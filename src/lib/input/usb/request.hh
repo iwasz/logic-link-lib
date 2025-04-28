@@ -1,0 +1,54 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+#pragma once
+#include "common/error.hh"
+#include "common/stats.hh"
+#include "data/acqParams.hh"
+#include "data/rawData.hh"
+#include <unordered_set>
+
+namespace usb {
+
+/**
+ * Inits.
+ */
+void init ();
+
+/**
+ * Request acquisition parameters like number of channels and the
+ * sample rate.
+ */
+common::acq::Params configure (common::acq::Params const &params, bool legacy = false);
+
+/**
+ * Sends initial configuration requests.
+ */
+void start ();
+
+/**
+ * Send stop request to the device and inform the algorithms that it was sent.
+ */
+void stop (data::Session *rawData);
+
+void close ();
+
+/**
+ * Get device statistics
+ */
+Stats getStats ();
+
+/**
+ * Get error list from the device if any.
+ */
+std::unordered_set<logs::Code> getErrors ();
+
+/// TODO make a structure or something instead of these params.
+void setTransmissionParams (uint32_t usbTransfer, uint32_t usbBlock /* , uint32_t dmaBlock */);
+
+} // namespace usb

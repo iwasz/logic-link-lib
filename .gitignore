@@ -1,0 +1,7 @@
+/build*
+/.vscode
+/cpm_modules
+.DS_Store
+src-modules-attempt
+src-modules-attempt.zip
+60Mhz.txt

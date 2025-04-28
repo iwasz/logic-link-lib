@@ -1,0 +1,3 @@
+[submodule "deps/logic-link-common"]
+	path = deps/common
+	url = git@github.com:iwasz/logic-link-common.git
