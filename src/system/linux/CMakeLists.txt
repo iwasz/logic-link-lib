@@ -1,3 +1,3 @@
-target_sources(link PRIVATE
+target_sources(${PROJECT_NAME} PRIVATE
   system.cc
 )
