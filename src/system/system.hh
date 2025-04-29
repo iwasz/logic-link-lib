@@ -8,9 +8,9 @@
 
 #pragma once
 
-namespace sys {
+namespace logic::sys {
 
 void init ();
 bool isTermRequested ();
 
-} // namespace sys
+} // namespace logic::sys

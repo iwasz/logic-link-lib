@@ -9,7 +9,7 @@
 #pragma once
 #include <cstdint>
 
-namespace loguc {
+namespace logic {
 /**
  * This size has to be requested by the USB host (PC). After sending exactly this
  * amount, USB bulk transaction finishes, and the client application running on the
@@ -24,4 +24,4 @@ constexpr uint32_t DEFAULT_USB_TRANSFER_SIZE_B = 16384;
  */
 constexpr uint32_t DEFAULT_USB_BLOCK_SIZE_B = 8192;
 
-} // namespace loguc
+} // namespace logic

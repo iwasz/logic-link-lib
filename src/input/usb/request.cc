@@ -224,11 +224,11 @@ void close ()
 
 /****************************************************************************/
 
-::usb::Stats getStats ()
+common::usb::Stats getStats ()
 {
         controlOut (Request{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_STATS));
-        auto rawStats = controlIn (sizeof (::usb::Stats));
-        ::usb::Stats stats{};
+        auto rawStats = controlIn (sizeof (common::usb::Stats));
+        common::usb::Stats stats{};
         memcpy (&stats, rawStats.data (), rawStats.size ());
         return stats;
 }
