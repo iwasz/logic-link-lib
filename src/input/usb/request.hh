@@ -41,7 +41,7 @@ void close ();
 /**
  * Get device statistics
  */
-::usb::Stats getStats ();
+common::usb::Stats getStats ();
 
 /**
  * Get error list from the device if any.

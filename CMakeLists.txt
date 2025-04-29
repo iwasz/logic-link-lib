@@ -25,6 +25,14 @@ CPMAddPackage("gh:microsoft/GSL@4.1.0")
 CPMAddPackage("gh:catchorg/Catch2@3.5.2")
 CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
 CPMAddPackage("gh:microsoft/GSL#v4.0.0")
+if(LOCAL_DEPENDENCIES)
+  message("+------------------------------+")
+  message("| Using local library versions |")
+  message("+------------------------------+")
+  CPMAddPackage(NAME common SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/logic-link-common)
+else()
+  CPMAddPackage(NAME common GIT_REPOSITORY "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/iwasz/logic-link-common.git" GIT_TAG v0.0.2)
+endif()
 
 # +--------------------------------------+
 # | Flags and includes common for the    |
@@ -35,7 +43,7 @@ CPMAddPackage("gh:microsoft/GSL#v4.0.0")
 # target: add_library(${PROJECT_NAME} INTERFACE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 include_directories(${GSL_SOURCE_DIR}/include)
-include_directories("deps")
+include_directories(${common_SOURCE_DIR})
 
 # +--------------------------------------+
 # | Library target                       |
