@@ -1,0 +1,1 @@
+Include only the topmost hh files. All other files ahould be considered as implementation detail.
