@@ -7,8 +7,8 @@
  ****************************************************************************/
 
 #pragma once
-#include "common/params.hh"
 #include "types.hh"
+#include <cstdlib>
 
 namespace logic::an {
 
@@ -49,14 +49,5 @@ public:
 private:
         size_t dmaBlockLenB_;
 };
-
-/**
- * @brief Perform the (debug) analysis using a strategy.
- *
- * @param rawData Data to analyze.
- * @param strategy Describes what to do.
- * @param discard Whether to discard the data or sotre it indefinitely in the RAM.
- */
-void analyze (common::acq::Params const &params, data::Session *session, an::ICheck *strategy, bool discard = false, bool decompress = false);
 
 } // namespace logic::an

@@ -39,7 +39,13 @@ endif()
 add_library(${PROJECT_NAME})
 add_subdirectory(src)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
-target_include_directories(${PROJECT_NAME} PRIVATE src ${GSL_SOURCE_DIR}/include ${common_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE
+  "src"
+  "include"
+  "${GSL_SOURCE_DIR}/include"
+  "${common_SOURCE_DIR}"
+)
+
 target_include_directories(
   ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
                          $<INSTALL_INTERFACE:include/link-${PROJECT_VERSION}>
@@ -47,6 +53,7 @@ target_include_directories(
 
 # being a cross-platform target, we enforce standards conformance on MSVC
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
+target_compile_options(${PROJECT_NAME} PUBLIC "-fPIC")
 
 include (FindPkgConfig)
 pkg_check_modules (LIBUSBX REQUIRED "libusb-1.0")

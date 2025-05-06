@@ -52,7 +52,15 @@ target_sources(${PROJECT_NAME} PRIVATE
 enable_testing()
 add_test(${PROJECT_NAME} ${PROJECT_NAME})
 
-target_include_directories(${PROJECT_NAME} PRIVATE ../../src ./src ${Catch2_SOURCE_DIR}/src ${GSL_SOURCE_DIR}/include ${common_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE
+  ../../src
+  ../../include
+  ./src
+  ${Catch2_SOURCE_DIR}/src
+  ${GSL_SOURCE_DIR}/include
+  ${common_SOURCE_DIR}
+)
+
 target_link_libraries(${PROJECT_NAME} Catch2::Catch2WithMain LogicLink::LogicLink)
 target_compile_definitions(${PROJECT_NAME} PRIVATE "-DUNIT_TEST=1")
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)

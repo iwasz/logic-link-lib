@@ -7,7 +7,7 @@
  ****************************************************************************/
 
 #pragma once
-#include "analysis/analysis.hh"
+#include "analyzer/analyzer.hh"
 #include "types.hh"
 
 namespace logic::an {

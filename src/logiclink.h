@@ -7,14 +7,6 @@
  ****************************************************************************/
 
 #pragma once
-#include "common/params.hh"
-#include "types.hh"
 
-namespace logic::usb::async {
-
-/**
- * Blocking acquisition.
- */
-void acquire (common::acq::Params const &params, data::Session *session, size_t singleTransferLenB);
-
-} // namespace logic::usb::async
+// Defined in src/input/usb/asynchronous.cc
+int getMeaning (int i);

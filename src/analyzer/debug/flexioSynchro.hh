@@ -7,40 +7,35 @@
  ****************************************************************************/
 
 #pragma once
-#include "analysis/analysis.hh"
+#include "analyzer/analyzer.hh"
 #include "types.hh"
 
 namespace logic::an {
 
 /**
- * Simply prints basic info for denug purposes only.
+ * Analyze the stream, assume there are 4 flexio streams, 32bit each like this:
+ *
+ * 0x00 | flexio0-32bits | flexio1-32bits | flexio2-32bits | flexio3-32bits |
+ * 0x10 | flexio0-32bits | flexio1-32bits | flexio2-32bits | flexio3-32bits |
+ * ...
+ *
+ * Assume that all 4 flexio inputs are connected (physically by wire) together,
+ * thus all 4 blocks staring every 16 bytes shall have the same value. Print or
+ * store errors if they don't.
  */
-class SimplePrint : public AbstractCheck {
+class FlexioSynchronizationCheck : public AbstractCheck {
 public:
         using AbstractCheck::AbstractCheck;
 
         void start () override {}
+
         void run (data::SampleData const &samples) override;
-        void stop () override {}
+        void stop () override;
 
 private:
-        // size_t cnt{};
-};
+        size_t analyzeDataIntegrityBlock (std::span<const uint32_t> const &block);
 
-/**
- * Simply prints basic info for denug purposes only.
- */
-class RawPrint : public AbstractCheck {
-public:
-        using AbstractCheck::AbstractCheck;
-
-        void start () override {}
-        void runRaw (data::RawData const &rd) override;
-        void run (data::SampleData const &samples) override {}
-        void stop () override {}
-
-private:
-        size_t cnt{};
+        size_t devBlockNo{};
 };
 
 } // namespace logic::an

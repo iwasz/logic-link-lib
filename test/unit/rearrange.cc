@@ -6,7 +6,7 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "analysis/rearrange.hh"
+#include "processing/rearrange.hh"
 #include <catch2/catch_test_macros.hpp>
 
 using namespace logic;

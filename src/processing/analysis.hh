@@ -7,14 +7,19 @@
  ****************************************************************************/
 
 #pragma once
+#include "analyzer/analyzer.hh"
 #include "common/params.hh"
 #include "types.hh"
 
-namespace logic::usb::async {
+namespace logic::an {
 
 /**
- * Blocking acquisition.
+ * @brief Perform the (debug) analysis using a strategy.
+ *
+ * @param rawData Data to analyze.
+ * @param strategy Describes what to do.
+ * @param discard Whether to discard the data or sotre it indefinitely in the RAM.
  */
-void acquire (common::acq::Params const &params, data::Session *session, size_t singleTransferLenB);
+void analyze (common::acq::Params const &params, data::Session *session, an::ICheck *strategy, bool discard = false, bool decompress = false);
 
-} // namespace logic::usb::async
+} // namespace logic::an

@@ -18,6 +18,8 @@
 #include <libusb.h>
 #include <print>
 
+// extern "C" int getMeaning (int i);
+
 namespace logic::usb::async {
 using namespace std::chrono;
 using namespace std::string_literals;
@@ -62,6 +64,7 @@ namespace {
  */
 void acquire (common::acq::Params const & /* params */, data::Session *session, size_t singleTransferLenB)
 {
+        // ::getMeaning (0);
         libusb_transfer *transfer = libusb_alloc_transfer (0);
 
         if (transfer == nullptr) {
@@ -168,4 +171,10 @@ void acquire (common::acq::Params const & /* params */, data::Session *session, 
         }
 }
 
+/****************************************************************************/
+
+int getMeaning (int i) { return 42 + i; }
+
 } // namespace logic::usb::async
+
+extern "C" int getMeaning (int i) { return logic::usb::async::getMeaning (i); }

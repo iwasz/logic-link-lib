@@ -7,6 +7,7 @@
  ****************************************************************************/
 
 #pragma once
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <deque>
@@ -51,6 +52,7 @@ struct SampleData {
 struct AugumentedData {};
 
 struct Block {
+        // Block could have a sampleNumber and time_point
         RawCompressedData rawCompressedData;
         SampleData sampleData;
         std::vector<std::unique_ptr<AugumentedData>> augumentedData;

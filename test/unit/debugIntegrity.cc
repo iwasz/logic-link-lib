@@ -6,7 +6,7 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "analysis/debug/clockSignal.hh"
+#include "analyzer/debug/clockSignal.hh"
 #include <catch2/catch_test_macros.hpp>
 
 using namespace logic;

@@ -16,4 +16,8 @@
 
 namespace logic {
 
+} // namespace logic
+
+namespace logic::usb::async {
+int getMeaning (int i);
 }
