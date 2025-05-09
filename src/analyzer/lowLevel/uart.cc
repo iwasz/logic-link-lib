@@ -6,14 +6,14 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#pragma once
-#include "data/types.hh"
+#include "uart.hh"
 
-namespace logic::usb::sync {
+namespace logic::an::uart {
 
-/**
- * Blocking acquisition.
- */
-void acquire (data::RawData *rawData, size_t singleTransferLenB);
+data::AugumentedData UartAnalyzer::run (data::SampleBlockStream const &samples)
+{
+        data::AugumentedData ret;
+        return ret;
+}
 
-} // namespace logic::usb::sync
+} // namespace logic::an::uart

@@ -8,7 +8,7 @@
 
 #pragma once
 #include "common/params.hh"
-#include "types.hh"
+#include "data/types.hh"
 
 namespace logic::usb::async {
 

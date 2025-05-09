@@ -8,7 +8,7 @@
 
 #pragma once
 #include "analyzer/analyzer.hh"
-#include "types.hh"
+#include "data/types.hh"
 
 namespace logic::an {
 
@@ -23,13 +23,12 @@ namespace logic::an {
  * thus all 4 blocks staring every 16 bytes shall have the same value. Print or
  * store errors if they don't.
  */
-class FlexioSynchronizationCheck : public AbstractCheck {
+class FlexioSynchronizationCheck : public SingleChannelAnalyzer {
 public:
-        using AbstractCheck::AbstractCheck;
+        using SingleChannelAnalyzer::SingleChannelAnalyzer;
 
         void start () override {}
-
-        void run (data::SampleData const &samples) override;
+        data::AugumentedData run (data::SampleBlockStream const &samples) override;
         void stop () override;
 
 private:

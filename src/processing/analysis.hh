@@ -9,7 +9,7 @@
 #pragma once
 #include "analyzer/analyzer.hh"
 #include "common/params.hh"
-#include "types.hh"
+#include "data/types.hh"
 
 namespace logic::an {
 
@@ -20,6 +20,6 @@ namespace logic::an {
  * @param strategy Describes what to do.
  * @param discard Whether to discard the data or sotre it indefinitely in the RAM.
  */
-void analyze (common::acq::Params const &params, data::Session *session, an::ICheck *strategy, bool discard = false, bool decompress = false);
+void analyze (common::acq::Params const &params, data::Session *session, an::IAnalyzer *strategy, bool discard = false, bool decompress = false);
 
 } // namespace logic::an

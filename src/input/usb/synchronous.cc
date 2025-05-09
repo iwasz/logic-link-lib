@@ -7,9 +7,9 @@
  ****************************************************************************/
 
 #include "context.hh"
+#include "data/types.hh"
 #include "deps/constants.hh"
 #include "exception.hh"
-#include "types.hh"
 #include <chrono>
 #include <cstdio>
 #include <gsl/gsl>

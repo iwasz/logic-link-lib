@@ -7,10 +7,10 @@
  ****************************************************************************/
 
 #pragma once
-#include "types.hh"
+#include "data/types.hh"
 
 namespace logic::an {
 
-data::RawData decompress (data::RawCompressedData const &rcd);
+data::RawData decompress (data::RawCompressedBlock const &rcd);
 
 } // namespace logic::an

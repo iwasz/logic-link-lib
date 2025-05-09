@@ -7,13 +7,22 @@
  ****************************************************************************/
 
 #pragma once
+#include "analyzer/analyzer.hh"
 #include "data/types.hh"
 
-namespace logic::usb::sync {
+namespace logic::an::uart {
 
-/**
- * Blocking acquisition.
- */
-void acquire (data::RawData *rawData, size_t singleTransferLenB);
+enum class Parity : uint8_t { none, odd, even };
 
-} // namespace logic::usb::sync
+class UartAnalyzer : public AbstractAnalyzer {
+public:
+        using AbstractAnalyzer::AbstractAnalyzer;
+
+        void start () override {}
+        data::AugumentedData run (data::SampleBlockStream const &samples) override;
+        void stop () override {}
+
+private:
+};
+
+} // namespace logic::an::uart

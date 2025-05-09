@@ -9,9 +9,9 @@
 #include "common/constants.hh"
 #include "common/params.hh"
 #include "context.hh"
+#include "data/types.hh"
 #include "exception.hh"
 #include "request.hh"
-#include "types.hh"
 #include <chrono>
 #include <cstdio>
 #include <gsl/gsl>
@@ -28,9 +28,9 @@ using namespace std::string_literals;
  * Acquires a single transfer amount of data, which is more closely explained in
  * src/feature/analyzer/flexio.cc file in the firmware.
  */
-data::Buffer acquireSingleTransfer (data::Session *rawData, size_t bytes)
+data::Bytes acquireSingleTransfer (data::Session *rawData, size_t bytes)
 {
-        data::Buffer singleTransfer (bytes);
+        data::Bytes singleTransfer (bytes);
 
         int transferredB{};
 
@@ -82,7 +82,7 @@ void acquire (common::acq::Params const & /* params */, data::Session *session, 
                  * For now we allocate the whole (rather big) memory buffer all at once. This is
                  * because we must avoid reallocations in the future.
                  */
-                std::lock_guard lock{session->bufferMutex};
+                std::lock_guard lock{session->rawQueueMutex};
                 session->globalStart = high_resolution_clock::now ();
         }
 
@@ -97,7 +97,7 @@ void acquire (common::acq::Params const & /* params */, data::Session *session, 
                         start = high_resolution_clock::now ();
                 }
 
-                data::Buffer singleTransfer (singleTransferLenB);
+                data::Bytes singleTransfer (singleTransferLenB);
                 libusb_fill_bulk_transfer (transfer, ctx ().dev, common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (),
                                            sync_transfer_cb, &completed, common::usb::TIMEOUT_MS);
 
@@ -145,14 +145,14 @@ void acquire (common::acq::Params const & /* params */, data::Session *session, 
                 bool notify{};
 
                 {
-                        std::lock_guard lock{session->bufferMutex};
+                        std::lock_guard lock{session->rawQueueMutex};
                         session->allTransferedB += singleTransfer.size ();
 
                         if (!singleTransfer.empty ()) {
                                 auto mbps = (double (benchmarkB) / double (duration_cast<microseconds> (now - *start).count ())) * 8;
                                 // TODO resize blocks (if needed)
-                                data::RawCompressedData rcd{mbps, 0, std::move (singleTransfer)};
-                                session->queue.emplace_back (data::Block{.rawCompressedData = std::move (rcd)});
+                                data::RawCompressedBlock rcd{mbps, 0, std::move (singleTransfer)};
+                                session->rawQueue.emplace_back (std::move (rcd));
                                 notify = true;
                                 session->globalStop = high_resolution_clock::now (); // We want to be up to date, and skip possible time-out.
                         }
@@ -171,10 +171,4 @@ void acquire (common::acq::Params const & /* params */, data::Session *session, 
         }
 }
 
-/****************************************************************************/
-
-int getMeaning (int i) { return 42 + i; }
-
 } // namespace logic::usb::async
-
-extern "C" int getMeaning (int i) { return logic::usb::async::getMeaning (i); }

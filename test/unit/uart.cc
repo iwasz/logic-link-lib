@@ -6,14 +6,19 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#pragma once
-#include "data/types.hh"
+#include "analyzer/lowLevel/uart.hh"
+#include <catch2/catch_test_macros.hpp>
 
-namespace logic::usb::sync {
+using namespace logic;
 
-/**
- * Blocking acquisition.
- */
-void acquire (data::RawData *rawData, size_t singleTransferLenB);
+TEST_CASE ("Valid", "[uart]")
+{
+        data::SampleBlockStream in;
+        // in.digital.push_back (data::Bytes{1, 2, 3});
 
-} // namespace logic::usb::sync
+        an::uart::UartAnalyzer a{0};
+        /* auto out =  */ a.run (in);
+
+        // REQUIRE ((csc.analyzeDataIntegrity (a.data (), a.size ())) == 0);
+        // REQUIRE ((csc.analyzeDataIntegrity (b.data (), b.size ())) == 0);
+}

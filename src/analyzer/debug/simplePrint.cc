@@ -5,7 +5,7 @@
  *  License : see COPYING file for details.                                 *
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
-
+#if 0
 #include "simplePrint.hh"
 #include <cstdio>
 #include <print>
@@ -15,13 +15,13 @@ namespace logic::an {
 
 /****************************************************************************/
 
-void SimplePrint::run (data::SampleData const &samples)
+data::AugumentedData SimplePrint::run (data::SampleBuffers const &samples)
 {
         // if (cnt++ > 0) {
         //         return;
         // }
 
-        std::vector<data::Buffer::const_iterator> diters (samples.digital.size ());
+        std::vector<data::Bytes::const_iterator> diters (samples.digital.size ());
 
         for (size_t chan = 0; chan < samples.digital.size (); ++chan) {
                 diters.at (chan) = samples.digital.at (chan).begin ();
@@ -40,11 +40,13 @@ void SimplePrint::run (data::SampleData const &samples)
 
                 std::println ("");
         }
+
+        return {};
 }
 
 /****************************************************************************/
 
-void RawPrint::runRaw (data::RawData const &raw)
+data::AugumentedData RawPrint::runRaw (data::RawData const &raw)
 {
         size_t row{};
         size_t column{};
@@ -60,6 +62,9 @@ void RawPrint::runRaw (data::RawData const &raw)
                         }
                 }
         }
+
+        return {};
 }
 
 } // namespace logic::an
+#endif

@@ -8,7 +8,7 @@
 
 #pragma once
 #include "analyzer/analyzer.hh"
-#include "types.hh"
+#include "data/types.hh"
 
 namespace logic::an {
 
@@ -22,9 +22,9 @@ namespace logic::an {
  * will work provided that has steady (down to a single sample) frequency.
  * @arg size bytes
  */
-class ClockSignalCheck : public AbstractCheck {
+class ClockSignalCheck : public SingleChannelAnalyzer {
 public:
-        using AbstractCheck::AbstractCheck;
+        using SingleChannelAnalyzer::SingleChannelAnalyzer;
 
         void start () override
         {
@@ -33,8 +33,8 @@ public:
                 // overrunsNo = 0;
         }
 
-        void runRaw (data::RawData const & /* rd */) override {} // TODO this produces errors in UTs when is removed.
-        void run (data::SampleData const &samples) override;
+        // void runRaw (data::RawData const & /* rd */) override {} // TODO this produces errors in UTs when is removed.
+        data::AugumentedData run (data::SampleBlockStream const &samples) override;
         void stop () override;
 
         /// Analyze only `mod`-th 32 bit word out of every `div` words in the stream.

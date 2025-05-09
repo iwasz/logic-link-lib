@@ -8,20 +8,20 @@
 
 #pragma once
 #include "analyzer/analyzer.hh"
-#include "types.hh"
+#include "data/types.hh"
 
 namespace logic::an {
 
 /**
- * Chjecks for the consecutive integer number at the start of every
+ * Checks for the consecutive integer number at the start of every
  * block that comes from the device. Numbers have to be consecutive,
  * one by one. Every deviation from this pattern is reported. Also It
  * expects the queue size in the second word (32bit) of every block,
  * and outputs it as well.
  */
-class OrdinalCheck : public AbstractCheck {
+class OrdinalCheck : public SingleChannelAnalyzer {
 public:
-        using AbstractCheck::AbstractCheck;
+        using SingleChannelAnalyzer::SingleChannelAnalyzer;
 
         void start () override
         {
@@ -41,7 +41,7 @@ public:
          * @param deviceBufferLenB DMA blocks on the device (IRQ after each block -> metadata
          * for each block).
          */
-        void run (data::SampleData const &bmd) override;
+        data::AugumentedData run (data::SampleBlockStream const &bmd) override;
         void stop () override;
 
 private:

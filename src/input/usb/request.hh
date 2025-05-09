@@ -10,7 +10,7 @@
 #include "common/error.hh"
 #include "common/stats.hh"
 #include "data/acqParams.hh"
-#include "types.hh"
+#include "data/types.hh"
 #include <unordered_set>
 
 namespace logic::usb {

@@ -8,7 +8,7 @@
 
 #pragma once
 #include "common/params.hh"
-#include "types.hh"
+#include "data/types.hh"
 
 namespace logic::an {
 
@@ -20,7 +20,12 @@ namespace logic::an {
  * for some (the fastest transfers) also bits in the input bytes have to be reordered
  * as well.
  */
-data::SampleData rearrange (data::RawData const &rd, common::acq::Params const &params);
+std::vector<data::SampleBlock> rearrange (data::RawData const &rd, common::acq::Params const &params);
+
+/**
+ * A helper function for preparingff an empty batch of digital channelss.
+ */
+std::vector<data::SampleBlock> prepareDigitalBlocks (data::RawData const &rd, size_t channelsNum, bool resize = true);
 
 /**
  * Configurable rearrange algorithm. Moved to a header file to simplify unit testing.
@@ -48,17 +53,14 @@ data::SampleData rearrange (data::RawData const &rd, common::acq::Params const &
  * ...
  * b0[30] b1[30] b2[30] b3[30] b0[31] b1[31] b2[31] b3[31]
  */
-template <size_t CHANNELS_NUM, size_t SHIFTBUFS_PER_CH_NUM> data::SampleData rearrangeFlexio (data::RawData const &rd)
+template <size_t CHANNELS_NUM, size_t SHIFTBUFS_PER_CH_NUM> std::vector<data::SampleBlock> rearrangeFlexio (data::RawData const &rd)
 {
-        data::SampleData sd;
-        sd.digital.resize (CHANNELS_NUM);
-        std::array<data::Buffer::iterator, SHIFTBUFS_PER_CH_NUM> outI;
+        auto digital = prepareDigitalBlocks (rd, CHANNELS_NUM);
+        std::array<data::Bytes::iterator, CHANNELS_NUM> outI;
 
         size_t i{};
-        for (auto &ch : sd.digital) {
-                ch.resize (rd.buffer.size () / CHANNELS_NUM);
-                outI[i] = ch.begin ();
-                i = (i + 1) % CHANNELS_NUM;
+        for (auto &d : digital) {
+                outI[i++] = std::get<data::Bytes> (d.buffer).begin ();
         }
 
         auto inI = rd.buffer.begin ();
@@ -94,7 +96,7 @@ template <size_t CHANNELS_NUM, size_t SHIFTBUFS_PER_CH_NUM> data::SampleData rea
                 }
         }
 
-        return sd;
+        return digital;
 }
 
 /*
@@ -102,19 +104,14 @@ template <size_t CHANNELS_NUM, size_t SHIFTBUFS_PER_CH_NUM> data::SampleData rea
  * respective channel collections (one vector per channel). Input data looks like this:
  * CH0 4B, CH1 4B, ..., CH7 4B.
  */
-template <size_t CHANNELS_NUM> data::SampleData rearrangeFlexio (data::RawData const &rd)
+template <size_t CHANNELS_NUM> std::vector<data::SampleBlock> rearrangeFlexio (data::RawData const &rd)
 {
-        data::SampleData sd;
-        sd.digital.resize (CHANNELS_NUM);
-
-        for (auto &ch : sd.digital) {
-                ch.reserve (rd.buffer.size () / CHANNELS_NUM);
-        }
-
+        auto digital = prepareDigitalBlocks (rd, CHANNELS_NUM, false);
         size_t byteCounter{};
         size_t channelCounter{};
+
         for (uint8_t b : rd.buffer) {
-                data::Buffer &buf = sd.digital[channelCounter];
+                auto &buf = std::get<data::Bytes> (digital[channelCounter].buffer);
 
                 buf.push_back (b);
 
@@ -128,7 +125,7 @@ template <size_t CHANNELS_NUM> data::SampleData rearrangeFlexio (data::RawData c
                 }
         }
 
-        return sd;
+        return digital;
 }
 
 } // namespace logic::an

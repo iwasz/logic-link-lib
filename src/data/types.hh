@@ -1,0 +1,168 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+#pragma once
+#include "common/constants.hh"
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <string>
+#include <variant>
+#include <vector>
+
+namespace logic::data {
+using Bytes = std::vector<uint8_t>;
+using Words = std::vector<uint32_t>;
+using Numbers = std::vector<float>;
+using Buffer = std::variant<Bytes, Words, Numbers>;
+
+enum class StreamType : uint8_t { digital, analog };
+
+/**
+ * Buffer of sample data. Typically this data will come from a logic analyzer device,
+ * can be 8-32 bit wide, but it can also come from other sources like a file, etc.
+ */
+struct SampleBlock {
+        StreamType type;
+        SampleRate sampleRate;
+        std::chrono::high_resolution_clock::time_point begin;
+        std::chrono::high_resolution_clock::time_point end;
+        Buffer buffer;
+};
+
+/**
+ * The data as received from the device. Possibly compressed with LZ4.
+ */
+struct RawCompressedBlock {
+        double bps{};        /// Debug data indicating bits per second. Not sampling rate.
+        size_t overrunsNo{}; /// Number of problems that occured during the reception.
+        Bytes buffer;        /// Binary data.
+
+        void clear () { buffer.clear (); }
+};
+
+/**
+ * The same data but decompressed. In case of no compression on the device,
+ * both RawCompressedData and RawData will contain the same data.
+ */
+using RawData = RawCompressedBlock;
+
+/**
+ * Sample data for multiple channels numbered by integer numbers. Some channels
+ * may be missing for a block, so I
+ * Data decoded from the RawData to the sample data organized by channels
+ * (both digital and analog). This is the data that can be finally displayed
+ * or consumed by the analyzers.
+ */
+struct SampleBlockStream {
+        /// Single or multiple blocks.
+        std::deque<SampleBlock> stream;
+        std::vector<SampleBlockStream> children; // TODO may be optional or unique_ptr
+};
+
+/**
+ * Like digital or analog channles.
+ */
+class Group {
+public:
+        /// Adds s[0] to stream[0], s[1] to stream[1] etc
+        void appendChannels (std::vector<SampleBlock> &&s);
+
+        // private:
+        std::string name;
+        std::vector<SampleBlockStream> channels;
+};
+
+/*--------------------------------------------------------------------------*/
+
+/**
+ * Bridge OO pattern I believe. Concrete classes of this interace will be
+ * implemented by the users of this library. You could have one that displays
+ * timepoints as dots, othe one  that displays squares or solor bars etc.
+ */
+struct IHintDrawer {};
+
+/**
+ * Some additional information coming from an analyzer.
+ */
+struct IDisplayHint {
+        IDisplayHint () = default;
+        IDisplayHint (IDisplayHint const &) = default;
+        IDisplayHint &operator= (IDisplayHint const &) = default;
+        IDisplayHint (IDisplayHint &&) noexcept = default;
+        IDisplayHint &operator= (IDisplayHint &&) noexcept = default;
+        virtual ~IDisplayHint () = default;
+
+        virtual void draw (IHintDrawer *drw) = 0;
+};
+
+/**
+ * Single marker on a single (?) channel. If you want to add more than one of thsese
+ * consider using TimePoints class for efficiency.
+ */
+struct TimePoint : public IDisplayHint {};
+
+/**
+ * Stream of markers.
+ */
+struct TimePoints : public IDisplayHint {};
+
+/**
+ *
+ */
+struct Period : public IDisplayHint {};
+
+using DisplayHints = std::vector<IDisplayHint>;
+
+/*--------------------------------------------------------------------------*/
+
+/**
+ * Analyzer output format. This data accompanies the sample data and provides
+ * additional, decoded information like binary->hex etc.
+ */
+struct AugumentedData {
+        /// Decoded data
+        Buffer data;
+
+        // Additional information about the analyzed data.
+        DisplayHints hints;
+};
+
+// struct Block {
+//         // Block could have a sampleNumber and time_point
+//         RawCompressedBlock rawCompressedData;
+//         SampleBlockStream sampleData;
+//         std::vector<std::unique_ptr<AugumentedData>> augumentedData;
+//         // std::mutex mutex; // sizeof == ~40B Do I really need this?
+// };
+
+/**
+ * Data as received directly from the device.
+ */
+class Session {
+public:
+        std::deque<RawCompressedBlock> rawQueue;
+        std::mutex rawQueueMutex;
+
+        std::vector<Group> groups;
+        std::mutex sampleMutex; // TODO finer mutex locking
+
+        std::chrono::high_resolution_clock::time_point globalStart;
+        std::chrono::high_resolution_clock::time_point globalStop;
+        std::condition_variable bufferCV;
+        std::atomic_bool running;
+        std::atomic_bool stop; /// Send stop request to the device.
+        size_t allTransferedB{};
+
+        /// Number of bytes received so far irrespective of the buffer size.
+        size_t receivedB () const { return allTransferedB; }
+};
+
+} // namespace logic::data

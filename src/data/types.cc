@@ -6,14 +6,15 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#pragma once
-#include "data/types.hh"
+#include "types.hh"
 
-namespace logic::usb::sync {
+namespace logic::data {
 
-/**
- * Blocking acquisition.
- */
-void acquire (data::RawData *rawData, size_t singleTransferLenB);
+void Group::appendChannels (std::vector<SampleBlock> &&s)
+{
+        for (size_t i = 0; i < s.size (); ++i) {
+                channels.at (i).stream.push_back (std::move (s.at (i)));
+        }
+}
 
-} // namespace logic::usb::sync
+} // namespace logic::data

@@ -11,8 +11,8 @@
  */
 #pragma once
 #include "constants.hh"
+#include "data/types.hh"
 #include "exception.hh"
-#include "types.hh"
 
 namespace logic {
 

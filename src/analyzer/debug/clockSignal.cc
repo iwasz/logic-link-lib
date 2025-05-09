@@ -18,14 +18,17 @@ using namespace std::string_literals;
 
 /****************************************************************************/
 
-void ClockSignalCheck::run (data::SampleData const &samples)
+data::AugumentedData ClockSignalCheck::run (data::SampleBlockStream const &samples)
 {
-        auto dmaBlocksNum = samples.digital.size () / dmaBlockLenB (); // We assume % is 0.
+        // auto const &bytes = std::get<data::Bytes> (samples.at (channel ()).buffer);
+        // auto dmaBlocksNum = bytes.size () / dmaBlockLenB (); // We assume % is 0.
 
-        for (size_t i = 0; i < dmaBlocksNum; ++i) {
-                analyzeDataIntegrity (reinterpret_cast<uint32_t const *> (samples.digital.data () + i * dmaBlockLenB ()), dmaBlockLenB () / 4);
-                ++devBlockNo;
-        }
+        // for (size_t i = 0; i < dmaBlocksNum; ++i) {
+        //         analyzeDataIntegrity (reinterpret_cast<uint32_t const *> (bytes.data () + i * dmaBlockLenB ()), dmaBlockLenB () / 4);
+        //         ++devBlockNo;
+        // }
+
+        return {};
 }
 
 /****************************************************************************/

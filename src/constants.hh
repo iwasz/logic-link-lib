@@ -7,7 +7,9 @@
  ****************************************************************************/
 
 #pragma once
+#include <array>
 #include <cstdint>
+#include <string>
 
 namespace logic {
 /**
@@ -23,5 +25,16 @@ constexpr uint32_t DEFAULT_USB_TRANSFER_SIZE_B = 16384;
  * This size gets transferred from the buffer to the USB peripheral at once.
  */
 constexpr uint32_t DEFAULT_USB_BLOCK_SIZE_B = 8192;
+
+template <size_t N> constexpr std::array<std::string, N> digitalChannels ()
+{
+        std::array<std::string, N> ret;
+
+        for (size_t i = 0; i < N; ++i) {
+                ret[i] = "D" /* + std::to_string (i) */;
+        }
+
+        return ret;
+}
 
 } // namespace logic

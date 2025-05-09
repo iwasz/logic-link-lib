@@ -45,8 +45,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   queue.cc
   debugIntegrity.cc
   rearrange.cc
-  # ../../src/analysis/debug/clockSignal.cc
-  # ../../src/analysis/rearrange.cc
+  uart.cc
 )
 
 enable_testing()

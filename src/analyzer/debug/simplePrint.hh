@@ -6,21 +6,22 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
+#if 0
 #pragma once
 #include "analyzer/analyzer.hh"
-#include "types.hh"
+#include "data/types.hh"
 
 namespace logic::an {
 
 /**
  * Simply prints basic info for denug purposes only.
  */
-class SimplePrint : public AbstractCheck {
+class SimplePrint : public AbstractAnalyzer {
 public:
-        using AbstractCheck::AbstractCheck;
+        using AbstractAnalyzer::AbstractAnalyzer;
 
         void start () override {}
-        void run (data::SampleData const &samples) override;
+        data::AugumentedData run (data::SampleBuffers const &samples) override;
         void stop () override {}
 
 private:
@@ -30,13 +31,13 @@ private:
 /**
  * Simply prints basic info for denug purposes only.
  */
-class RawPrint : public AbstractCheck {
+class RawPrint : public AbstractAnalyzer {
 public:
-        using AbstractCheck::AbstractCheck;
+        using AbstractAnalyzer::AbstractAnalyzer;
 
         void start () override {}
-        void runRaw (data::RawData const &rd) override;
-        void run (data::SampleData const &samples) override {}
+        data::AugumentedData runRaw (data::RawData const &rd) override;
+        data::AugumentedData run (data::SampleBuffers const &samples) override { return {}; }
         void stop () override {}
 
 private:
@@ -44,3 +45,4 @@ private:
 };
 
 } // namespace logic::an
+#endif

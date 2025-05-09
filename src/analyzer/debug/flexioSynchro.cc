@@ -15,16 +15,18 @@ namespace logic::an {
 
 /****************************************************************************/
 
-void FlexioSynchronizationCheck::run (data::SampleData const &samples)
+data::AugumentedData FlexioSynchronizationCheck::run (data::SampleBlockStream const &samples)
 {
-        auto dmaBlocksNum = samples.digital.size () / dmaBlockLenB (); // We assume % is 0.
+        // auto const &bytes = std::get<data::Bytes> (samples.at (channel ()).buffer);
+        // auto dmaBlocksNum = bytes.size () / dmaBlockLenB (); // We assume % is 0.
 
-        for (size_t i = 0; i < dmaBlocksNum; ++i) {
-                std::span<const uint32_t> block{reinterpret_cast<uint32_t const *> (samples.digital.data () + i * dmaBlockLenB ()),
-                                                dmaBlockLenB () / 4};
-                analyzeDataIntegrityBlock (block);
-                ++devBlockNo;
-        }
+        // for (size_t i = 0; i < dmaBlocksNum; ++i) {
+        //         std::span<const uint32_t> block{reinterpret_cast<uint32_t const *> (bytes.data () + i * dmaBlockLenB ()), dmaBlockLenB () /
+        //         4}; analyzeDataIntegrityBlock (block);
+        //         ++devBlockNo;
+        // }
+
+        return {};
 }
 
 /****************************************************************************/

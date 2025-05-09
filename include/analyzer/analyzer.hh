@@ -7,24 +7,24 @@
  ****************************************************************************/
 
 #pragma once
-#include "types.hh"
+#include "data/types.hh"
 #include <cstdlib>
 
 namespace logic::an {
 
-struct ICheck {
-        ICheck () = default;
-        ICheck (ICheck const &) = default;
-        ICheck &operator= (ICheck const &) = default;
-        ICheck (ICheck &&) noexcept = default;
-        ICheck &operator= (ICheck &&) noexcept = default;
-        virtual ~ICheck () = default;
+struct IAnalyzer {
+        IAnalyzer () = default;
+        IAnalyzer (IAnalyzer const &) = default;
+        IAnalyzer &operator= (IAnalyzer const &) = default;
+        IAnalyzer (IAnalyzer &&) noexcept = default;
+        IAnalyzer &operator= (IAnalyzer &&) noexcept = default;
+        virtual ~IAnalyzer () = default;
 
         /// Pre analysis
         virtual void start () = 0;
         /// For every block
-        virtual void runRaw (data::RawData const &rd) = 0;
-        virtual void run (data::SampleData const &bmd) = 0;
+        virtual data::AugumentedData runRaw (data::RawData const &rd) = 0;
+        virtual data::AugumentedData run (data::SampleBlockStream const &bmd) = 0;
         /// Post analysis
         virtual void stop () = 0;
 };
@@ -32,22 +32,43 @@ struct ICheck {
 /**
  * A helper class
  */
-class AbstractCheck : public ICheck {
+class AbstractAnalyzer : public IAnalyzer {
 public:
-        AbstractCheck (size_t dmaBlockLenB) : dmaBlockLenB_{dmaBlockLenB} {}
-        AbstractCheck (AbstractCheck const &) = default;
-        AbstractCheck &operator= (AbstractCheck const &) = default;
-        AbstractCheck (AbstractCheck &&) noexcept = default;
-        AbstractCheck &operator= (AbstractCheck &&) noexcept = default;
-        virtual ~AbstractCheck () = default;
+        AbstractAnalyzer () = default;
+        explicit AbstractAnalyzer (size_t dmaBlockLenB) : dmaBlockLenB_{dmaBlockLenB} {}
+        AbstractAnalyzer (AbstractAnalyzer const &) = default;
+        AbstractAnalyzer &operator= (AbstractAnalyzer const &) = default;
+        AbstractAnalyzer (AbstractAnalyzer &&) noexcept = default;
+        AbstractAnalyzer &operator= (AbstractAnalyzer &&) noexcept = default;
+        virtual ~AbstractAnalyzer () = default;
 
         // Usually working with the raw data (before reorder algorithm) is not performed.
-        void runRaw (data::RawData const &rd) override {}
+        data::AugumentedData runRaw (data::RawData const & /* rd */) override { return {}; }
 
+        // TODO Remove. This was used on early stage when I worked on the raw data.
         size_t dmaBlockLenB () const { return dmaBlockLenB_; }
 
 private:
-        size_t dmaBlockLenB_;
+        size_t dmaBlockLenB_{};
+};
+
+/**
+ * Single channel analyzer.
+ */
+class SingleChannelAnalyzer : public AbstractAnalyzer {
+public:
+        explicit SingleChannelAnalyzer (std::string channel = "") : channel_{std::move (channel)} {}
+        SingleChannelAnalyzer (SingleChannelAnalyzer const &) = default;
+        SingleChannelAnalyzer &operator= (SingleChannelAnalyzer const &) = default;
+        SingleChannelAnalyzer (SingleChannelAnalyzer &&) noexcept = default;
+        SingleChannelAnalyzer &operator= (SingleChannelAnalyzer &&) noexcept = default;
+        virtual ~SingleChannelAnalyzer () = default;
+
+        std::string &channel () { return channel_; }
+        std::string const &channel () const { return channel_; }
+
+private:
+        std::string channel_;
 };
 
 } // namespace logic::an
