@@ -18,6 +18,9 @@
 #include <vector>
 
 namespace logic::data {
+
+using TimePoint = std::chrono::high_resolution_clock::time_point;
+
 using Bytes = std::vector<uint8_t>;
 using Words = std::vector<uint32_t>;
 using Numbers = std::vector<float>;
@@ -32,8 +35,8 @@ enum class StreamType : uint8_t { digital, analog };
 struct SampleBlock {
         StreamType type;
         SampleRate sampleRate;
-        std::chrono::high_resolution_clock::time_point begin;
-        std::chrono::high_resolution_clock::time_point end;
+        TimePoint begin;
+        TimePoint end;
         Buffer buffer;
 };
 
@@ -80,6 +83,12 @@ public:
         std::vector<SampleBlockStream> channels;
 };
 
+/**
+ * @brief
+ *
+ */
+using Groups = std::vector<Group>;
+
 /*--------------------------------------------------------------------------*/
 
 /**
@@ -107,12 +116,12 @@ struct IDisplayHint {
  * Single marker on a single (?) channel. If you want to add more than one of thsese
  * consider using TimePoints class for efficiency.
  */
-struct TimePoint : public IDisplayHint {};
+struct TPoint : public IDisplayHint {};
 
 /**
  * Stream of markers.
  */
-struct TimePoints : public IDisplayHint {};
+struct TPoints : public IDisplayHint {};
 
 /**
  *
@@ -144,18 +153,19 @@ struct AugumentedData {
 // };
 
 /**
- * Data as received directly from the device.
+ * Data as received directly from the device. In a possible GUI app this would
+ * correspond to a single TAB.
  */
 class Session {
 public:
         std::deque<RawCompressedBlock> rawQueue;
         std::mutex rawQueueMutex;
 
-        std::vector<Group> groups;
+        Groups groups;
         std::mutex sampleMutex; // TODO finer mutex locking
 
-        std::chrono::high_resolution_clock::time_point globalStart;
-        std::chrono::high_resolution_clock::time_point globalStop;
+        TimePoint globalStart;
+        TimePoint globalStop;
         std::condition_variable bufferCV;
         std::atomic_bool running;
         std::atomic_bool stop; /// Send stop request to the device.
