@@ -6,12 +6,15 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#pragma once
+module;
+
 #include "common/error.hh"
 #include "common/stats.hh"
 #include "data/acqParams.hh"
-#include "data/types.hh"
 #include <unordered_set>
+
+export module logic.input.usb:request;
+import logic.data;
 
 namespace logic::usb {
 

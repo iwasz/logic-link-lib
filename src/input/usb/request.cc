@@ -6,10 +6,12 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "request.hh"
+module;
 #include "common/constants.hh"
+#include "common/error.hh"
+#include "common/params.hh"
 #include "common/serialize.hh"
-#include "context.hh"
+#include "common/stats.hh"
 #include "exception.hh"
 #include <algorithm>
 #include <cstdio>
@@ -18,10 +20,11 @@
 #include <gsl/gsl>
 #include <iterator>
 #include <libusb.h>
-#include <print>
 #include <ranges>
 #include <string>
+#include <unordered_set>
 #include <vector>
+module logic.input.usb;
 
 namespace logic::usb {
 using namespace std::string_literals;

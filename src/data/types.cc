@@ -6,7 +6,11 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "types.hh"
+module;
+
+#include <vector>
+
+module logic.data;
 
 namespace logic::data {
 

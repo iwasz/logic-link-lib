@@ -6,11 +6,15 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#pragma once
-#include "data/types.hh"
-#include <cstdlib>
+module;
 
-namespace logic::an {
+#include <cstdlib>
+#include <string>
+
+export module logic.analyzer;
+import logic.data;
+
+export namespace logic::an {
 
 struct IAnalyzer {
         IAnalyzer () = default;

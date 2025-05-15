@@ -6,8 +6,8 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "context.hh"
-#include "data/types.hh"
+module;
+
 #include "deps/constants.hh"
 #include "exception.hh"
 #include <chrono>
@@ -16,6 +16,8 @@
 #include <libusb.h>
 #include <print>
 #include <vector>
+
+module logic.input.usb;
 
 namespace logic::usb::sync {
 using namespace std::chrono;

@@ -6,7 +6,8 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#pragma once
+module;
+
 #include "common/constants.hh"
 #include <atomic>
 #include <chrono>
@@ -17,7 +18,9 @@
 #include <variant>
 #include <vector>
 
-namespace logic::data {
+export module logic.data;
+
+export namespace logic::data {
 
 using TimePoint = std::chrono::high_resolution_clock::time_point;
 

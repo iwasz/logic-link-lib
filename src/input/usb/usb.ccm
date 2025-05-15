@@ -6,11 +6,42 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#pragma once
+module;
+#include "common/params.hh"
+#include <atomic>
 #include <cstdint>
 #include <cstdlib>
+#include <libusb.h>
+export module logic.input.usb;
+export import :request;
+
+import logic.data;
+
+namespace logic::usb::async {
+
+/**
+ * Blocking acquisition.
+ */
+export void acquire (common::acq::Params const &params, data::Session *session, size_t singleTransferLenB);
+
+} // namespace logic::usb::async
+
+namespace logic::usb::sync {
+
+/**
+ * Blocking acquisition.
+ */
+export void acquire (data::RawData *rawData, size_t singleTransferLenB);
+
+} // namespace logic::usb::sync
 
 namespace logic::usb {
+struct Context {
+        libusb_device_handle *dev{};
+        std::atomic<bool> initialized;
+};
+
+Context &ctx ();
 
 struct Params {
         uint32_t usbTransfer{}; // TODO validate

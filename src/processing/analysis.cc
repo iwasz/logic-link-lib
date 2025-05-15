@@ -6,11 +6,14 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "analysis.hh"
-#include "decompress.hh"
-#include "rearrange.hh"
+module;
+#include "common/params.hh"
 #include <chrono>
+#include <climits>
+#include <mutex>
 #include <print>
+module logic;
+import logic.analyzer;
 
 namespace logic::an {
 using namespace std::chrono;

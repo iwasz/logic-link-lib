@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.14...3.22)
 
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+
 project(LogicLink VERSION 1.0 LANGUAGES CXX)
 
 # +--------------------------------------+
@@ -37,11 +42,15 @@ endif()
 # +--------------------------------------+
 
 add_library(${PROJECT_NAME})
+target_sources(${PROJECT_NAME}
+  PUBLIC FILE_SET CXX_MODULES FILES "src/logiclink.ccm"
+)
+
 add_subdirectory(src)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME} PRIVATE
   "src"
-  "include"
+  # "include"
   "${GSL_SOURCE_DIR}/include"
   "${common_SOURCE_DIR}"
 )
@@ -79,14 +88,14 @@ endif()
 # header paths
 string(TOLOWER link/version.h VERSION_HEADER_LOCATION)
 
-packageProject(
-  NAME ${PROJECT_NAME}
-  VERSION ${PROJECT_VERSION}
-  NAMESPACE ${PROJECT_NAME}
-  BINARY_DIR ${PROJECT_BINARY_DIR}
-  INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
-  INCLUDE_DESTINATION include/link-${PROJECT_VERSION}
-  VERSION_HEADER "${VERSION_HEADER_LOCATION}"
-  COMPATIBILITY SameMajorVersion
-  # DEPENDENCIES "fmt 9.1.0"
-)
+# packageProject(
+#   NAME ${PROJECT_NAME}
+#   VERSION ${PROJECT_VERSION}
+#   NAMESPACE ${PROJECT_NAME}
+#   BINARY_DIR ${PROJECT_BINARY_DIR}
+#   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
+#   INCLUDE_DESTINATION include/link-${PROJECT_VERSION}
+#   VERSION_HEADER "${VERSION_HEADER_LOCATION}"
+#   COMPATIBILITY SameMajorVersion
+#   # DEPENDENCIES "fmt 9.1.0"
+# )

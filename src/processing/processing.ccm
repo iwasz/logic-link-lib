@@ -6,11 +6,30 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#pragma once
+module;
 #include "common/params.hh"
-#include "data/types.hh"
+#include <algorithm>
+#include <climits>
+#include <span>
+#include <variant>
+#include <vector>
+export module logic:processing;
+import logic.data;
+import logic.analyzer;
 
 namespace logic::an {
+
+/**
+ * @brief Perform the (debug) analysis using a strategy.
+ *
+ * @param rawData Data to analyze.
+ * @param strategy Describes what to do.
+ * @param discard Whether to discard the data or sotre it indefinitely in the RAM.
+ */
+export void analyze (common::acq::Params const &params, data::Session *session, an::IAnalyzer *strategy, bool discard = false,
+                     bool decompress = false);
+
+export data::RawData decompress (data::RawCompressedBlock const &rcd);
 
 /**
  * Rearrange the byte and/or bit order from raw device data format to per-channel

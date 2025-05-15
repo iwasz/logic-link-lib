@@ -6,14 +6,13 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#pragma once
-#include "data/types.hh"
-
-namespace logic::usb::sync {
-
-/**
- * Blocking acquisition.
+/*
+ * Common library for cli and gui.
  */
-void acquire (data::RawData *rawData, size_t singleTransferLenB);
-
-} // namespace logic::usb::sync
+module;
+#include "constants.hh"
+export module logic;
+export import logic.data;
+import :processing;
+// #include "data/types.hh"
+// #include "exception.hh"

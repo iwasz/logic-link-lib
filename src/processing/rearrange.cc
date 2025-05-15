@@ -6,8 +6,17 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "rearrange.hh"
+module;
+#include "common/params.hh"
 #include "exception.hh"
+#include <algorithm>
+#include <chrono>
+#include <climits>
+#include <cstdint>
+#include <span>
+#include <variant>
+#include <vector>
+module logic;
 
 namespace logic::an {
 using namespace data;

@@ -6,19 +6,19 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
+module;
+
 #include "common/constants.hh"
 #include "common/params.hh"
-#include "context.hh"
-#include "data/types.hh"
 #include "exception.hh"
-#include "request.hh"
 #include <chrono>
 #include <cstdio>
 #include <gsl/gsl>
 #include <libusb.h>
 #include <print>
 
-// extern "C" int getMeaning (int i);
+module logic.input.usb;
+import logic.data;
 
 namespace logic::usb::async {
 using namespace std::chrono;
