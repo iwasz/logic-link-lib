@@ -7,6 +7,7 @@
  ****************************************************************************/
 
 module logic;
+import :processing;
 
 namespace logic::an {
 

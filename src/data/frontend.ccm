@@ -1,0 +1,96 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include "common/constants.hh"
+#include <vector>
+export module logic:data.frontend;
+import :data;
+import :data.backend;
+
+export namespace logic::data {
+
+/// Single group
+using ChannelStream = ChannelBlock;
+/// Groups
+using ChannelStreams = std::vector<ChannelStream>;
+
+/**
+ * Range of all available data. Returned by the frontend.
+ */
+// class Range {
+// public:
+//         bool empty () const { return true; }
+//         // group[0, 1, 2];
+//         //  Block Attahced block Attached hints (by reference)
+//         //                 Attached blocks by value ;
+//         //                 Attached hints by value;
+//         //         < -all of this is copied form the "database"
+
+//         ChannelStreams groups;
+// };
+
+/**
+ *
+ * Note: Front end API uses time-points, not sample numbers, because various groups (digital, analog)
+ * can have separate sample rates.
+ */
+struct IFrontend {
+        IFrontend () = default;
+        IFrontend (IFrontend const &) = default;
+        IFrontend &operator= (IFrontend const &) = default;
+        IFrontend (IFrontend &&) noexcept = default;
+        IFrontend &operator= (IFrontend &&) noexcept = default;
+        virtual ~IFrontend () = default;
+
+        /**
+         * All available new data, that was not read before. This is intrusive operation,
+         * meaning that you get the data only once. It works like Java Iterator, but if there's
+         * no new data, it will wait on a conditional_variable.
+         */
+        virtual ChannelStreams next () = 0;
+
+        /**
+         * Returns all available data from a range of sample numbers.
+         */
+        virtual ChannelStreams const &range (data::TimePoint const &begin, data::TimePoint const &end) = 0;
+        virtual ChannelStream const &group (size_t groupIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
+        virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
+};
+
+/**
+ * @brief
+ *
+ */
+class Frontend : public IFrontend {
+public:
+        explicit Frontend (IBackend *backend) : backend{backend} {}
+
+        ChannelStreams next () override { return {}; }
+
+        ChannelStreams const &range (data::TimePoint const &begin, data::TimePoint const &end) override { return current; }
+
+        ChannelStream const &group (size_t groupIdx, data::TimePoint const &begin, data::TimePoint const &end) override
+        {
+                return range (begin, end).at (groupIdx);
+        }
+
+        Bytes const &channel (size_t groupIdx, size_t channelIdx, data::TimePoint const &begin, data::TimePoint const &end) override
+        {
+                (void)backend;
+                return group (groupIdx, begin, end).data.at (channelIdx);
+        }
+
+private:
+        IBackend *backend;
+
+        // Cache.
+        ChannelStreams current;
+};
+
+} // namespace logic::data

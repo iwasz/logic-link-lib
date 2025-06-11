@@ -1,0 +1,134 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include "common/constants.hh"
+#include <deque>
+#include <span>
+#include <unordered_map>
+#include <vector>
+export module logic:data.backend;
+import :data;
+
+namespace logic::data {
+
+class ChannelBlock {
+public:
+        ChannelBlock () = default;
+        ChannelBlock (SampleNo const &firstSampleNo, std::vector<Bytes> &&d) : firstSampleNo_{firstSampleNo}, data{std::move (d)} {}
+        // ChannelBlock (SampleNo const &firstSampleNo, std::vector<Bytes> const &d) : firstSampleNo_{firstSampleNo}, data{d} {}
+
+        SampleNo const &firstSampleNo () const { return firstSampleNo_; }
+        SampleNo lastSampleNo () const
+        {
+                auto s = firstSampleNo_ + size ();
+                return (s > 0) ? (s - 1) : (0);
+        }
+
+        /// Number of channels in the block.
+        size_t channelsNo () const { return data.size (); }
+
+        /// Length of the block. Assumes that all channels are the same length.
+        size_t size () const { return (data.empty ()) ? (0U) : (data.front ().size ()); }
+
+        // private:
+        SampleNo firstSampleNo_;
+
+        // For now only Bytes are supported.
+        std::vector<Bytes> data;
+};
+
+/**
+ *
+ */
+class ChannelBlockStream {
+public:
+        StreamType type;
+        SampleRate sampleRate;
+
+        using Container = std::deque<ChannelBlock>;
+        using SubRange = std::ranges::subrange<Container::const_iterator>;
+
+        void append (std::vector<Bytes> &&cb);
+
+        /**
+         * Returns block range that includes sample numbers passed (inclusive).
+         */
+        SubRange range (SampleNo const &begin, SampleNo const &end);
+
+        Container const &data () const { return data_; }
+
+private:
+        SampleNo currentSampleNo;
+        Container data_;
+};
+
+using ChannelBlockStreams = std::vector<ChannelBlockStream>;
+
+/**
+ * A database for string (sample) data.
+ */
+export struct IBackend {
+        IBackend () = default;
+        IBackend (IBackend const &) = default;
+        IBackend &operator= (IBackend const &) = default;
+        IBackend (IBackend &&) noexcept = default;
+        IBackend &operator= (IBackend &&) noexcept = default;
+        virtual ~IBackend () = default;
+
+        using SubRange = ChannelBlockStream::SubRange;
+
+        /// Adds s[0] to stream[0], s[1] to stream[1] etc
+        virtual void append (size_t groupIdx, std::vector<Bytes> &&s) = 0;
+        virtual SubRange range (size_t groupIdx, SampleNo const &begin, SampleNo const &end) = 0;
+        virtual size_t groupsNo () const = 0;
+};
+
+// /**
+//  * Like digital or analog channles.
+//  */
+// class Group {
+// public:
+//         /// Adds s[0] to stream[0], s[1] to stream[1] etc
+//         void append (std::vector<SampleBlock> &&s);
+
+// private:
+//         std::vector<SampleBlockStream> channels;
+// };
+
+// /****************************************************************************/
+
+// void Group::append (std::vector<SampleBlock> &&s)
+// {
+//         for (size_t i = 0; i < s.size (); ++i) {
+//                 channels.at (i).stream.push_back (std::move (s.at (i)));
+//         }
+// }
+
+// /**
+//  * @brief
+//  *
+//  */
+// using Groups = std::vector<Group>;
+
+/**
+ * Simple backend for unit testing, and CLI app development.
+ */
+export class BlockBackend : public IBackend {
+public:
+        void append (size_t groupIdx, std::vector<Bytes> &&s) override { groups.at (groupIdx).append (std::move (s)); }
+        SubRange range (size_t groupIdx, SampleNo const &begin, SampleNo const &end) override;
+        void configureGroup (size_t groupIdx, SampleRate sampleRate);
+
+        size_t groupsNo () const override { return groups.size (); }
+
+private:
+        ChannelBlockStreams groups;
+};
+
+} // namespace logic::data

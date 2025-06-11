@@ -7,7 +7,6 @@
  ****************************************************************************/
 
 module;
-
 #include "common/constants.hh"
 #include <atomic>
 #include <chrono>
@@ -17,8 +16,7 @@ module;
 #include <string>
 #include <variant>
 #include <vector>
-
-export module logic.data;
+export module logic:data;
 
 export namespace logic::data {
 
@@ -30,6 +28,25 @@ using Numbers = std::vector<float>;
 using Buffer = std::variant<Bytes, Words, Numbers>;
 
 enum class StreamType : uint8_t { digital, analog };
+
+/**
+ * Sample number with corresponding sample rate.
+ */
+class SampleNo {
+public:
+        SampleNo () = default;
+        /* no explicit */ SampleNo (uint64_t s) : sampleNumber_{s} {}
+        operator uint64_t () const { return sampleNumber_; }
+
+        SampleRate &sampleRate () { return sampleRate_; }
+        SampleRate const &sampleRate () const { return sampleRate_; }
+
+        // operators =, >, < will take sample rate into account.
+
+private:
+        SampleRate sampleRate_{};
+        uint64_t sampleNumber_{};
+};
 
 /**
  * Buffer of sample data. Typically this data will come from a logic analyzer device,
@@ -72,25 +89,6 @@ struct SampleBlockStream {
         std::deque<SampleBlock> stream;
         std::vector<SampleBlockStream> children; // TODO may be optional or unique_ptr
 };
-
-/**
- * Like digital or analog channles.
- */
-class Group {
-public:
-        /// Adds s[0] to stream[0], s[1] to stream[1] etc
-        void appendChannels (std::vector<SampleBlock> &&s);
-
-        // private:
-        std::string name;
-        std::vector<SampleBlockStream> channels;
-};
-
-/**
- * @brief
- *
- */
-using Groups = std::vector<Group>;
 
 /*--------------------------------------------------------------------------*/
 
@@ -155,6 +153,11 @@ struct AugumentedData {
 //         // std::mutex mutex; // sizeof == ~40B Do I really need this?
 // };
 
+/****************************************************************************/
+
+struct IBackend;
+struct IFrontend;
+
 /**
  * Data as received directly from the device. In a possible GUI app this would
  * correspond to a single TAB.
@@ -164,7 +167,10 @@ public:
         std::deque<RawCompressedBlock> rawQueue;
         std::mutex rawQueueMutex;
 
-        Groups groups;
+        // Groups groups;
+        std::unique_ptr<IBackend> backend;
+        std::unique_ptr<IFrontend> frontend;
+
         std::mutex sampleMutex; // TODO finer mutex locking
 
         TimePoint globalStart;

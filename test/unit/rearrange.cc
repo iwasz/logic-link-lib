@@ -6,8 +6,12 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "processing/rearrange.hh"
+module;
+#include "common/params.hh"
 #include <catch2/catch_test_macros.hpp>
+#include <variant>
+module logic; // This is a HACK. By becoming a part of the module I gain access to its partitions I want to test.
+import :processing;
 
 using namespace logic;
 using namespace logic::data;

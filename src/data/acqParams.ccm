@@ -6,22 +6,20 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#pragma once
-#include <exception>
-#include <string>
+module;
+#include "common/params.hh"
+export module logic:data.acqParams;
 
-namespace logic {
+namespace acq {
 
-class Exception : public std::exception {
-public:
-        Exception (std::string message) : message_{std::move (message)} {}
-        const char *what () const noexcept override { return message_.c_str (); }
+namespace priv {
+        inline common::acq::Params &params ()
+        {
+                static common::acq::Params _;
+                return _;
+        }
+} // namespace priv
 
-        std::string &message () { return message_; }
-        std::string const &message () const { return message_; }
+inline common::acq::Params const &params () { return priv::params (); }
 
-private:
-        std::string message_;
-};
-
-} // namespace logic
+} // namespace acq

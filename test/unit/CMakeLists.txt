@@ -1,4 +1,10 @@
 cmake_minimum_required(VERSION 3.14...3.22)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+
 project(LogicLinkTests VERSION 1.0 LANGUAGES CXX)
 option(ENABLE_TEST_COVERAGE "Enable test coverage" OFF)
 
@@ -41,34 +47,38 @@ endif()
 
 add_executable(${PROJECT_NAME})
 
-target_sources(${PROJECT_NAME} PRIVATE
-  queue.cc
-  debugIntegrity.cc
-  rearrange.cc
-  uart.cc
+target_sources(${PROJECT_NAME}
+  PRIVATE
+    queue.cc
+    debugIntegrity.cc
+    rearrange.cc
+    uart.cc
+    frontend.cc
+    backend.cc
+
+  PUBLIC FILE_SET CXX_MODULES FILES
+    utils.ccm
 )
 
 enable_testing()
 add_test(${PROJECT_NAME} ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-  ../../src
-  ../../include
-  ./src
   ${Catch2_SOURCE_DIR}/src
   ${GSL_SOURCE_DIR}/include
   ${common_SOURCE_DIR}
 )
 
-target_link_libraries(${PROJECT_NAME} Catch2::Catch2WithMain LogicLink::LogicLink)
-target_compile_definitions(${PROJECT_NAME} PRIVATE "-DUNIT_TEST=1")
+# target_link_libraries(${PROJECT_NAME} Catch2::Catch2WithMain LogicLink::LogicLink)
+target_link_libraries(${PROJECT_NAME} Catch2::Catch2WithMain LogicLink)
+# target_compile_definitions(${PROJECT_NAME} PRIVATE "-DUNIT_TEST=1")
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS false)
 
 # Enable warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Werror -Wno-unused-function)
+  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wno-unused-function)
 elseif(MSVC)
   target_compile_options(${PROJECT_NAME} PUBLIC /W4 /WX)
   target_compile_options(${PROJECT_NAME} PUBLIC PUBLIC DOCTEST_CONFIG_USE_STD_HEADERS)

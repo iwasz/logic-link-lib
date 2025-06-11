@@ -7,7 +7,6 @@
  ****************************************************************************/
 
 module;
-
 #include "deps/constants.hh"
 #include "exception.hh"
 #include <chrono>
@@ -16,7 +15,6 @@ module;
 #include <libusb.h>
 #include <print>
 #include <vector>
-
 module logic.input.usb;
 
 namespace logic::usb::sync {

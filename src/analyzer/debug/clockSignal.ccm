@@ -10,9 +10,9 @@ module;
 #include <cstdio>
 #include <gsl/gsl>
 #include <print>
-export module logic.analyzer.debug:clockSignal;
-import logic.analyzer;
-import logic.data;
+export module logic:analyzer.debug.clockSignal;
+import :analyzer;
+import :data;
 
 namespace logic::an {
 
@@ -26,7 +26,7 @@ namespace logic::an {
  * will work provided that has steady (down to a single sample) frequency.
  * @arg size bytes
  */
-class ClockSignalCheck : public SingleChannelAnalyzer {
+export class ClockSignalCheck : public SingleChannelAnalyzer {
 public:
         using SingleChannelAnalyzer::SingleChannelAnalyzer;
 
@@ -48,14 +48,12 @@ public:
                 decimationMod = mod;
         }
 
-// TODO refactor this. Maybe use the gmock and friends or some other mocks.
-#ifndef UNIT_TEST
-private:
-#endif
-
+        // These are public to facilitate unit testing.
         size_t analyzeDataIntegrity (uint32_t const *data, size_t sizeW);
         void analyzeDataIntegrity (uint32_t w);
+        size_t errorNum () const { return errorNum_; }
 
+private:
         size_t devBlockNo{};
         size_t wordInBlockNo{};
         bool skip = true;   // Skip first (incomplete) level.
@@ -64,7 +62,7 @@ private:
         std::optional<uint32_t> prevPeriod;
         uint32_t period{};
         uint32_t prevWord{};
-        size_t errorNum{};
+        size_t errorNum_{};
         bool lastPeriodWasError{}; // For skipping 2 consecutive errors
         std::optional<int> decimationDiv;
         std::optional<int> decimationMod;
@@ -105,7 +103,7 @@ size_t ClockSignalCheck::analyzeDataIntegrity (uint32_t const *data, size_t size
                 ++wordInBlockNo;
         }
 
-        return errorNum;
+        return errorNum_;
 }
 
 /****************************************************************************/
@@ -137,7 +135,7 @@ void ClockSignalCheck::analyzeDataIntegrity (uint32_t w)
 
                                         if (prevPeriod != std::nullopt && *prevPeriod != period) {
                                                 if (!lastPeriodWasError) {
-                                                        ++errorNum;
+                                                        ++errorNum_;
                                                         std::println ("{}:{}. {:032b} {:032b} {}:{}", devBlockNo, wordInBlockNo, w, prevWord,
                                                                       *prevPeriod, period);
                                                         lastPeriodWasError = true;

@@ -7,18 +7,16 @@
  ****************************************************************************/
 
 module;
-
 #include "common/constants.hh"
 #include "common/params.hh"
-#include "exception.hh"
 #include <chrono>
 #include <cstdio>
 #include <gsl/gsl>
 #include <libusb.h>
+#include <mutex>
 #include <print>
-
-module logic.input.usb;
-import logic.data;
+module logic;
+import :input.usb;
 
 namespace logic::usb::async {
 using namespace std::chrono;

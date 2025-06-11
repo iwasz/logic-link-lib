@@ -12,17 +12,16 @@ module;
 #include <cstdint>
 #include <cstdlib>
 #include <libusb.h>
-export module logic.input.usb;
-export import :request;
-
-import logic.data;
+module logic:input.usb;
+import :input.usb.request;
+import :data;
 
 namespace logic::usb::async {
 
 /**
  * Blocking acquisition.
  */
-export void acquire (common::acq::Params const &params, data::Session *session, size_t singleTransferLenB);
+void acquire (common::acq::Params const &params, data::Session *session, size_t singleTransferLenB);
 
 } // namespace logic::usb::async
 
@@ -31,7 +30,7 @@ namespace logic::usb::sync {
 /**
  * Blocking acquisition.
  */
-export void acquire (data::RawData *rawData, size_t singleTransferLenB);
+void acquire (data::RawData *rawData, size_t singleTransferLenB);
 
 } // namespace logic::usb::sync
 

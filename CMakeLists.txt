@@ -42,15 +42,20 @@ endif()
 # +--------------------------------------+
 
 add_library(${PROJECT_NAME})
+
+# This is added only to set the BASE_DIRS once an for all. Without it, the first
+# target_sources instruction that adds to CXX_MODULES fileset would change the
+# BASE_DIRS (they are scaterred all over the place in various folders).
 target_sources(${PROJECT_NAME}
-  PUBLIC FILE_SET CXX_MODULES FILES "src/logiclink.ccm"
+  PUBLIC FILE_SET CXX_MODULES FILES
+    src/logiclink.ccm
+    src/constants.ccm
+    src/exception.ccm
 )
 
 add_subdirectory(src)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME} PRIVATE
-  "src"
-  # "include"
   "${GSL_SOURCE_DIR}/include"
   "${common_SOURCE_DIR}"
 )
@@ -73,7 +78,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBUSBX_LIBRARIES})
 # Enable warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   # add_definitions(-Wall -Wpedantic -Wextra -Werror)
-  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Werror -Wno-unused-function)
+  target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Werror -Wno-unused-function)
 elseif(MSVC)
   target_compile_options(${PROJECT_NAME} PUBLIC /W4 /WX)
   target_compile_options(${PROJECT_NAME} PUBLIC PUBLIC DOCTEST_CONFIG_USE_STD_HEADERS)

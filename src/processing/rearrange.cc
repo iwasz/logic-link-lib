@@ -8,7 +8,6 @@
 
 module;
 #include "common/params.hh"
-#include "exception.hh"
 #include <algorithm>
 #include <chrono>
 #include <climits>
@@ -17,6 +16,7 @@ module;
 #include <variant>
 #include <vector>
 module logic;
+import :processing;
 
 namespace logic::an {
 using namespace data;

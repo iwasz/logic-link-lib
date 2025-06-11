@@ -9,10 +9,13 @@
 /*
  * Common library for cli and gui.
  */
-module;
-#include "constants.hh"
 export module logic;
-export import logic.data;
-import :processing;
-// #include "data/types.hh"
-// #include "exception.hh"
+export import :data;
+export import :data.frontend;
+export import :data.backend;
+export import :data.acqParams;
+export import :exception;
+export import :constant;
+export import :analyzer;
+export import :analyzer.debug.clockSignal;
+export import :analyzer.lowLevel.uart;

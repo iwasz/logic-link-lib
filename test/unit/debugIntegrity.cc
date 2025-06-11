@@ -6,9 +6,8 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "analyzer/debug/clockSignal.hh"
+import logic;
 #include <catch2/catch_test_macros.hpp>
-
 using namespace logic;
 
 TEST_CASE ("Valid", "[integrity]")
@@ -59,7 +58,7 @@ TEST_CASE ("Valid one by one", "[integrity]")
                 csc.analyzeDataIntegrity (x);
         }
 
-        REQUIRE (csc.errorNum == 0);
+        REQUIRE (csc.errorNum () == 0);
 }
 
 TEST_CASE ("Invalid", "[integrity]")
@@ -115,7 +114,7 @@ TEST_CASE ("Invalid one by one", "[integrity]")
                 csc.analyzeDataIntegrity (x);
         }
 
-        REQUIRE (csc.errorNum == 2);
+        REQUIRE (csc.errorNum () == 2);
 }
 
 TEST_CASE ("Use case 1", "[integrity]")

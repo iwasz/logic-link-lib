@@ -6,9 +6,10 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "exception.hh"
+module;
 #include <csignal>
 #include <signal.h>
+module logic;
 
 namespace logic::sys {
 volatile std::sig_atomic_t gSignalStatus;

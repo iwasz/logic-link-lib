@@ -12,7 +12,6 @@ module;
 #include "common/params.hh"
 #include "common/serialize.hh"
 #include "common/stats.hh"
-#include "exception.hh"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -24,7 +23,8 @@ module;
 #include <string>
 #include <unordered_set>
 #include <vector>
-module logic.input.usb;
+module logic;
+import :input.usb;
 
 namespace logic::usb {
 using namespace std::string_literals;

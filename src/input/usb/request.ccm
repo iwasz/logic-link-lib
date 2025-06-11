@@ -7,14 +7,12 @@
  ****************************************************************************/
 
 module;
-
 #include "common/error.hh"
+#include "common/params.hh"
 #include "common/stats.hh"
-#include "data/acqParams.hh"
 #include <unordered_set>
-
-export module logic.input.usb:request;
-import logic.data;
+export module logic:input.usb.request;
+import :data;
 
 namespace logic::usb {
 

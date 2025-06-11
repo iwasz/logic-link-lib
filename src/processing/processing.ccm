@@ -13,9 +13,9 @@ module;
 #include <span>
 #include <variant>
 #include <vector>
-export module logic:processing;
-import logic.data;
-import logic.analyzer;
+module logic:processing;
+import :data;
+import :analyzer;
 
 namespace logic::an {
 
@@ -26,10 +26,9 @@ namespace logic::an {
  * @param strategy Describes what to do.
  * @param discard Whether to discard the data or sotre it indefinitely in the RAM.
  */
-export void analyze (common::acq::Params const &params, data::Session *session, an::IAnalyzer *strategy, bool discard = false,
-                     bool decompress = false);
+void analyze (common::acq::Params const &params, data::Session *session, an::IAnalyzer *strategy, bool discard = false, bool decompress = false);
 
-export data::RawData decompress (data::RawCompressedBlock const &rcd);
+data::RawData decompress (data::RawCompressedBlock const &rcd);
 
 /**
  * Rearrange the byte and/or bit order from raw device data format to per-channel

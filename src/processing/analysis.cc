@@ -13,7 +13,8 @@ module;
 #include <mutex>
 #include <print>
 module logic;
-import logic.analyzer;
+import :processing;
+import :data.backend;
 
 namespace logic::an {
 using namespace std::chrono;
@@ -64,7 +65,10 @@ void analyze (common::acq::Params const &params, data::Session *session, an::IAn
                 }
 
                 // TODO for now only digital data gets rearranged
-                std::vector<data::SampleBlock> digitalChannels = rearrange (rd, params);
+                // TODO agnostic! vector of vector of bytes
+                // std::vector<data::SampleBlock>  digitalChannels = rearrange (rd, params);
+                // data::ChannelBlock digitalChannels{0, {}};
+                std::vector<data::Bytes> digitalChannels;
 
                 {
                         /*
@@ -74,7 +78,8 @@ void analyze (common::acq::Params const &params, data::Session *session, an::IAn
                         std::lock_guard lock{session->sampleMutex};
                         // currentBlock->sampleData = std::move (digitalChannels);
                         // Group 0 means digital channels
-                        session->groups.at (0).appendChannels (std::move (digitalChannels));
+                        // session->groups.at (0).appendChannels (std::move (digitalChannels));
+                        session->backend->append (0, std::move (digitalChannels));
                 }
 
                 // if (strategy != nullptr) {

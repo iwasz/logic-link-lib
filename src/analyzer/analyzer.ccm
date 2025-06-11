@@ -11,8 +11,8 @@ module;
 #include <cstdlib>
 #include <string>
 
-export module logic.analyzer;
-import logic.data;
+export module logic:analyzer;
+import :data;
 
 export namespace logic::an {
 
