@@ -8,7 +8,10 @@
 
 module;
 #include "common/constants.hh"
+#include <algorithm>
+#include <ranges>
 #include <vector>
+
 module logic;
 import :data;
 import :data.frontend;
@@ -16,17 +19,22 @@ import :data.backend;
 
 namespace logic::data {
 
-// Range Frontend::range (SampleNo const &begin, SampleNo const &end)
-// {
-//         Range range;
-//         // auto x = backend->groupsNo ();
-//         // range.groups.resize (x);
+auto binaryToGray (auto num) { return num ^ (num >> 1); };
 
-//         // for (size_t groupIdx = 0; groupIdx < backend->groupsNo (); ++groupIdx) {
-//         //         auto range = backend->range (groupIdx, begin, end);
-//         // }
+Frontend::Frontend (IBackend *backend) : backend{backend}
+{
+        ChannelStream group;
+        group.data.resize (16);
 
-//         return range;
-// }
+        for (auto &channel : group.data) {
+                channel.resize (10000 / CHAR_BIT);
+                // std::ranges::generate (channel, [] { return uint8_t (std::rand () % 256); });
+                // std::ranges::copy (std::views::iota (0, 4192), bytes.begin ());
+                std::ranges::fill (channel, 0xe0);
+                // uint8_t i = 0;
+                // std::ranges::generate (bytes, [&i] { return binaryToGray (i++); });
+        }
 
+        current.push_back (std::move (group));
+}
 } // namespace logic::data

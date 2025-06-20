@@ -8,7 +8,9 @@
 
 module;
 #include "common/constants.hh"
+#include <print>
 #include <vector>
+
 export module logic:data.frontend;
 import :data;
 import :data.backend;
@@ -48,42 +50,76 @@ struct IFrontend {
         IFrontend &operator= (IFrontend &&) noexcept = default;
         virtual ~IFrontend () = default;
 
+        /// Number of samples so far.
+        virtual SampleNo size (size_t groupIdx) const = 0;
+
         /**
          * All available new data, that was not read before. This is intrusive operation,
          * meaning that you get the data only once. It works like Java Iterator, but if there's
          * no new data, it will wait on a conditional_variable.
          */
-        virtual ChannelStreams next () = 0;
+        // virtual ChannelStreams next () = 0; // TODO this will go to a separate interface for Sequential access.
 
         /**
          * Returns all available data from a range of sample numbers.
          */
-        virtual ChannelStreams const &range (data::TimePoint const &begin, data::TimePoint const &end) = 0;
-        virtual ChannelStream const &group (size_t groupIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
-        virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
+        // virtual ChannelStreams const &range (data::TimePoint const &begin, data::TimePoint const &end) = 0;
+
+        // virtual ChannelStream const &group (size_t groupIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
+        virtual ChannelStream const &group (size_t groupIdx, data::SampleNo const &begin, data::SampleNo const &end) = 0;
+
+        // virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
+        virtual std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleNo const &begin, data::SampleNo const &end)
+                = 0;
 };
 
 /**
  * @brief
- *
  */
-class Frontend : public IFrontend {
+class /*RandomAccess*/ Frontend : public IFrontend {
 public:
-        explicit Frontend (IBackend *backend) : backend{backend} {}
+        explicit Frontend (IBackend *backend);
 
-        ChannelStreams next () override { return {}; }
+        SampleNo size (size_t groupIdx) const override { return current.at (groupIdx).size () * CHAR_BIT; }
 
-        ChannelStreams const &range (data::TimePoint const &begin, data::TimePoint const &end) override { return current; }
+        // ChannelStreams next () override { return {}; }
 
-        ChannelStream const &group (size_t groupIdx, data::TimePoint const &begin, data::TimePoint const &end) override
+        // ChannelStreams const &range (data::TimePoint const &begin, data::TimePoint const &end) override { return current; }
+
+        ChannelStream const &group (size_t groupIdx, data::SampleNo const &begin, data::SampleNo const &end) override
         {
-                return range (begin, end).at (groupIdx);
+                return current.at (groupIdx);
         }
 
-        Bytes const &channel (size_t groupIdx, size_t channelIdx, data::TimePoint const &begin, data::TimePoint const &end) override
+        // ChannelStream const &group (size_t groupIdx, data::TimePoint const &begin, data::TimePoint const &end) override
+        // {
+        //         return range (begin, end).at (groupIdx);
+        // }
+
+        // Bytes const &channel (size_t groupIdx, size_t channelIdx, data::TimePoint const &begin, data::TimePoint const &end) override
+        // {
+        //         (void)backend;
+        //         return group (groupIdx, begin, end).data.at (channelIdx);
+        // }
+
+        std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleNo const &begin, data::SampleNo const &end) override
         {
                 (void)backend;
-                return group (groupIdx, begin, end).data.at (channelIdx);
+                Bytes const &currentData = group (groupIdx, begin, end).data.at (channelIdx);
+                auto offset = begin / CHAR_BIT;
+
+                if (offset >= currentData.size ()) {
+                        return {};
+                }
+
+                auto size = (end - begin) / CHAR_BIT;
+
+                if (offset + size > currentData.size ()) {
+                        size = currentData.size () - offset;
+                }
+
+                // std::println ("offset: {}, size: {}", offset, size);
+                return {std::next (currentData.cbegin (), offset), size};
         }
 
 private:
@@ -92,5 +128,11 @@ private:
         // Cache.
         ChannelStreams current;
 };
+
+/**
+ * @brief
+ *
+ */
+class SequentialAccessFrontend {};
 
 } // namespace logic::data
