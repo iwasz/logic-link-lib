@@ -18,35 +18,22 @@ namespace logic::util {
 /**
  * Based on https://en.cppreference.com/w/cpp/iterator/forward_iterator.html
  */
-export template <std::unsigned_integral T> class ForwardIterator {
+export template <std::unsigned_integral T> class Iterator {
 public:
         using difference_type = std::ptrdiff_t;
         using value_type = bool;
 
-        ForwardIterator () = default;
-        ForwardIterator (T *data, size_t bitOffset) : data{data}, currentElemOffset{bitOffset / S}, currentBitOffset{bitOffset % S} {}
+        Iterator () = default;
+        Iterator (T *data, size_t bitOffset) : data{data}, currentElemOffset{bitOffset / S}, currentBitOffset{bitOffset % S} {}
 
         bool operator* () const { return (*(data + currentElemOffset) & T (1 << (S - 1 - currentBitOffset))) != 0; }
 
-        ForwardIterator &operator++ ()
-        {
+        Iterator &operator++ ();
+        Iterator operator++ (int);
+        Iterator &operator-- ();
+        Iterator operator-- (int);
 
-                if (++currentBitOffset >= S) {
-                        currentBitOffset = 0;
-                        ++currentElemOffset;
-                }
-
-                return *this;
-        }
-
-        ForwardIterator operator++ (int)
-        {
-                auto tmp = *this;
-                ++*this;
-                return tmp;
-        }
-
-        bool operator== (const ForwardIterator &a) const
+        bool operator== (const Iterator &a) const
         {
                 return currentBitOffset == a.currentBitOffset && currentElemOffset == a.currentElemOffset && data == a.data;
         }
@@ -59,7 +46,53 @@ private:
         size_t currentBitOffset{};
 };
 
-static_assert (std::forward_iterator<ForwardIterator<uint8_t>>);
+static_assert (std::bidirectional_iterator<Iterator<uint8_t>>);
+
+/****************************************************************************/
+
+template <std::unsigned_integral T> Iterator<T> &Iterator<T>::operator++ ()
+{
+
+        if (++currentBitOffset >= S) {
+                currentBitOffset = 0;
+                ++currentElemOffset;
+        }
+
+        return *this;
+}
+
+/****************************************************************************/
+
+template <std::unsigned_integral T> Iterator<T> Iterator<T>::operator++ (int)
+{
+        auto tmp = *this;
+        ++*this;
+        return tmp;
+}
+
+/****************************************************************************/
+
+template <std::unsigned_integral T> Iterator<T> &Iterator<T>::operator-- ()
+{
+        if (currentBitOffset == 0) {
+                currentBitOffset = S - 1;
+                --currentElemOffset;
+        }
+        else {
+                --currentBitOffset;
+        }
+
+        return *this;
+}
+
+/****************************************************************************/
+
+template <std::unsigned_integral T> Iterator<T> Iterator<T>::operator-- (int)
+{
+        auto tmp = *this;
+        --*this;
+        return tmp;
+}
 
 /**
  * Semantics like std::span, but iteration happens bit by bit instead of
@@ -68,8 +101,8 @@ static_assert (std::forward_iterator<ForwardIterator<uint8_t>>);
  */
 export template <std::unsigned_integral T> class BitSpan {
 public:
-        using iterator = ForwardIterator<T>;
-        using const_iterator = ForwardIterator<T const>;
+        using iterator = Iterator<T>;
+        using const_iterator = Iterator<T const>;
 
         BitSpan () = default;
         BitSpan (T *data, size_t bitOffset, size_t bitSize) : data{data}, offsetInBits{bitOffset}, sizeInBits{bitSize} {}

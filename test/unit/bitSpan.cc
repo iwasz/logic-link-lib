@@ -32,9 +32,32 @@ TEST_CASE ("Basic", "[bitSpan]")
                 return dreadedVector;
         };
 
-        REQUIRE (vectorize (BitSpan{bytes.data (), 12U, 8U}) == std::vector<bool>{1, 0, 1, 0, 1, 1, 0, 0});
-        REQUIRE (vectorize (BitSpan{bytes.data (), 0U, 8U}) == std::vector<bool>{1, 1, 1, 1, 0, 0, 0, 0});
-        REQUIRE (vectorize (BitSpan{bytes.data (), 0U, 32U})
-                 == std::vector<bool>{1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1});
-        REQUIRE (vectorize (BitSpan{bytes.data (), 31U, 1U}) == std::vector<bool>{1});
+        SECTION ("Span")
+        {
+                REQUIRE (vectorize (BitSpan{bytes.data (), 12U, 8U}) == std::vector<bool>{1, 0, 1, 0, 1, 1, 0, 0});
+                REQUIRE (vectorize (BitSpan{bytes.data (), 0U, 8U}) == std::vector<bool>{1, 1, 1, 1, 0, 0, 0, 0});
+                REQUIRE (vectorize (BitSpan{bytes.data (), 0U, 32U})
+                         == std::vector<bool>{1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1});
+                REQUIRE (vectorize (BitSpan{bytes.data (), 31U, 1U}) == std::vector<bool>{1});
+        }
+
+        SECTION ("Iterator increment decrement")
+        {
+                auto span = BitSpan{bytes.data (), 4, 4};
+                auto i = span.begin ();
+                REQUIRE (i == span.begin ());
+                REQUIRE (i != span.end ());
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (i == span.end ());
+
+                i = span.begin ();
+                REQUIRE (*i-- == 0);
+                REQUIRE (*i-- == 1);
+                REQUIRE (*i-- == 1);
+                REQUIRE (*i-- == 1);
+                REQUIRE (*i-- == 1);
+        }
 }
