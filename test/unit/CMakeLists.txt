@@ -55,6 +55,7 @@ target_sources(${PROJECT_NAME}
     uart.cc
     frontend.cc
     backend.cc
+    bitSpan.cc
 
   PUBLIC FILE_SET CXX_MODULES FILES
     utils.ccm

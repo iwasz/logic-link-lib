@@ -48,6 +48,9 @@ private:
         uint64_t sampleNumber_{};
 };
 
+using SampleIdx = uint64_t;
+using SampleNum = uint64_t;
+
 /**
  * Buffer of sample data. Typically this data will come from a logic analyzer device,
  * can be 8-32 bit wide, but it can also come from other sources like a file, etc.

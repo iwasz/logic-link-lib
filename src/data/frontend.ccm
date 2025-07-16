@@ -38,7 +38,7 @@ using ChannelStreams = std::vector<ChannelStream>;
 // };
 
 /**
- *
+ * Outdated:
  * Note: Front end API uses time-points, not sample numbers, because various groups (digital, analog)
  * can have separate sample rates.
  */
@@ -51,7 +51,7 @@ struct IFrontend {
         virtual ~IFrontend () = default;
 
         /// Number of samples so far.
-        virtual SampleNo size (size_t groupIdx) const = 0;
+        virtual SampleNum size (size_t groupIdx) const = 0;
 
         /**
          * All available new data, that was not read before. This is intrusive operation,
@@ -66,11 +66,10 @@ struct IFrontend {
         // virtual ChannelStreams const &range (data::TimePoint const &begin, data::TimePoint const &end) = 0;
 
         // virtual ChannelStream const &group (size_t groupIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
-        virtual ChannelStream const &group (size_t groupIdx, data::SampleNo const &begin, data::SampleNo const &end) = 0;
+        virtual ChannelStream const &group (size_t groupIdx, data::SampleIdx const &begin, data::SampleIdx const &end) = 0;
 
         // virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
-        virtual std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleNo const &begin, data::SampleNo const &end)
-                = 0;
+        virtual std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleIdx offset, data::SampleNum length) = 0;
 };
 
 /**
@@ -80,13 +79,13 @@ class /*RandomAccess*/ Frontend : public IFrontend {
 public:
         explicit Frontend (IBackend *backend);
 
-        SampleNo size (size_t groupIdx) const override { return current.at (groupIdx).size () * CHAR_BIT; }
+        SampleNum size (size_t groupIdx) const override { return current.at (groupIdx).size () * CHAR_BIT; }
 
         // ChannelStreams next () override { return {}; }
 
         // ChannelStreams const &range (data::TimePoint const &begin, data::TimePoint const &end) override { return current; }
 
-        ChannelStream const &group (size_t groupIdx, data::SampleNo const &begin, data::SampleNo const &end) override
+        ChannelStream const &group (size_t groupIdx, data::SampleIdx const &begin, data::SampleIdx const &end) override
         {
                 return current.at (groupIdx);
         }
@@ -102,17 +101,38 @@ public:
         //         return group (groupIdx, begin, end).data.at (channelIdx);
         // }
 
-        std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleNo const &begin, data::SampleNo const &end) override
+        // std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleIdx const &begin, data::SampleIdx const &end)
+        // override
+        // {
+        //         (void)backend;
+        //         Bytes const &currentData = group (groupIdx, begin, end).data.at (channelIdx);
+        //         auto offset = begin / CHAR_BIT;
+
+        //         if (offset >= currentData.size ()) {
+        //                 return {};
+        //         }
+
+        //         auto size = (end - begin) / CHAR_BIT;
+
+        //         if (offset + size > currentData.size ()) {
+        //                 size = currentData.size () - offset;
+        //         }
+
+        //         // std::println ("offset: {}, size: {}", offset, size);
+        //         return {std::next (currentData.cbegin (), offset), size};
+        // }
+
+        std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleIdx begin, data::SampleNum length) override
         {
                 (void)backend;
-                Bytes const &currentData = group (groupIdx, begin, end).data.at (channelIdx);
+                Bytes const &currentData = group (groupIdx, begin, begin + length).data.at (channelIdx);
                 auto offset = begin / CHAR_BIT;
 
                 if (offset >= currentData.size ()) {
                         return {};
                 }
 
-                auto size = (end - begin) / CHAR_BIT;
+                auto size = length / CHAR_BIT;
 
                 if (offset + size > currentData.size ()) {
                         size = currentData.size () - offset;

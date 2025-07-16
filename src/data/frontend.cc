@@ -30,7 +30,8 @@ Frontend::Frontend (IBackend *backend) : backend{backend}
                 channel.resize (10000 / CHAR_BIT);
                 // std::ranges::generate (channel, [] { return uint8_t (std::rand () % 256); });
                 // std::ranges::copy (std::views::iota (0, 4192), bytes.begin ());
-                std::ranges::fill (channel, 0xe0);
+                // std::ranges::fill (channel, 0xe0);
+                std::ranges::fill (channel, 0xaa);
                 // uint8_t i = 0;
                 // std::ranges::generate (bytes, [&i] { return binaryToGray (i++); });
         }

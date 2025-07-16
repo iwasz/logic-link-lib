@@ -19,3 +19,4 @@ export import :constant;
 export import :analyzer;
 export import :analyzer.debug.clockSignal;
 export import :analyzer.lowLevel.uart;
+export import :utils;

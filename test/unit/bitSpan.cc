@@ -6,24 +6,31 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-import logic;
-import utils;
 #include <catch2/catch_test_macros.hpp>
+#include <vector>
+
+import logic;
 
 using namespace logic::data;
+using namespace logic::utils;
 
-TEST_CASE ("empty range", "[frontend]")
+TEST_CASE ("Basic", "[bitSpan]")
 {
-        BlockBackend backend;
-        backend.configureGroup (0, 240'000'000); // Digital channels
-        backend.append (0, getChannelBlockData (0));
-        backend.append (0, getChannelBlockData (1));
-        backend.append (0, getChannelBlockData (2));
+        Bytes bytes = {
+                0b1111'0000,
+                0b0101'1010,
+                0b1100'1100,
+                0b1110'0011,
+        };
 
-        Frontend frontend{&backend};
-        // auto range = frontend.range (0, 3);
-        // REQUIRE (range.groups.size () == 1);
-        // auto digitalGroup = range.groups.front ();
-        // REQUIRE (digitalGroup.channelsNo () == 4);
-        // REQUIRE (digitalGroup.size () == 4);
+        auto sp = BitSpan{bytes.data (), 12U, 8U};
+
+        std::vector<bool> dreadedVector;
+
+        for (bool b : sp) {
+                dreadedVector.push_back (b);
+        }
+
+        REQUIRE (dreadedVector.size () == 8);
+        REQUIRE (dreadedVector == std::vector<bool>{1, 0, 1, 0, 1, 1, 0, 0});
 }
