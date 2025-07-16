@@ -14,6 +14,7 @@ module;
 export module logic:data.frontend;
 import :data;
 import :data.backend;
+import :util.span;
 
 export namespace logic::data {
 
@@ -69,7 +70,7 @@ struct IFrontend {
         virtual ChannelStream const &group (size_t groupIdx, data::SampleIdx const &begin, data::SampleIdx const &end) = 0;
 
         // virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
-        virtual std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleIdx offset, data::SampleNum length) = 0;
+        virtual util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleIdx offset, data::SampleNum length) = 0;
 };
 
 /**
@@ -122,24 +123,17 @@ public:
         //         return {std::next (currentData.cbegin (), offset), size};
         // }
 
-        std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleIdx begin, data::SampleNum length) override
+        util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleIdx begin, data::SampleNum length) override
         {
                 (void)backend;
                 Bytes const &currentData = group (groupIdx, begin, begin + length).data.at (channelIdx);
-                auto offset = begin / CHAR_BIT;
 
-                if (offset >= currentData.size ()) {
+                // Basic validation
+                if (auto byteOffset = (begin + length - 1) / CHAR_BIT; byteOffset >= currentData.size ()) {
                         return {};
                 }
 
-                auto size = length / CHAR_BIT;
-
-                if (offset + size > currentData.size ()) {
-                        size = currentData.size () - offset;
-                }
-
-                // std::println ("offset: {}, size: {}", offset, size);
-                return {std::next (currentData.cbegin (), offset), size};
+                return {currentData.data (), begin, length};
         }
 
 private:

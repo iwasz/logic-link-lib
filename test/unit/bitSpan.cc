@@ -12,7 +12,7 @@
 import logic;
 
 using namespace logic::data;
-using namespace logic::utils;
+using namespace logic::util;
 
 TEST_CASE ("Basic", "[bitSpan]")
 {
@@ -23,14 +23,18 @@ TEST_CASE ("Basic", "[bitSpan]")
                 0b1110'0011,
         };
 
-        auto sp = BitSpan{bytes.data (), 12U, 8U};
+        auto vectorize = [] (auto const &sp) {
+                std::vector<bool> dreadedVector;
 
-        std::vector<bool> dreadedVector;
+                for (bool b : sp) {
+                        dreadedVector.push_back (b);
+                }
+                return dreadedVector;
+        };
 
-        for (bool b : sp) {
-                dreadedVector.push_back (b);
-        }
-
-        REQUIRE (dreadedVector.size () == 8);
-        REQUIRE (dreadedVector == std::vector<bool>{1, 0, 1, 0, 1, 1, 0, 0});
+        REQUIRE (vectorize (BitSpan{bytes.data (), 12U, 8U}) == std::vector<bool>{1, 0, 1, 0, 1, 1, 0, 0});
+        REQUIRE (vectorize (BitSpan{bytes.data (), 0U, 8U}) == std::vector<bool>{1, 1, 1, 1, 0, 0, 0, 0});
+        REQUIRE (vectorize (BitSpan{bytes.data (), 0U, 32U})
+                 == std::vector<bool>{1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1});
+        REQUIRE (vectorize (BitSpan{bytes.data (), 31U, 1U}) == std::vector<bool>{1});
 }
