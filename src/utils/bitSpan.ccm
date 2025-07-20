@@ -116,6 +116,7 @@ public:
         const_iterator cend () const { return {data, offsetInBits + sizeInBits}; }
 
         size_t size () const { return sizeInBits; }
+        bool empty () const { return sizeInBits == 0; }
 
 private:
         T *data{};

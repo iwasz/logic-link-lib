@@ -127,10 +127,15 @@ public:
         {
                 (void)backend;
                 Bytes const &currentData = group (groupIdx, begin, begin + length).data.at (channelIdx);
+                auto beginByteOffset = begin / CHAR_BIT;
 
                 // Basic validation
-                if (auto byteOffset = (begin + length - 1) / CHAR_BIT; byteOffset >= currentData.size ()) {
+                if (length == 0 || beginByteOffset >= currentData.size ()) {
                         return {};
+                }
+
+                if (auto byteOffset = (begin + length - 1) / CHAR_BIT; byteOffset >= currentData.size ()) {
+                        return {currentData.data (), begin, data::SampleNum (currentData.size () - beginByteOffset - 1)};
                 }
 
                 return {currentData.data (), begin, length};

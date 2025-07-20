@@ -93,14 +93,18 @@ std::vector<Coord> toPolyPointsW (Collection const &data, bool *lastBit, Coord w
  * a collection of bits (bools).
  */
 export template <typename Coord, typename Collection>
-std::vector<Coord> toPolyPointsb (Collection const &data, bool *lastBit, Coord h, Coord lineWidth)
+std::vector<Coord> toPolyPointsb (Collection const &data, bool *lastBit, Coord h, Coord lineWidth, Coord padding)
 {
-        Coord x = 0;
+        if (data.empty ()) {
+                return {};
+        }
+
+        Coord x = padding * lineWidth;
         std::vector<Coord> ret;
         ret.reserve (data.size ());
 
         // Starting point.
-        ret.push_back (0);
+        ret.push_back (x);
         ret.push_back ((*lastBit) ? (0) : (h));
 
         for (uint8_t bit : data) {

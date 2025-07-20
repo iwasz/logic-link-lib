@@ -26,7 +26,7 @@ Frontend::Frontend (IBackend *backend) : backend{backend}
         group.data.resize (16);
 
         for (auto &channel : group.data) {
-                channel.resize (10000 / CHAR_BIT);
+                channel.resize (256); // 2048 bits
                 std::ranges::generate (channel, [] { return uint8_t (std::rand () % 256); });
                 // std::ranges::copy (std::views::iota (0, 4192), bytes.begin ());
                 // std::ranges::fill (channel, 0xe0);
