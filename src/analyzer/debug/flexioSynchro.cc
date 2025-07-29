@@ -15,9 +15,9 @@ namespace logic::an {
 
 /****************************************************************************/
 
-data::AugumentedData FlexioSynchronizationCheck::run (data::SampleBlockStream const &samples)
+AugumentedData FlexioSynchronizationCheck::run (SampleBlockStream const &samples)
 {
-        // auto const &bytes = std::get<data::Bytes> (samples.at (channel ()).buffer);
+        // auto const &bytes = std::get<Bytes> (samples.at (channel ()).buffer);
         // auto dmaBlocksNum = bytes.size () / dmaBlockLenB (); // We assume % is 0.
 
         // for (size_t i = 0; i < dmaBlocksNum; ++i) {

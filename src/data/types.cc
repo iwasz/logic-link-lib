@@ -10,6 +10,6 @@ module;
 #include <vector>
 module logic;
 
-namespace logic::data {
+namespace logic {
 
-} // namespace logic::data
+} // namespace logic

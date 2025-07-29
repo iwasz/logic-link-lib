@@ -35,8 +35,8 @@ class RealBackend : public IBacked {}; // for testingf
 
 TEST_CASE ("Valid", "[uart]")
 {
-        data::SampleBlockStream in;
-        // in.digital.push_back (data::Bytes{1, 2, 3});
+        SampleBlockStream in;
+        // in.digital.push_back (Bytes{1, 2, 3});
 
         an::uart::UartAnalyzer a{0};
         /* auto out =  */ a.run (in);

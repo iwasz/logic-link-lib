@@ -16,7 +16,7 @@ import :data;
 import :data.backend;
 import :util.span;
 
-export namespace logic::data {
+export namespace logic {
 
 /// Single group
 using ChannelStream = ChannelBlock;
@@ -64,13 +64,13 @@ struct IFrontend {
         /**
          * Returns all available data from a range of sample numbers.
          */
-        // virtual ChannelStreams const &range (data::TimePoint const &begin, data::TimePoint const &end) = 0;
+        // virtual ChannelStreams const &range (TimePoint const &begin, TimePoint const &end) = 0;
 
-        // virtual ChannelStream const &group (size_t groupIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
-        virtual ChannelStream const &group (size_t groupIdx, data::SampleIdx const &begin, data::SampleIdx const &end) = 0;
+        // virtual ChannelStream const &group (size_t groupIdx, TimePoint const &begin, TimePoint const &end) = 0;
+        virtual ChannelStream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) = 0;
 
-        // virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, data::TimePoint const &begin, data::TimePoint const &end) = 0;
-        virtual util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleIdx offset, data::SampleNum length) = 0;
+        // virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, TimePoint const &begin, TimePoint const &end) = 0;
+        virtual util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, SampleIdx offset, SampleNum length) = 0;
 };
 
 /**
@@ -84,25 +84,25 @@ public:
 
         // ChannelStreams next () override { return {}; }
 
-        // ChannelStreams const &range (data::TimePoint const &begin, data::TimePoint const &end) override { return current; }
+        // ChannelStreams const &range (TimePoint const &begin, TimePoint const &end) override { return current; }
 
-        ChannelStream const &group (size_t groupIdx, data::SampleIdx const &begin, data::SampleIdx const &end) override
+        ChannelStream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override
         {
                 return current.at (groupIdx);
         }
 
-        // ChannelStream const &group (size_t groupIdx, data::TimePoint const &begin, data::TimePoint const &end) override
+        // ChannelStream const &group (size_t groupIdx, TimePoint const &begin, TimePoint const &end) override
         // {
         //         return range (begin, end).at (groupIdx);
         // }
 
-        // Bytes const &channel (size_t groupIdx, size_t channelIdx, data::TimePoint const &begin, data::TimePoint const &end) override
+        // Bytes const &channel (size_t groupIdx, size_t channelIdx, TimePoint const &begin, TimePoint const &end) override
         // {
         //         (void)backend;
         //         return group (groupIdx, begin, end).data.at (channelIdx);
         // }
 
-        // std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleIdx const &begin, data::SampleIdx const &end)
+        // std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, SampleIdx const &begin, SampleIdx const &end)
         // override
         // {
         //         (void)backend;
@@ -123,7 +123,7 @@ public:
         //         return {std::next (currentData.cbegin (), offset), size};
         // }
 
-        util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, data::SampleIdx begin, data::SampleNum length) override
+        util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length) override
         {
                 (void)backend;
                 Bytes const &currentData = group (groupIdx, begin, begin + length).data.at (channelIdx);
@@ -135,7 +135,7 @@ public:
                 }
 
                 if (auto byteOffset = (begin + length - 1) / CHAR_BIT; byteOffset >= currentData.size ()) {
-                        return {currentData.data (), begin, data::SampleNum (currentData.size () - beginByteOffset - 1)};
+                        return {currentData.data (), begin, SampleNum ((currentData.size () - beginByteOffset) * CHAR_BIT)};
                 }
 
                 return {currentData.data (), begin, length};

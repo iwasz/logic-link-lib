@@ -51,6 +51,7 @@ target_sources(${PROJECT_NAME}
     src/logiclink.ccm
     src/constants.ccm
     src/exception.ccm
+    src/session.ccm
 )
 
 add_subdirectory(src)

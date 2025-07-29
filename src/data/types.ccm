@@ -18,7 +18,7 @@ module;
 #include <vector>
 export module logic:data;
 
-export namespace logic::data {
+export namespace logic {
 
 using TimePoint = std::chrono::high_resolution_clock::time_point;
 
@@ -32,21 +32,21 @@ enum class StreamType : uint8_t { digital, analog };
 /**
  * Sample number with corresponding sample rate.
  */
-class SampleNo {
-public:
-        SampleNo () = default;
-        /* no explicit */ SampleNo (uint64_t s) : sampleNumber_{s} {}
-        operator uint64_t () const { return sampleNumber_; }
+// class SampleNo {
+// public:
+//         SampleNo () = default;
+//         /* no explicit */ SampleNo (uint64_t s) : sampleNumber_{s} {}
+//         operator uint64_t () const { return sampleNumber_; }
 
-        SampleRate &sampleRate () { return sampleRate_; }
-        SampleRate const &sampleRate () const { return sampleRate_; }
+//         SampleRate &sampleRate () { return sampleRate_; }
+//         SampleRate const &sampleRate () const { return sampleRate_; }
 
-        // operators =, >, < will take sample rate into account.
+//         // operators =, >, < will take sample rate into account.
 
-private:
-        SampleRate sampleRate_{};
-        uint64_t sampleNumber_{};
-};
+// private:
+//         SampleRate sampleRate_{};
+//         uint64_t sampleNumber_{};
+// };
 
 using SampleIdx = uint64_t;
 using SampleNum = uint64_t;
@@ -72,6 +72,50 @@ struct RawCompressedBlock {
         Bytes buffer;        /// Binary data.
 
         void clear () { buffer.clear (); }
+};
+
+template <typename Elem> class Queue {
+public:
+        template <typename... T> void push (T &&...t)
+        {
+                {
+                        std::lock_guard lock{mutex};
+                        data.emplace_back (std::forward<T> (t)...);
+                }
+
+                cVar.notify_all ();
+        }
+
+        std::unique_ptr<Elem> pop ()
+        {
+                std::unique_lock lock{mutex};
+                cVar.wait (lock, [this] { return !data.empty (); });
+                auto p = std::make_unique<Elem> (data.front ());
+                data.pop_front ();
+                return p;
+        }
+
+        void start ()
+        {
+                std::lock_guard lock{mutex};
+                iter = data.begin ();
+        }
+
+        std::unique_ptr<Elem> next ()
+        {
+                std::unique_lock lock{mutex};
+                cVar.wait (lock, [this] { return iter != data.end (); });
+                auto p = std::make_unique<Elem> (*iter++);
+                return p;
+        }
+
+private:
+        std::deque<Elem> data;
+        std::mutex mutex;
+        std::condition_variable cVar;
+
+        using Iterator = std::deque<Elem>::iterator;
+        Iterator iter;
 };
 
 /**
@@ -156,35 +200,4 @@ struct AugumentedData {
 //         // std::mutex mutex; // sizeof == ~40B Do I really need this?
 // };
 
-/****************************************************************************/
-
-struct IBackend;
-struct IFrontend;
-
-/**
- * Data as received directly from the device. In a possible GUI app this would
- * correspond to a single TAB.
- */
-class Session {
-public:
-        std::deque<RawCompressedBlock> rawQueue;
-        std::mutex rawQueueMutex;
-
-        // Groups groups;
-        std::unique_ptr<IBackend> backend;
-        std::unique_ptr<IFrontend> frontend;
-
-        std::mutex sampleMutex; // TODO finer mutex locking
-
-        TimePoint globalStart;
-        TimePoint globalStop;
-        std::condition_variable bufferCV;
-        std::atomic_bool running;
-        std::atomic_bool stop; /// Send stop request to the device.
-        size_t allTransferedB{};
-
-        /// Number of bytes received so far irrespective of the buffer size.
-        size_t receivedB () const { return allTransferedB; }
-};
-
-} // namespace logic::data
+} // namespace logic

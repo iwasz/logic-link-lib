@@ -209,11 +209,7 @@ void start () { controlOut (Request{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_ST
 
 /****************************************************************************/
 
-void stop (data::Session *rawData)
-{
-        rawData->stop = true;
-        controlOut (Request{}.clazz ().verb (LA_VERB_STOP_CAPTURE));
-}
+void stop () { controlOut (Request{}.clazz ().verb (LA_VERB_STOP_CAPTURE)); }
 
 /****************************************************************************/
 

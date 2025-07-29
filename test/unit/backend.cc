@@ -11,7 +11,7 @@ module;
 module logic;
 import utils;
 
-using namespace logic::data;
+using namespace logic;
 
 TEST_CASE ("one block", "[backend]")
 {

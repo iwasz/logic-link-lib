@@ -14,7 +14,7 @@ namespace logic::an {
 /**
  * Decompress.
  */
-data::RawData decompress (data::RawCompressedBlock const &rcd)
+RawData decompress (RawCompressedBlock const &rcd)
 {
         // TODO
         return {};

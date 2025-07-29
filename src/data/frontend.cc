@@ -16,7 +16,7 @@ import :data;
 import :data.frontend;
 import :data.backend;
 
-namespace logic::data {
+namespace logic {
 
 auto binaryToGray (auto num) { return num ^ (num >> 1); };
 

@@ -13,7 +13,7 @@ module;
 #include <vector>
 module logic;
 
-namespace logic::data {
+namespace logic {
 
 void ChannelBlockStream::append (std::vector<Bytes> &&channels)
 {
@@ -24,7 +24,7 @@ void ChannelBlockStream::append (std::vector<Bytes> &&channels)
 
 /****************************************************************************/
 
-ChannelBlockStream::SubRange ChannelBlockStream::range (SampleNo const &begin, SampleNo const &end)
+ChannelBlockStream::SubRange ChannelBlockStream::range (SampleIdx const &begin, SampleIdx const &end)
 {
         auto b = std::find_if (data_.cbegin (), data_.cend (),
                                [&begin] (ChannelBlock const &b) { return b.firstSampleNo () <= begin && b.lastSampleNo () >= begin; });
@@ -41,7 +41,7 @@ ChannelBlockStream::SubRange ChannelBlockStream::range (SampleNo const &begin, S
 
 /****************************************************************************/
 
-BlockBackend::SubRange BlockBackend::range (size_t groupIdx, SampleNo const &begin, SampleNo const &end)
+BlockBackend::SubRange BlockBackend::range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end)
 {
         return groups.at (groupIdx).range (begin, end);
 }
@@ -58,4 +58,4 @@ void BlockBackend::configureGroup (size_t groupIdx, SampleRate sampleRate)
         groups.at (groupIdx).sampleRate = sampleRate;
 }
 
-} // namespace logic::data
+} // namespace logic

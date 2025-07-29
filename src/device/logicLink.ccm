@@ -1,0 +1,34 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include "common/error.hh"
+#include "common/params.hh"
+#include "common/stats.hh"
+#include <cstdlib>
+#include <unordered_set>
+export module logic:link;
+import :device;
+
+namespace logic {
+
+export class LogicLink : public AbstractDevice {
+public:
+        common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
+        void configureTransmission (TransferParams const &params) override;
+
+        void start () override;
+        void stop () override;
+
+        common::usb::Stats getStats () override;
+
+        std::unordered_set<logs::Code> getErrors () override;
+        void clearErrors () override;
+};
+
+} // namespace logic

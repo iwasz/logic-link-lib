@@ -1,0 +1,74 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <atomic>
+#include <cstdint>
+#include <cstdlib>
+#include <libusb.h>
+#include <mutex>
+#include <vector>
+export module logic:input.usb;
+export import :input;
+
+namespace logic {
+
+/**
+ *
+ */
+export class UsbAsync : public AbstractInput {
+public:
+        /**
+         * Construct a new UsbAsync object and initializes the libusb.
+         */
+        UsbAsync (HotplugHooks const &hotplugHooks);
+
+        UsbAsync (UsbAsync const &) = delete;
+        UsbAsync &operator= (UsbAsync const &) = delete;
+        UsbAsync (UsbAsync &&) noexcept = delete;
+        UsbAsync &operator= (UsbAsync &&) noexcept = delete;
+
+        /**
+         * Gracefully de-inits the libusb.
+         */
+        ~UsbAsync () override;
+
+        void open (DeviceHooks const &deviceHooks) override;
+
+        void controlOut (std::vector<uint8_t> const &request) override;
+        std::vector<uint8_t> controlIn (size_t len) override;
+
+        void start () override { request_ = Request::start; }
+        void stop () override { request_ = Request::stop; }
+
+        void run () override;
+
+private:
+        /// Number of bytes received so far irrespective of the buffer size.
+        size_t receivedB () const { return allTransferedB; }
+
+        enum class Request : uint8_t { start, stop };
+
+        libusb_device_handle *dev{};
+        libusb_hotplug_callback_handle callback_handle{};
+
+        std::atomic_bool initialized;
+        std::atomic_bool running;
+        std::atomic<Request> request_;
+
+        uint32_t usbTransfer{}; // TODO validate
+        uint32_t usbBlock{};
+        size_t singleTransferLenB{};
+
+        std::mutex mutex;
+        TimePoint globalStart;
+        TimePoint globalStop;
+        size_t allTransferedB{};
+};
+
+} // namespace logic

@@ -35,7 +35,7 @@ void start ();
 /**
  * Send stop request to the device and inform the algorithms that it was sent.
  */
-void stop (data::Session *rawData);
+void stop ();
 
 void close ();
 

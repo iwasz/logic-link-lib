@@ -41,7 +41,7 @@ public:
          * @param deviceBufferLenB DMA blocks on the device (IRQ after each block -> metadata
          * for each block).
          */
-        data::AugumentedData run (data::SampleBlockStream const &bmd) override;
+        AugumentedData run (SampleBlockStream const &bmd) override;
         void stop () override;
 
 private:

@@ -21,7 +21,7 @@ public:
         using AbstractAnalyzer::AbstractAnalyzer;
 
         void start () override {}
-        data::AugumentedData run (data::SampleBuffers const &samples) override;
+        AugumentedData run (SampleBuffers const &samples) override;
         void stop () override {}
 
 private:
@@ -36,8 +36,8 @@ public:
         using AbstractAnalyzer::AbstractAnalyzer;
 
         void start () override {}
-        data::AugumentedData runRaw (data::RawData const &rd) override;
-        data::AugumentedData run (data::SampleBuffers const &samples) override { return {}; }
+        AugumentedData runRaw (RawData const &rd) override;
+        AugumentedData run (SampleBuffers const &samples) override { return {}; }
         void stop () override {}
 
 private:

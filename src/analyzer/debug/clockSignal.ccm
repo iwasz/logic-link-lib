@@ -37,8 +37,8 @@ public:
                 // overrunsNo = 0;
         }
 
-        // void runRaw (data::RawData const & /* rd */) override {} // TODO this produces errors in UTs when is removed.
-        data::AugumentedData run (data::SampleBlockStream const &samples) override;
+        // void runRaw (RawData const & /* rd */) override {} // TODO this produces errors in UTs when is removed.
+        AugumentedData run (SampleBlockStream const &samples) override;
         void stop () override;
 
         /// Analyze only `mod`-th 32 bit word out of every `div` words in the stream.
@@ -73,9 +73,9 @@ using namespace std::string_literals;
 
 /****************************************************************************/
 
-data::AugumentedData ClockSignalCheck::run (data::SampleBlockStream const & /* samples */)
+AugumentedData ClockSignalCheck::run (SampleBlockStream const & /* samples */)
 {
-        // auto const &bytes = std::get<data::Bytes> (samples.at (channel ()).buffer);
+        // auto const &bytes = std::get<Bytes> (samples.at (channel ()).buffer);
         // auto dmaBlocksNum = bytes.size () / dmaBlockLenB (); // We assume % is 0.
 
         // for (size_t i = 0; i < dmaBlocksNum; ++i) {

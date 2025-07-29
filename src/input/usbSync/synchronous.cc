@@ -27,9 +27,9 @@ using namespace std::string_literals;
  * Acquires a single transfer amount of data, which is more closely explained in
  * src/feature/analyzer/flexio.cc file in the firmware.
  */
-data::Buffer acquireSingleTransfer (data::Session *rawData, size_t bytes)
+Buffer acquireSingleTransfer (Session *rawData, size_t bytes)
 {
-        data::Buffer singleTransfer (bytes);
+        Buffer singleTransfer (bytes);
 
         int transferredB{};
 
@@ -50,7 +50,7 @@ data::Buffer acquireSingleTransfer (data::Session *rawData, size_t bytes)
  * Acquires ~~`wholeDataLenB` bytes of~~ data (blocking function) block by block (`singleTransferLenB`).
  * See src/feature/analyzer/flexio.cc in the firmware project for the other side of the connection.
  */
-void acquire (data::Session *rawData, size_t singleTransferLenB)
+void acquire (Session *rawData, size_t singleTransferLenB)
 {
         rawData->running = true;
 
@@ -93,7 +93,7 @@ void acquire (data::Session *rawData, size_t singleTransferLenB)
 
                         if (!singleTransfer.empty ()) {
                                 auto mbps = (double (benchmarkB) / double (duration_cast<microseconds> (now - *start).count ())) * 8;
-                                rawData->queue.emplace_back (mbps, overrunsNo, std::make_unique<data::Buffer> (std::move (singleTransfer)));
+                                rawData->queue.emplace_back (mbps, overrunsNo, std::make_unique<Buffer> (std::move (singleTransfer)));
                                 notify = true;
                                 rawData->globalStop = high_resolution_clock::now (); // We want to be up to date, and skip possible time-out.
                         }

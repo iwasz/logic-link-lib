@@ -15,13 +15,13 @@ namespace logic::an {
 
 /****************************************************************************/
 
-data::AugumentedData SimplePrint::run (data::SampleBuffers const &samples)
+AugumentedData SimplePrint::run (SampleBuffers const &samples)
 {
         // if (cnt++ > 0) {
         //         return;
         // }
 
-        std::vector<data::Bytes::const_iterator> diters (samples.digital.size ());
+        std::vector<Bytes::const_iterator> diters (samples.digital.size ());
 
         for (size_t chan = 0; chan < samples.digital.size (); ++chan) {
                 diters.at (chan) = samples.digital.at (chan).begin ();
@@ -46,7 +46,7 @@ data::AugumentedData SimplePrint::run (data::SampleBuffers const &samples)
 
 /****************************************************************************/
 
-data::AugumentedData RawPrint::runRaw (data::RawData const &raw)
+AugumentedData RawPrint::runRaw (RawData const &raw)
 {
         size_t row{};
         size_t column{};

@@ -20,7 +20,7 @@ namespace logic::an {
 using namespace std::chrono;
 using namespace std::string_literals;
 
-void analyze (common::acq::Params const &params, data::Session *session, an::IAnalyzer *strategy, bool discard, bool decompress)
+void analyze (common::acq::Params const &params, Session *session, IAnalyzer *strategy, bool discard, bool decompress)
 {
         if (strategy != nullptr) {
                 strategy->start ();
@@ -29,7 +29,7 @@ void analyze (common::acq::Params const &params, data::Session *session, an::IAn
         size_t currentBlockIndex{}; // Block to be currently decompressed (if available).
 
         while (session->running) {
-                data::RawCompressedBlock rcd;
+                RawCompressedBlock rcd;
 
                 {
                         std::unique_lock lock{session->rawQueueMutex};
@@ -50,7 +50,7 @@ void analyze (common::acq::Params const &params, data::Session *session, an::IAn
                         rcd = std::move (session->rawQueue.at (currentBlockIndex++));
                 }
 
-                data::RawData rd;
+                RawData rd;
 
                 if (decompress) {
                         rd = an::decompress (rcd);
@@ -66,9 +66,9 @@ void analyze (common::acq::Params const &params, data::Session *session, an::IAn
 
                 // TODO for now only digital data gets rearranged
                 // TODO agnostic! vector of vector of bytes
-                // std::vector<data::SampleBlock>  digitalChannels = rearrange (rd, params);
-                // data::ChannelBlock digitalChannels{0, {}};
-                std::vector<data::Bytes> digitalChannels;
+                // std::vector<SampleBlock>  digitalChannels = rearrange (rd, params);
+                // ChannelBlock digitalChannels{0, {}};
+                std::vector<Bytes> digitalChannels;
 
                 {
                         /*

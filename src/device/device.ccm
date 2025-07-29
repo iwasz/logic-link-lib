@@ -1,0 +1,113 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include "common/error.hh"
+#include "common/params.hh"
+#include "common/stats.hh"
+#include <algorithm>
+#include <concepts>
+#include <cstdint>
+#include <cstdlib>
+#include <unordered_set>
+#include <vector>
+export module logic:device;
+import :input;
+
+namespace logic {
+
+struct TransferParams {
+        uint32_t usbTransfer{};
+        uint32_t usbBlock{};
+        size_t singleTransferLenB{};
+        // uint32_t dmaBlock {};
+};
+
+/**
+ * IDevice concrete classes are responsible of configuring the devices (for instance
+ * by sending USB control requests) and initial decompresing and decoding.
+ */
+export struct IDevice {
+        IDevice () = default;
+        IDevice (IDevice const &) = default;
+        IDevice &operator= (IDevice const &) = default;
+        IDevice (IDevice &&) noexcept = default;
+        IDevice &operator= (IDevice &&) noexcept = default;
+        virtual ~IDevice () = default;
+
+        /**
+         * Request acquisition parameters like number of channels and the
+         * sample rate.
+         */
+        virtual common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) = 0;
+
+        /**
+         * Configure buffer sizes intrinsic to the device.
+         */
+        virtual void configureTransmission (TransferParams const &params) = 0;
+
+        virtual void start () = 0;
+        virtual void stop () = 0;
+
+        /**
+         * Get device statistics - speciffic to the device itself and the USB interface.
+         * If this was to be a member of the IInput interface, it would have to have better,
+         * more generic interface.
+         */
+        virtual common::usb::Stats getStats () = 0;
+
+        /**
+         * Get error list from the device if any.
+         */
+        virtual std::unordered_set<logs::Code> getErrors () = 0;
+        virtual void clearErrors () = 0;
+};
+
+/**
+ * Helper for sending USB control transfers in a more structured way.
+ *
+ */
+class Request {
+public:
+        Request &clazz (uint32_t c /* = GREATFET_CLASS_LA */) { return integer (c); }
+        Request &verb (uint32_t v) { return integer (v); }
+        Request &sampleRate (uint32_t v) { return integer (v); }
+        Request &channels (uint8_t v) { return integer (v); }
+        Request &size (uint32_t v) { return integer (v); }
+
+        template <std::integral T> Request &integer (T u)
+        {
+                data_.resize (data_.size () + sizeof (u));
+                uint8_t const *p = reinterpret_cast<uint8_t *> (&u);
+                std::copy (p, std::next (p, sizeof (u)), std::prev (data_.end (), sizeof (u)));
+                return *this;
+        }
+
+        std::vector<uint8_t> const &data () const { return data_; }
+
+private:
+        std::vector<uint8_t> data_;
+};
+
+/**
+ * Basic implementation.
+ *
+ */
+export struct AbstractDevice : public IDevice {
+public:
+        AbstractDevice (IInput *input) : input_{input} {}
+
+        void controlOut (Request const &request) { input ()->controlOut (request.data ()); }
+
+        IInput *input () { return input_; }
+
+private:
+        IInput *input_;
+};
+
+} // namespace logic

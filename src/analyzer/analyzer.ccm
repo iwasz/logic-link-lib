@@ -14,7 +14,7 @@ module;
 export module logic:analyzer;
 import :data;
 
-export namespace logic::an {
+export namespace logic {
 
 struct IAnalyzer {
         IAnalyzer () = default;
@@ -27,8 +27,8 @@ struct IAnalyzer {
         /// Pre analysis
         virtual void start () = 0;
         /// For every block
-        virtual data::AugumentedData runRaw (data::RawData const &rd) = 0;
-        virtual data::AugumentedData run (data::SampleBlockStream const &bmd) = 0;
+        virtual AugumentedData runRaw (RawData const &rd) = 0;
+        virtual AugumentedData run (SampleBlockStream const &bmd) = 0;
         /// Post analysis
         virtual void stop () = 0;
 };
@@ -47,7 +47,7 @@ public:
         virtual ~AbstractAnalyzer () = default;
 
         // Usually working with the raw data (before reorder algorithm) is not performed.
-        data::AugumentedData runRaw (data::RawData const & /* rd */) override { return {}; }
+        AugumentedData runRaw (RawData const & /* rd */) override { return {}; }
 
         // TODO Remove. This was used on early stage when I worked on the raw data.
         size_t dmaBlockLenB () const { return dmaBlockLenB_; }

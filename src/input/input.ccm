@@ -1,0 +1,78 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <cstdint>
+#include <functional>
+export module logic:input;
+export import :data;
+
+namespace logic {
+
+struct HotplugHooks {
+        std::function<void (std::string const &)> connected;
+        std::function<void ()> disconnected;
+};
+
+struct DeviceHooks {
+        Queue<RawCompressedBlock> *queue{}; /// Main output queue
+        std::function<void ()> startHook;
+        std::function<void ()> stopHook;
+};
+
+struct IInput {
+        IInput () = default;
+        IInput (IInput const &) = default;
+        IInput &operator= (IInput const &) = default;
+        IInput (IInput &&) noexcept = default;
+        IInput &operator= (IInput &&) noexcept = default;
+        virtual ~IInput () = default;
+
+        /**
+         * Basic USB bookeeping like opening thge device, claiming the interface
+         * and so on.
+         */
+        virtual void open (DeviceHooks const &deviceHooks) = 0;
+
+        virtual void controlOut (std::vector<uint8_t> const &request) = 0;
+        virtual std::vector<uint8_t> controlIn (size_t len) = 0;
+
+        /**
+         * Sends a start command.
+         */
+        virtual void start () = 0;
+
+        /**
+         * Send stop request to the device and inform the algorithms that it was sent.
+         */
+        virtual void stop () = 0;
+
+        /**
+         * Blocking acquisition and event listener method, that pushes the data at the
+         * end of the `data` queue and observes the hotplug events.
+         */
+        virtual void run () = 0;
+};
+
+/**
+ * A helper.
+ */
+class AbstractInput : public IInput {
+public:
+        AbstractInput (HotplugHooks const &hotplugHooks) : hotplugHooks_{hotplugHooks} {}
+        void open (DeviceHooks const &deviceHooks) override { deviceHooks_ = deviceHooks; }
+
+        HotplugHooks hotplugHooks () { return hotplugHooks_; }
+        DeviceHooks deviceHooks () { return deviceHooks_; }
+
+private:
+        HotplugHooks hotplugHooks_;
+        DeviceHooks deviceHooks_;
+};
+
+} // namespace logic

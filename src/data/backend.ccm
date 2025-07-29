@@ -15,16 +15,16 @@ module;
 export module logic:data.backend;
 import :data;
 
-namespace logic::data {
+namespace logic {
 
 class ChannelBlock {
 public:
         ChannelBlock () = default;
-        ChannelBlock (SampleNo const &firstSampleNo, std::vector<Bytes> &&d) : firstSampleNo_{firstSampleNo}, data{std::move (d)} {}
-        // ChannelBlock (SampleNo const &firstSampleNo, std::vector<Bytes> const &d) : firstSampleNo_{firstSampleNo}, data{d} {}
+        ChannelBlock (SampleIdx const &firstSampleNo, std::vector<Bytes> &&d) : firstSampleNo_{firstSampleNo}, data{std::move (d)} {}
+        // ChannelBlock (SampleIdx const &firstSampleNo, std::vector<Bytes> const &d) : firstSampleNo_{firstSampleNo}, data{d} {}
 
-        SampleNo const &firstSampleNo () const { return firstSampleNo_; }
-        SampleNo lastSampleNo () const
+        SampleIdx const &firstSampleNo () const { return firstSampleNo_; }
+        SampleIdx lastSampleNo () const
         {
                 auto s = firstSampleNo_ + size ();
                 return (s > 0) ? (s - 1) : (0);
@@ -37,7 +37,7 @@ public:
         size_t size () const { return (data.empty ()) ? (0U) : (data.front ().size ()); }
 
         // private:
-        SampleNo firstSampleNo_;
+        SampleIdx firstSampleNo_;
 
         // For now only Bytes are supported.
         std::vector<Bytes> data;
@@ -59,12 +59,12 @@ public:
         /**
          * Returns block range that includes sample numbers passed (inclusive).
          */
-        SubRange range (SampleNo const &begin, SampleNo const &end);
+        SubRange range (SampleIdx const &begin, SampleIdx const &end);
 
         Container const &data () const { return data_; }
 
 private:
-        SampleNo currentSampleNo;
+        SampleIdx currentSampleNo;
         Container data_;
 };
 
@@ -85,7 +85,7 @@ export struct IBackend {
 
         /// Adds s[0] to stream[0], s[1] to stream[1] etc
         virtual void append (size_t groupIdx, std::vector<Bytes> &&s) = 0;
-        virtual SubRange range (size_t groupIdx, SampleNo const &begin, SampleNo const &end) = 0;
+        virtual SubRange range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) = 0;
         virtual size_t groupsNo () const = 0;
 };
 
@@ -122,7 +122,7 @@ export struct IBackend {
 export class BlockBackend : public IBackend {
 public:
         void append (size_t groupIdx, std::vector<Bytes> &&s) override { groups.at (groupIdx).append (std::move (s)); }
-        SubRange range (size_t groupIdx, SampleNo const &begin, SampleNo const &end) override;
+        SubRange range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
         void configureGroup (size_t groupIdx, SampleRate sampleRate);
 
         size_t groupsNo () const override { return groups.size (); }
@@ -131,4 +131,4 @@ private:
         ChannelBlockStreams groups;
 };
 
-} // namespace logic::data
+} // namespace logic

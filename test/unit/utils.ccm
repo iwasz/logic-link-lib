@@ -11,7 +11,7 @@ module;
 export module utils;
 import logic;
 
-using namespace logic::data;
+using namespace logic;
 
 export std::vector<std::vector<Bytes>> channelBlocksData = {
         {

@@ -6,18 +6,14 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-/*
- * Common library for cli and gui.
- */
-export module logic;
-export import :data;
-export import :data.frontend;
-export import :data.backend;
-export import :data.acqParams;
-export import :exception;
-export import :constant;
-// export import :analyzer;
-// export import :analyzer.debug.clockSignal;
-// export import :analyzer.lowLevel.uart;
-export import :util.span;
-export import :util.poly;
+module;
+#include "common/error.hh"
+#include "common/params.hh"
+#include "common/stats.hh"
+#include <cstdlib>
+module logic;
+import :device;
+
+namespace logic {
+
+}

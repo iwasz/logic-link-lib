@@ -10,7 +10,7 @@ import logic;
 import utils;
 #include <catch2/catch_test_macros.hpp>
 
-using namespace logic::data;
+using namespace logic;
 
 TEST_CASE ("empty range", "[frontend]")
 {

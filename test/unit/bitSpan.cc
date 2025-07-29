@@ -11,7 +11,7 @@
 
 import logic;
 
-using namespace logic::data;
+using namespace logic;
 using namespace logic::util;
 
 TEST_CASE ("Basic", "[bitSpan]")

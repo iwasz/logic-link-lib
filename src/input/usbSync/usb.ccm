@@ -15,13 +15,16 @@ module;
 module logic:input.usb;
 import :input.usb.request;
 import :data;
+import :session;
 
 namespace logic::usb::async {
+
+
 
 /**
  * Blocking acquisition.
  */
-void acquire (common::acq::Params const &params, data::Session *session, size_t singleTransferLenB);
+void acquire (common::acq::Params const &params, Session *session, size_t singleTransferLenB);
 
 } // namespace logic::usb::async
 
@@ -30,7 +33,7 @@ namespace logic::usb::sync {
 /**
  * Blocking acquisition.
  */
-void acquire (data::RawData *rawData, size_t singleTransferLenB);
+void acquire (RawData *rawData, size_t singleTransferLenB);
 
 } // namespace logic::usb::sync
 

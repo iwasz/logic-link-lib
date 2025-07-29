@@ -28,7 +28,7 @@ public:
         using SingleChannelAnalyzer::SingleChannelAnalyzer;
 
         void start () override {}
-        data::AugumentedData run (data::SampleBlockStream const &samples) override;
+        AugumentedData run (SampleBlockStream const &samples) override;
         void stop () override;
 
 private:
