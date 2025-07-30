@@ -12,7 +12,7 @@ module;
 #include <string>
 export module logic:constant;
 
-namespace logic {
+export namespace logic {
 /**
  * This size has to be requested by the USB host (PC). After sending exactly this
  * amount, USB bulk transaction finishes, and the client application running on the

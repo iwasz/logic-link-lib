@@ -24,8 +24,6 @@ namespace logic {
  */
 export class DemoInput : public AbstractInput {
 public:
-        using AbstractInput::AbstractInput;
-
         void controlOut (std::vector<uint8_t> const &request) override {}
         std::vector<uint8_t> controlIn (size_t /* len */) override { return {}; }
 

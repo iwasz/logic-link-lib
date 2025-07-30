@@ -1,11 +1,13 @@
 target_sources(${PROJECT_NAME}
   PRIVATE
     device.cc
-  #   decompress.cc
+    autoDevice.cc
     logicLink.cc
+    factory.cc
 
   PUBLIC FILE_SET CXX_MODULES FILES
     device.ccm
     logicLink.ccm
-    # demoDevice.ccm
+    factory.ccm
+    autoDevice.ccm
 )

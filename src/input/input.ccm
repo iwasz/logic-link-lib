@@ -14,18 +14,26 @@ export import :data;
 
 namespace logic {
 
-struct HotplugHooks {
-        std::function<void (std::string const &)> connected;
-        std::function<void ()> disconnected;
+export struct HotplugHooks {
+        std::function<void (std::string const &)> connected = [] (auto) {};
+        std::function<void ()> disconnected = [] {};
 };
 
-struct DeviceHooks {
+export struct DeviceHooks {
         Queue<RawCompressedBlock> *queue{}; /// Main output queue
         std::function<void ()> startHook;
         std::function<void ()> stopHook;
 };
 
-struct IInput {
+export struct DeviceInfo {
+        int vid{};
+        int pid{};
+        int claimInterface{};
+        int interfaceNumber{};
+        int alternateSetting{};
+};
+
+export struct IInput {
         IInput () = default;
         IInput (IInput const &) = default;
         IInput &operator= (IInput const &) = default;
@@ -37,7 +45,8 @@ struct IInput {
          * Basic USB bookeeping like opening thge device, claiming the interface
          * and so on.
          */
-        virtual void open (DeviceHooks const &deviceHooks) = 0;
+        virtual void open (DeviceHooks const &deviceHooks, DeviceInfo const &info) = 0;
+        virtual void hotplug (HotplugHooks const &hotplugHooks) = 0;
 
         virtual void controlOut (std::vector<uint8_t> const &request) = 0;
         virtual std::vector<uint8_t> controlIn (size_t len) = 0;
@@ -62,10 +71,10 @@ struct IInput {
 /**
  * A helper.
  */
-class AbstractInput : public IInput {
+export class AbstractInput : public IInput {
 public:
-        AbstractInput (HotplugHooks const &hotplugHooks) : hotplugHooks_{hotplugHooks} {}
-        void open (DeviceHooks const &deviceHooks) override { deviceHooks_ = deviceHooks; }
+        void open (DeviceHooks const &deviceHooks, DeviceInfo const & /* info */) override { deviceHooks_ = deviceHooks; }
+        void hotplug (HotplugHooks const &hotplugHooks) override { hotplugHooks_ = hotplugHooks; }
 
         HotplugHooks hotplugHooks () { return hotplugHooks_; }
         DeviceHooks deviceHooks () { return deviceHooks_; }

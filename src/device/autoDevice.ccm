@@ -12,14 +12,20 @@ module;
 #include "common/stats.hh"
 #include <cstdlib>
 #include <unordered_set>
-export module logic:device.link;
+export module logic:device.autoDevice;
 import :device;
+import :device.factory;
 
 namespace logic {
 
-export class LogicLink : public AbstractDevice {
+/**
+ * Device wrapper that automatically creates a device when hotplug event
+ * gets reported. Until then, it does nothing, i.e. calling its methods
+ * has no effect.
+ */
+export class AutoDevice : public AbstractDevice {
 public:
-        explicit LogicLink (IInput *input);
+        AutoDevice (IInput *input, Factory *factory) : AbstractDevice (input), factory_{factory} {}
 
         common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
         void configureTransmission (TransmissionParams const &params) override;
@@ -31,6 +37,16 @@ public:
 
         std::unordered_set<logs::Code> getErrors () override;
         void clearErrors () override;
+
+        /*--------------------------------------------------------------------------*/
+
+        void onConnected (std::string const &name);
+        void onDisconnected ();
+        bool isReady () const { return delegate != nullptr; }
+
+private:
+        std::unique_ptr<IDevice> delegate;
+        Factory *factory_;
 };
 
 } // namespace logic

@@ -7,22 +7,32 @@
  ****************************************************************************/
 
 module;
-#include <exception>
+#include <memory>
 #include <string>
-export module logic:exception;
+export module logic:device.factory;
+import :device;
+import :input.usb;
+import :input.demo;
 
 namespace logic {
 
-export class Exception : public std::exception {
+export class Factory {
 public:
-        Exception (std::string message) : message_{std::move (message)} {}
-        const char *what () const noexcept override { return message_.c_str (); }
+        Factory () = default;
+        Factory (Factory const &) = delete;
+        Factory &operator= (Factory const &) = delete;
+        Factory (Factory &&) = delete;
+        Factory &operator= (Factory &&) = delete;
 
-        std::string &message () { return message_; }
-        std::string const &message () const { return message_; }
+        std::unique_ptr<IDevice> create (std::string const &name);
 
 private:
-        std::string message_;
+        /**
+         * All inputs are created here and shared by all the devices.
+         *
+         */
+        UsbAsync usb;
+        DemoInput demo;
 };
 
-} // namespace logic
+}; // namespace logic

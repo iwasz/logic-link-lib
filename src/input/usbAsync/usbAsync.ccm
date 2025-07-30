@@ -26,8 +26,7 @@ public:
         /**
          * Construct a new UsbAsync object and initializes the libusb.
          */
-        UsbAsync (HotplugHooks const &hotplugHooks);
-
+        UsbAsync ();
         UsbAsync (UsbAsync const &) = delete;
         UsbAsync &operator= (UsbAsync const &) = delete;
         UsbAsync (UsbAsync &&) noexcept = delete;
@@ -38,7 +37,7 @@ public:
          */
         ~UsbAsync () override;
 
-        void open (DeviceHooks const &deviceHooks) override;
+        void open (DeviceHooks const &deviceHooks, DeviceInfo const &info) override;
 
         void controlOut (std::vector<uint8_t> const &request) override;
         std::vector<uint8_t> controlIn (size_t len) override;

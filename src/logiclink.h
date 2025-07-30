@@ -1,12 +1,12 @@
-/****************************************************************************
- *                                                                          *
- *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
- *  ~~~~~~~~                                                                *
- *  License : see COPYING file for details.                                 *
- *  ~~~~~~~~~                                                               *
- ****************************************************************************/
+// /****************************************************************************
+//  *                                                                          *
+//  *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+//  *  ~~~~~~~~                                                                *
+//  *  License : see COPYING file for details.                                 *
+//  *  ~~~~~~~~~                                                               *
+//  ****************************************************************************/
 
-#pragma once
+// #pragma once
 
-// Defined in src/input/usb/asynchronous.cc
-int getMeaning (int i);
+// // Defined in src/input/usb/asynchronous.cc
+// int getMeaning (int i);

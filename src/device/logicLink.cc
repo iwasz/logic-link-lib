@@ -17,10 +17,29 @@ module;
 #include <unordered_set>
 #include <vector>
 module logic;
-import :link;
+import :device.link;
 
 namespace logic {
 using namespace common::usb;
+
+LogicLink::LogicLink (IInput *input) : AbstractDevice{input}
+{
+        DeviceInfo info = {
+                .vid = VID,
+                .pid = PID,
+                .claimInterface = 0,
+                .interfaceNumber = 0,
+                .alternateSetting = 0,
+        };
+
+        DeviceHooks hooks;
+        hooks.startHook = [this] { start (); };
+        hooks.stopHook = [this] { stop (); };
+
+        input->open (hooks, info);
+}
+
+/****************************************************************************/
 
 common::acq::Params LogicLink::configureAcquisition (common::acq::Params const &params, bool legacy)
 {
@@ -116,7 +135,7 @@ void LogicLink::clearErrors () { controlOut (Request{}.clazz (LOGIC_LINK_CLASS_L
 
 /****************************************************************************/
 
-void LogicLink::configureTransmission (TransferParams const &params)
+void LogicLink::configureTransmission (TransmissionParams const &params)
 {
         controlOut (Request{}
                             .clazz (LOGIC_LINK_CLASS_LA)

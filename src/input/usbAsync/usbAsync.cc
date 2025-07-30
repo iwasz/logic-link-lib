@@ -31,7 +31,7 @@ using namespace std::chrono;
 
 /****************************************************************************/
 
-UsbAsync::UsbAsync (HotplugHooks const &hotplugHooks) : AbstractInput{hotplugHooks}
+UsbAsync::UsbAsync ()
 {
         if (int r = libusb_init_context (/*ctx=*/nullptr, /*options=*/nullptr, /*num_options=*/0); r < 0) {
                 throw Exception ("Failed to init USB (libusb_init_context): "s + libusb_error_name (r));
@@ -50,9 +50,9 @@ UsbAsync::UsbAsync (HotplugHooks const &hotplugHooks) : AbstractInput{hotplugHoo
 
 /****************************************************************************/
 
-void UsbAsync::open (DeviceHooks const &deviceHooks)
+void UsbAsync::open (DeviceHooks const &deviceHooks, DeviceInfo const &info)
 {
-        AbstractInput::open (deviceHooks);
+        AbstractInput::open (deviceHooks, info);
 
         if (dev = libusb_open_device_with_vid_pid (nullptr, VID, PID); dev == nullptr) {
                 throw Exception ("Error finding USB device.");

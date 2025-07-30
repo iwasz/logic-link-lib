@@ -21,7 +21,7 @@ import :input;
 
 namespace logic {
 
-struct TransferParams {
+export struct TransmissionParams {
         uint32_t usbTransfer{};
         uint32_t usbBlock{};
         size_t singleTransferLenB{};
@@ -49,7 +49,7 @@ export struct IDevice {
         /**
          * Configure buffer sizes intrinsic to the device.
          */
-        virtual void configureTransmission (TransferParams const &params) = 0;
+        virtual void configureTransmission (TransmissionParams const &params) = 0;
 
         virtual void start () = 0;
         virtual void stop () = 0;
@@ -100,7 +100,7 @@ private:
  */
 export struct AbstractDevice : public IDevice {
 public:
-        AbstractDevice (IInput *input) : input_{input} {}
+        explicit AbstractDevice (IInput *input) : input_{input} {}
 
         void controlOut (Request const &request) { input ()->controlOut (request.data ()); }
 
