@@ -163,7 +163,7 @@ void UsbAsync::handleUsbEvents (int *completed, int timeoutMs, libusb_transfer *
  * Acquires ~~`wholeDataLenB` bytes of~~ data (blocking function) block by block (`singleTransferLenB`).
  * See src/feature/analyzer/flexio.cc in the firmware project for the other side of the connection.
  */
-void UsbAsync::run (Queue<RawCompressedBlock> *queue)
+void UsbAsync::run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB)
 {
         int rc = libusb_hotplug_register_callback (NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0, VID, PID,
                                                    LIBUSB_HOTPLUG_MATCH_ANY, hotplugCallback, this, &callback_handle);
@@ -196,7 +196,6 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue)
         size_t benchmarkB{};
         std::optional<high_resolution_clock::time_point> startPoint;
         bool started{};
-        Bytes singleTransfer (singleTransferLenB);
 
         while (true) {
                 if (state_.load () == State::disconnected) {
@@ -214,7 +213,7 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue)
                 }
 
                 if (state_.load () == State::transferring) {
-                        singleTransfer.clear ();
+                        Bytes singleTransfer (singleTransferLenB);
 
                         if (!startPoint) { // TODO move to a benchmarking class
                                 startPoint = high_resolution_clock::now ();

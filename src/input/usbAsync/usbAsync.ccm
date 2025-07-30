@@ -45,7 +45,7 @@ public:
         void start () override { request_.store (Request::start); }
         void stop () override { request_ = Request::stop; }
 
-        void run (Queue<RawCompressedBlock> *queue) override;
+        void run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB) override;
         void detect () override;
 
 private:
@@ -67,7 +67,6 @@ private:
 
         uint32_t usbTransfer{}; // TODO validate
         uint32_t usbBlock{};
-        size_t singleTransferLenB{};
 
         std::mutex mutex;
         TimePoint globalStart;

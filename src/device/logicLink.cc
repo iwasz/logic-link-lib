@@ -136,7 +136,7 @@ void LogicLink::clearErrors () { controlOut (Request{}.clazz (LOGIC_LINK_CLASS_L
 /****************************************************************************/
 
 void LogicLink::configureTransmission (TransmissionParams const &params)
-{
+{AbstractDevice::configureTransmission (params);
         controlOut (Request{}
                             .clazz (LOGIC_LINK_CLASS_LA)
                             .verb (LL_VERB_SET_USB_TRANSFER_PARAMS)

@@ -64,7 +64,7 @@ export struct IInput {
          * Blocking acquisition and event listener method, that pushes the data at the
          * end of the `data` queue and observes the hotplug events.
          */
-        virtual void run (Queue<RawCompressedBlock> *queue) = 0;
+        virtual void run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB) = 0;
 
         virtual void detect () = 0;
 };

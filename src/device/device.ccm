@@ -106,7 +106,8 @@ export struct AbstractDevice : public IDevice {
 public:
         explicit AbstractDevice (IInput *input) : input_{input} {}
 
-        void run (Queue<RawCompressedBlock> *queue) override { input_->run (queue); }
+        void run (Queue<RawCompressedBlock> *queue) override { input_->run (queue, usbTransfer_); }
+        void configureTransmission (TransmissionParams const &params) override { usbTransfer_ = params.usbTransfer; }
 
         void controlOut (Request const &request) { input ()->controlOut (request.data ()); }
 
@@ -114,6 +115,7 @@ public:
 
 private:
         IInput *input_;
+        size_t usbTransfer_{};
 };
 
 } // namespace logic
