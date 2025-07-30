@@ -31,6 +31,10 @@ public:
 
         std::unordered_set<logs::Code> getErrors () override;
         void clearErrors () override;
+
+        // Gets initialized in the RAII ctor, so must be ready
+        bool isReady () const override { return true; }
+        void waitReady () const override {}
 };
 
 } // namespace logic

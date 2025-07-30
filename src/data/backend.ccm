@@ -9,8 +9,7 @@
 module;
 #include "common/constants.hh"
 #include <deque>
-#include <span>
-#include <unordered_map>
+#include <mutex>
 #include <vector>
 export module logic:data.backend;
 import :data;
@@ -118,10 +117,16 @@ export struct IBackend {
 
 /**
  * Simple backend for unit testing, and CLI app development.
+ * TODO locking
  */
 export class BlockBackend : public IBackend {
 public:
-        void append (size_t groupIdx, std::vector<Bytes> &&s) override { groups.at (groupIdx).append (std::move (s)); }
+        void append (size_t groupIdx, std::vector<Bytes> &&s) override
+        {
+                std::lock_guard lock{mutex};
+                groups.at (groupIdx).append (std::move (s));
+        }
+
         SubRange range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
         void configureGroup (size_t groupIdx, SampleRate sampleRate);
 
@@ -129,6 +134,7 @@ public:
 
 private:
         ChannelBlockStreams groups;
+        std::mutex mutex;
 };
 
 } // namespace logic

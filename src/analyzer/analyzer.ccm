@@ -75,4 +75,4 @@ private:
         std::string channel_;
 };
 
-} // namespace logic::an
+} // namespace logic

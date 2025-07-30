@@ -12,7 +12,7 @@
 #include <print>
 #include <vector>
 
-namespace logic::an {
+namespace logic {
 using namespace std::chrono;
 using namespace std::string_literals;
 
@@ -59,4 +59,4 @@ void OrdinalCheck::stop ()
         }
 }
 
-} // namespace logic::an
+} // namespace logic

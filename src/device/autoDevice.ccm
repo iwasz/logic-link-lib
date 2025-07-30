@@ -11,6 +11,7 @@ module;
 #include "common/params.hh"
 #include "common/stats.hh"
 #include <cstdlib>
+#include <mutex>
 #include <unordered_set>
 export module logic:device.autoDevice;
 import :device;
@@ -30,8 +31,9 @@ public:
         common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
         void configureTransmission (TransmissionParams const &params) override;
 
-        void start () override;
+        void start () override; // TODO Consider joining run and start into a single method.
         void stop () override;
+        void run (Queue<RawCompressedBlock> *queue) override;
 
         common::usb::Stats getStats () override;
 
@@ -42,9 +44,14 @@ public:
 
         void onConnected (std::string const &name);
         void onDisconnected ();
-        bool isReady () const { return delegate != nullptr; }
+
+        bool isReady () const override;
+        void waitReady () const override;
 
 private:
+        mutable std::mutex mutex;
+        mutable std::condition_variable cv;
+
         std::unique_ptr<IDevice> delegate;
         Factory *factory_;
 };

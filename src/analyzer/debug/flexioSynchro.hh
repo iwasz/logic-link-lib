@@ -10,7 +10,7 @@
 #include "analyzer/analyzer.hh"
 #include "data/types.hh"
 
-namespace logic::an {
+namespace logic {
 
 /**
  * Analyze the stream, assume there are 4 flexio streams, 32bit each like this:
@@ -37,4 +37,4 @@ private:
         size_t devBlockNo{};
 };
 
-} // namespace logic::an
+} // namespace logic

@@ -9,7 +9,7 @@
 module logic;
 import :processing;
 
-namespace logic::an {
+namespace logic {
 
 /**
  * Decompress.
@@ -20,4 +20,4 @@ RawData decompress (RawCompressedBlock const &rcd)
         return {};
 }
 
-} // namespace logic::an
+} // namespace logic

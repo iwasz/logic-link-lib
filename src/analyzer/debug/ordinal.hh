@@ -10,7 +10,7 @@
 #include "analyzer/analyzer.hh"
 #include "data/types.hh"
 
-namespace logic::an {
+namespace logic {
 
 /**
  * Checks for the consecutive integer number at the start of every
@@ -50,4 +50,4 @@ private:
         size_t overrunsNo{};
 };
 
-} // namespace logic::an
+} // namespace logic

@@ -42,23 +42,28 @@ public:
         void controlOut (std::vector<uint8_t> const &request) override;
         std::vector<uint8_t> controlIn (size_t len) override;
 
-        void start () override { request_ = Request::start; }
+        void start () override { request_.store (Request::start); }
         void stop () override { request_ = Request::stop; }
 
-        void run () override;
+        void run (Queue<RawCompressedBlock> *queue) override;
+        void detect () override;
 
 private:
+        static void transferCallback (struct libusb_transfer *transfer);
+        static int hotplugCallback (struct libusb_context * /* ctx */, struct libusb_device *dev, libusb_hotplug_event event, void *userData);
+        static void handleUsbEvents (int *completed, int timeoutS, libusb_transfer *transfer);
+
         /// Number of bytes received so far irrespective of the buffer size.
         size_t receivedB () const { return allTransferedB; }
 
-        enum class Request : uint8_t { start, stop };
+        enum class Request : uint8_t { none, start, stop };
+        enum class State : uint8_t { disconnected, connectedIdle, transferring };
 
         libusb_device_handle *dev{};
         libusb_hotplug_callback_handle callback_handle{};
 
-        std::atomic_bool initialized;
-        std::atomic_bool running;
         std::atomic<Request> request_;
+        std::atomic<State> state_;
 
         uint32_t usbTransfer{}; // TODO validate
         uint32_t usbBlock{};

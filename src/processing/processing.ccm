@@ -13,12 +13,12 @@ module;
 #include <span>
 #include <variant>
 #include <vector>
-module logic:processing;
+export module logic:processing;
 import :data;
 import :analyzer;
 import :session;
 
-namespace logic::an {
+namespace logic {
 
 /**
  * @brief Perform the (debug) analysis using a strategy.
@@ -27,7 +27,7 @@ namespace logic::an {
  * @param strategy Describes what to do.
  * @param discard Whether to discard the data or sotre it indefinitely in the RAM.
  */
-void analyze (common::acq::Params const &params, Session *session, IAnalyzer *strategy, bool discard = false, bool decompress = false);
+export void analyze (Queue<RawCompressedBlock> *queue, IBackend *backend, IAnalyzer *strategy, bool discard = false, bool decompress = false);
 
 RawData decompress (RawCompressedBlock const &rcd);
 
@@ -147,4 +147,4 @@ template <size_t CHANNELS_NUM> std::vector<SampleBlock> rearrangeFlexio (RawData
         return digital;
 }
 
-} // namespace logic::an
+} // namespace logic

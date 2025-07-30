@@ -11,7 +11,7 @@
 #include "analyzer/analyzer.hh"
 #include "data/types.hh"
 
-namespace logic::an {
+namespace logic {
 
 /**
  * Simply prints basic info for denug purposes only.
@@ -44,5 +44,5 @@ private:
         size_t cnt{};
 };
 
-} // namespace logic::an
+} // namespace logic
 #endif

@@ -13,7 +13,6 @@ module;
 #include <condition_variable>
 #include <deque>
 #include <mutex>
-#include <string>
 #include <variant>
 #include <vector>
 export module logic:data;
@@ -81,6 +80,7 @@ public:
                 {
                         std::lock_guard lock{mutex};
                         data.emplace_back (std::forward<T> (t)...);
+                        closed_ = false;
                 }
 
                 cVar.notify_all ();
@@ -89,11 +89,18 @@ public:
         std::unique_ptr<Elem> pop ()
         {
                 std::unique_lock lock{mutex};
-                cVar.wait (lock, [this] { return !data.empty (); });
+                cVar.wait (lock, [this] { return !data.empty () || closed_; });
+
+                if (closed_) {
+                        return {};
+                }
+
                 auto p = std::make_unique<Elem> (data.front ());
                 data.pop_front ();
                 return p;
         }
+
+        /*--------------------------------------------------------------------------*/
 
         void start ()
         {
@@ -104,9 +111,22 @@ public:
         std::unique_ptr<Elem> next ()
         {
                 std::unique_lock lock{mutex};
-                cVar.wait (lock, [this] { return iter != data.end (); });
+                cVar.wait (lock, [this] { return iter != data.end () || closed_; });
+
+                if (closed_) {
+                        return {};
+                }
+
                 auto p = std::make_unique<Elem> (*iter++);
                 return p;
+        }
+
+        /*--------------------------------------------------------------------------*/
+
+        void close ()
+        {
+                std::lock_guard lock{mutex};
+                closed_ = true;
         }
 
 private:
@@ -116,6 +136,7 @@ private:
 
         using Iterator = std::deque<Elem>::iterator;
         Iterator iter;
+        bool closed_{};
 };
 
 /**

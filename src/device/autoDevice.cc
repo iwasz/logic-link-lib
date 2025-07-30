@@ -11,6 +11,7 @@ module;
 #include "common/params.hh"
 #include "common/stats.hh"
 #include <cstdlib>
+#include <mutex>
 #include <unordered_set>
 module logic;
 
@@ -26,6 +27,18 @@ void asrt (auto const &ptr)
 
 /****************************************************************************/
 
+void AutoDevice::run (Queue<RawCompressedBlock> *queue)
+{
+        // // Wait for the device to become connected.
+        // if (!delegate) {
+        //         input ()->detect ();
+        // }
+
+        AbstractDevice::run (queue);
+}
+
+/****************************************************************************/
+
 common::acq::Params AutoDevice::configureAcquisition (common::acq::Params const &params, bool legacy)
 {
         asrt (delegate);
@@ -37,7 +50,8 @@ common::acq::Params AutoDevice::configureAcquisition (common::acq::Params const 
 void AutoDevice::start ()
 {
         asrt (delegate);
-        delegate->start ();
+        input ()->start (); // TODO mess. fix.
+        // delegate->start ();
 }
 
 /****************************************************************************/
@@ -45,7 +59,8 @@ void AutoDevice::start ()
 void AutoDevice::stop ()
 {
         asrt (delegate);
-        delegate->stop ();
+        input ()->stop ();
+        // delegate->stop ();
 }
 
 /****************************************************************************/
@@ -82,7 +97,38 @@ void AutoDevice::configureTransmission (TransmissionParams const &params)
 
 /****************************************************************************/
 
-void AutoDevice::onConnected (std::string const &name) { delegate = factory_->create (name); }
-void AutoDevice::onDisconnected () { delegate.reset (); }
+void AutoDevice::onConnected (std::string const &name)
+{
+        {
+                std::lock_guard lock{mutex};
+                delegate = factory_->create (name);
+        }
+
+        cv.notify_all ();
+}
+
+/****************************************************************************/
+
+void AutoDevice::onDisconnected ()
+{
+        std::lock_guard lock{mutex};
+        delegate.reset ();
+}
+
+/****************************************************************************/
+
+bool AutoDevice::isReady () const
+{
+        std::lock_guard lock{mutex};
+        return delegate != nullptr && delegate->isReady ();
+}
+
+/****************************************************************************/
+
+void AutoDevice::waitReady () const
+{
+        std::unique_lock lock{mutex};
+        cv.wait (lock, [this] { return delegate != nullptr && delegate->isReady (); });
+}
 
 } // namespace logic

@@ -37,8 +37,6 @@ UsbAsync::UsbAsync ()
                 throw Exception ("Failed to init USB (libusb_init_context): "s + libusb_error_name (r));
         }
 
-        initialized = true;
-
         libusb_device **devs{};
         if (auto cnt = libusb_get_device_list (nullptr, &devs); cnt < 0) {
                 throw Exception ("Failed to get a device list. Cnt: "s + std::to_string (cnt));
@@ -84,63 +82,105 @@ void UsbAsync::open (DeviceHooks const &deviceHooks, DeviceInfo const &info)
 
 UsbAsync::~UsbAsync ()
 {
-        if (initialized) {
-                libusb_hotplug_deregister_callback (nullptr, callback_handle);
-                libusb_exit (nullptr);
-                initialized = false;
-        }
+        libusb_hotplug_deregister_callback (nullptr, callback_handle);
+        libusb_exit (nullptr);
 }
 
-namespace {
-        void sync_transfer_cb (struct libusb_transfer *transfer)
-        {
-                auto *completed = reinterpret_cast<int *> (transfer->user_data);
-                *completed = 1;
-        }
+/****************************************************************************/
 
-        int hotplug_callback (struct libusb_context *ctx, struct libusb_device *dev, libusb_hotplug_event event, void *user_data)
-        {
-                static libusb_device_handle *dev_handle = NULL;
-                struct libusb_device_descriptor desc;
-                int rc;
+void UsbAsync::transferCallback (struct libusb_transfer *transfer)
+{
+        auto *completed = reinterpret_cast<int *> (transfer->user_data);
+        *completed = 1;
+}
 
-                (void)libusb_get_device_descriptor (dev, &desc);
+/*--------------------------------------------------------------------------*/
 
-                if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event) {
-                        rc = libusb_open (dev, &dev_handle);
-                        if (LIBUSB_SUCCESS != rc) {
-                                printf ("Could not open USB device\n");
-                        }
-                }
-                else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
-                        if (dev_handle) {
-                                libusb_close (dev_handle);
-                                dev_handle = NULL;
-                        }
+int UsbAsync::hotplugCallback (struct libusb_context * /* ctx */, struct libusb_device *dev, libusb_hotplug_event event, void *userData)
+{
+        static libusb_device_handle *devHandle = NULL;
+        struct libusb_device_descriptor desc{};
+        UsbAsync *that = reinterpret_cast<UsbAsync *> (userData);
+
+        libusb_get_device_descriptor (dev, &desc);
+
+        if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event) {
+                if (int rc = libusb_open (dev, &devHandle); LIBUSB_SUCCESS != rc) {
+                        std::println ("Could not open USB device"); // TODO better error handling.
                 }
                 else {
-                        printf ("Unhandled event %d\n", event);
+                        that->state_.store (State::connectedIdle);
+                        std::println ("Opened an USB device"); // TODO remove
+                        that->hotplugHooks ().connected ("logicLink");
+                }
+        }
+        else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
+                if (devHandle != nullptr) {
+                        libusb_close (devHandle);
+                        devHandle = NULL;
+                        that->state_.store (State::disconnected);
+                        std::println ("Closed an USB device"); // TODO remove
+                        that->hotplugHooks ().disconnected ();
+                }
+        }
+
+        return 0;
+}
+
+/*--------------------------------------------------------------------------*/
+
+void UsbAsync::handleUsbEvents (int *completed, int timeoutMs, libusb_transfer *transfer)
+{
+        timeval timeout{};
+        timeout.tv_sec = timeoutMs / 1000;
+        timeout.tv_usec = (timeoutMs % 1000) * 1000;
+
+        for (int i = 0; i < 1; ++i) {
+                // while (*completed == 0) {
+                if (auto r = libusb_handle_events_timeout_completed (nullptr, &timeout, completed); r < 0) {
+                        if (r == LIBUSB_ERROR_INTERRUPTED) {
+                                std::println ("Interrupted");
+                                continue;
+                        }
+
+                        if (transfer != nullptr) {
+                                std::println ("libusb_handle_events failed: {}, cancelling transfer and retrying", libusb_error_name (r));
+                                libusb_cancel_transfer (transfer);
+                        }
+
+                        continue;
                 }
 
-                return 0;
+                if (transfer != nullptr && transfer->dev_handle == nullptr) {
+                        /* transfer completion after libusb_close() */
+                        transfer->status = LIBUSB_TRANSFER_NO_DEVICE;
+                        *completed = 1;
+                }
         }
-} // namespace
+}
 
 /**
  * Acquires ~~`wholeDataLenB` bytes of~~ data (blocking function) block by block (`singleTransferLenB`).
  * See src/feature/analyzer/flexio.cc in the firmware project for the other side of the connection.
  */
-void UsbAsync::run ()
+void UsbAsync::run (Queue<RawCompressedBlock> *queue)
 {
+        int rc = libusb_hotplug_register_callback (NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0, VID, PID,
+                                                   LIBUSB_HOTPLUG_MATCH_ANY, hotplugCallback, this, &callback_handle);
+
+        if (LIBUSB_SUCCESS != rc) {
+                throw Exception{"Error creating a hotplug callback: " + std::string{libusb_error_name (rc)}};
+        }
+
         libusb_transfer *transfer = libusb_alloc_transfer (0);
 
         if (transfer == nullptr) {
                 throw Exception{"Libusb could not instantiate a new transfer using `libusb_alloc_transfer`"};
         }
 
-        auto finally = gsl::finally ([this, transfer /* , session */] {
+        auto finally = gsl::finally ([transfer] {
                 libusb_free_transfer (transfer);
-                running = false;
+                // running = false;
         });
 
         {
@@ -155,107 +195,95 @@ void UsbAsync::run ()
         int completed{};
         size_t benchmarkB{};
         std::optional<high_resolution_clock::time_point> startPoint;
-        timeval timeout{};
         bool started{};
-
-        // TODO!
-        {
-                int rc = libusb_hotplug_register_callback (NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0,
-                                                           0x045a, 0x5005, LIBUSB_HOTPLUG_MATCH_ANY, hotplug_callback, NULL, &callback_handle);
-                if (LIBUSB_SUCCESS != rc) {
-                        throw Exception{"Error creating a hotplug callback: " + std::string{libusb_error_name (rc)}};
-                }
-
-                while (true) {
-                        libusb_handle_events_completed (NULL, NULL);
-                        // nanosleep (&(struct timespec){0, 10000000UL}, NULL);
-                }
-        }
+        Bytes singleTransfer (singleTransferLenB);
 
         while (true) {
-                if (!startPoint) {
-                        startPoint = high_resolution_clock::now ();
+                if (state_.load () == State::disconnected) {
+                        handleUsbEvents (&completed, 1000, nullptr);
                 }
 
-                Bytes singleTransfer (singleTransferLenB);
-                libusb_fill_bulk_transfer (transfer, dev, common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (), sync_transfer_cb,
-                                           &completed, common::usb::TIMEOUT_MS);
+                if (state_.load () == State::connectedIdle) {
+                        handleUsbEvents (&completed, 10, nullptr); // Still LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT can be reporterd.
 
-                completed = 0;
-
-                if (auto r = libusb_submit_transfer (transfer); r < 0) {
-                        throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::to_string (r)};
-                }
-
-                if (!started) {
-                        start (/* params */);
-                        started = true;
-                }
-
-                while (completed == 0) {
-                        if (auto r = libusb_handle_events_timeout_completed (nullptr, &timeout, &completed); r < 0) {
-                                if (r == LIBUSB_ERROR_INTERRUPTED) {
-                                        std::println ("Interrupted");
-                                        continue;
-                                }
-
-                                std::println ("libusb_handle_events failed: {}, cancelling transfer and retrying", libusb_error_name (r));
-                                libusb_cancel_transfer (transfer);
-                                continue;
-                        }
-
-                        if (transfer->dev_handle == nullptr) {
-                                /* transfer completion after libusb_close() */
-                                transfer->status = LIBUSB_TRANSFER_NO_DEVICE;
-                                completed = 1;
+                        if (request_ == Request::start) {
+                                request_ = Request::none;
+                                state_ = State::transferring;
+                                started = false;
                         }
                 }
 
-                if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
-                        throw Exception{"USB transfer status error Code: " + std::string{libusb_error_name (transfer->status)}};
-                }
+                if (state_.load () == State::transferring) {
+                        singleTransfer.clear ();
 
-                if (size_t (transfer->actual_length) != singleTransferLenB) {
-                        std::println ("Short: {}", transfer->actual_length);
-                }
+                        if (!startPoint) { // TODO move to a benchmarking class
+                                startPoint = high_resolution_clock::now ();
+                        }
 
-                singleTransfer.resize (transfer->actual_length);
-                auto now = high_resolution_clock::now ();
-                benchmarkB += singleTransfer.size ();
+                        libusb_fill_bulk_transfer (transfer, dev, common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (),
+                                                   transferCallback, &completed, common::usb::TIMEOUT_MS);
 
-                {
-                        std::lock_guard lock{mutex};
-                        allTransferedB += singleTransfer.size ();
-                }
+                        completed = 0;
 
-                if (!singleTransfer.empty ()) {
-                        auto mbps = (double (benchmarkB) / double (duration_cast<microseconds> (now - *startPoint).count ())) * 8;
-                        RawCompressedBlock rcd{mbps, 0, std::move (singleTransfer)}; // TODO resize blocks (if needed)
-                        deviceHooks ().queue->push (std::move (rcd));
+                        if (auto r = libusb_submit_transfer (transfer); r < 0) {
+                                throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::to_string (r)};
+                        }
+
+                        if (!started) {
+                                deviceHooks ().startHook ();
+                                started = true;
+                        }
+
+                        handleUsbEvents (&completed, 0, transfer);
+
+                        if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
+                                std::println ("{}", libusb_error_name (transfer->status)); // TODO remove
+                                throw Exception{"USB transfer status error Code: " + std::string{libusb_error_name (transfer->status)}};
+                        }
+
+                        if (size_t (transfer->actual_length) != singleTransferLenB) {
+                                std::println ("Short: {}", transfer->actual_length);
+                        }
+
+                        singleTransfer.resize (transfer->actual_length);
+                        auto now = high_resolution_clock::now ();
+                        benchmarkB += singleTransfer.size ();
 
                         {
                                 std::lock_guard lock{mutex};
-                                globalStop = high_resolution_clock::now (); // We want to be up to date, and skip possible time-out.
+                                allTransferedB += singleTransfer.size ();
                         }
-                }
 
-                benchmarkB = 0;
-                startPoint.reset ();
+                        if (!singleTransfer.empty ()) {
+                                auto mbps = (double (benchmarkB) / double (duration_cast<microseconds> (now - *startPoint).count ())) * 8;
+                                RawCompressedBlock rcd{mbps, 0, std::move (singleTransfer)}; // TODO resize blocks (if needed)
+                                queue->push (std::move (rcd));
 
-                if (request_ == Request::stop && singleTransfer.empty ()) {
-                        break;
+                                {
+                                        std::lock_guard lock{mutex};
+                                        globalStop = high_resolution_clock::now (); // We want to be up to date, and skip possible time-out.
+                                }
+                        }
+
+                        benchmarkB = 0;
+                        startPoint.reset ();
+
+                        if (request_ == Request::stop && singleTransfer.empty ()) {
+                                request_ = Request::none;
+                                state_ = State::connectedIdle;
+                        }
                 }
         }
 }
 
 /****************************************************************************/
 
+void UsbAsync::detect () {}
+
+/****************************************************************************/
+
 void UsbAsync::controlOut (std::vector<uint8_t> const &request)
 {
-        if (!initialized) {
-                throw Exception{"`controlOut` called, but USB is not initialized."};
-        }
-
         if (request.size () > MAX_CONTROL_PAYLOAD_SIZE) {
                 throw Exception{"MAX_CONTROL_PAYLOAD_SIZE exceeded."};
         }
@@ -273,10 +301,6 @@ void UsbAsync::controlOut (std::vector<uint8_t> const &request)
 
 std::vector<uint8_t> UsbAsync::controlIn (size_t len)
 {
-        if (!initialized) {
-                throw Exception{"`controlIn` called, but USB is not initialized."};
-        }
-
         std::vector<uint8_t> request (len);
 
         if (auto r = libusb_control_transfer (

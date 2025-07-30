@@ -30,7 +30,8 @@ public:
         void start () override;
         void stop () override;
 
-        void run () override;
+        void run (Queue<RawCompressedBlock> *queue) override;
+        void detect () override {}
 
 private:
         std::atomic_bool running_;

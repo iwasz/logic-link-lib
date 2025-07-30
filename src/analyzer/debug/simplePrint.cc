@@ -11,7 +11,7 @@
 #include <print>
 #include <span>
 
-namespace logic::an {
+namespace logic {
 
 /****************************************************************************/
 
@@ -66,5 +66,5 @@ AugumentedData RawPrint::runRaw (RawData const &raw)
         return {};
 }
 
-} // namespace logic::an
+} // namespace logic
 #endif

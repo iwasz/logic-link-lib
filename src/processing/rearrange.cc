@@ -18,7 +18,7 @@ module;
 module logic;
 import :processing;
 
-namespace logic::an {
+namespace logic {
 
 namespace {
 
@@ -205,10 +205,10 @@ std::vector<SampleBlock> prepareDigitalBlocks (RawData const &rd, size_t channel
         std::vector<SampleBlock> digital (channelsNum);
 
         SampleBlock sb = {.type = StreamType::digital,
-                                .sampleRate = 0,                                     // TODO
-                                .begin = std::chrono::high_resolution_clock::now (), // TODO
-                                .end = std::chrono::high_resolution_clock::now (),   // TODO
-                                .buffer = Bytes{}};
+                          .sampleRate = 0,                                     // TODO
+                          .begin = std::chrono::high_resolution_clock::now (), // TODO
+                          .end = std::chrono::high_resolution_clock::now (),   // TODO
+                          .buffer = Bytes{}};
 
         std::ranges::fill (digital, sb);
 
@@ -227,4 +227,4 @@ std::vector<SampleBlock> prepareDigitalBlocks (RawData const &rd, size_t channel
         return digital;
 }
 
-} // namespace logic::an
+} // namespace logic

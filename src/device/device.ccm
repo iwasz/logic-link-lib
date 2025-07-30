@@ -53,6 +53,7 @@ export struct IDevice {
 
         virtual void start () = 0;
         virtual void stop () = 0;
+        virtual void run (Queue<RawCompressedBlock> *queue) = 0;
 
         /**
          * Get device statistics - speciffic to the device itself and the USB interface.
@@ -66,6 +67,9 @@ export struct IDevice {
          */
         virtual std::unordered_set<logs::Code> getErrors () = 0;
         virtual void clearErrors () = 0;
+
+        virtual bool isReady () const = 0;
+        virtual void waitReady () const = 0;
 };
 
 /**
@@ -101,6 +105,8 @@ private:
 export struct AbstractDevice : public IDevice {
 public:
         explicit AbstractDevice (IInput *input) : input_{input} {}
+
+        void run (Queue<RawCompressedBlock> *queue) override { input_->run (queue); }
 
         void controlOut (Request const &request) { input ()->controlOut (request.data ()); }
 

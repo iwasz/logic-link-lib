@@ -11,7 +11,7 @@
 #include <gsl/gsl>
 #include <print>
 
-namespace logic::an {
+namespace logic {
 
 /****************************************************************************/
 
@@ -54,4 +54,4 @@ size_t FlexioSynchronizationCheck::analyzeDataIntegrityBlock (std::span<const ui
 
 void FlexioSynchronizationCheck::stop () {}
 
-} // namespace logic::an
+} // namespace logic

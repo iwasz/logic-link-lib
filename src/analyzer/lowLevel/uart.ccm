@@ -12,7 +12,7 @@ export module logic:analyzer.lowLevel.uart;
 import :analyzer;
 import :data;
 
-namespace logic::an::uart {
+namespace logic::uart {
 
 export enum class Parity : uint8_t { none, odd, even };
 
@@ -35,4 +35,4 @@ AugumentedData UartAnalyzer::run (SampleBlockStream const & /* samples */)
         return ret;
 }
 
-} // namespace logic::an::uart
+} // namespace logic::uart
