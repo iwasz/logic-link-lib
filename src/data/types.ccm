@@ -105,19 +105,24 @@ public:
         void start ()
         {
                 std::lock_guard lock{mutex};
-                iter = data.begin ();
+                started_ = false;
         }
 
         std::unique_ptr<Elem> next ()
         {
                 std::unique_lock lock{mutex};
-                cVar.wait (lock, [this] { return iter != data.end () || closed_; });
+
+                if (!index) {
+                        index = 0;
+                }
+
+                cVar.wait (lock, [this] { return data.size () > *index || closed_; });
 
                 if (closed_) {
                         return {};
                 }
 
-                auto p = std::make_unique<Elem> (*iter++);
+                auto p = std::make_unique<Elem> (data.at ((*index)++));
                 return p;
         }
 
@@ -125,8 +130,12 @@ public:
 
         void close ()
         {
-                std::lock_guard lock{mutex};
-                closed_ = true;
+                {
+                        std::lock_guard lock{mutex};
+                        closed_ = true;
+                }
+
+                cVar.notify_all ();
         }
 
 private:
@@ -134,9 +143,10 @@ private:
         std::mutex mutex;
         std::condition_variable cVar;
 
-        using Iterator = std::deque<Elem>::iterator;
-        Iterator iter;
-        bool closed_{};
+        // using Iterator = std::deque<Elem>::iterator;
+        std::optional<size_t> index;
+        bool started_{}; // Tells if iteration has been started and is in proces
+        bool closed_{};  // Additional
 };
 
 /**

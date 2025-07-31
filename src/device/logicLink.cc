@@ -32,11 +32,7 @@ LogicLink::LogicLink (IInput *input) : AbstractDevice{input}
                 .alternateSetting = 0,
         };
 
-        DeviceHooks hooks;
-        hooks.startHook = [this] { start (); };
-        hooks.stopHook = [this] { stop (); };
-
-        input->open (hooks, info);
+        input->open (info);
 }
 
 /****************************************************************************/
@@ -91,15 +87,11 @@ common::acq::Params LogicLink::configureAcquisition (common::acq::Params const &
  * to provide the data in format digestable for the sigrok library. Consider removing the legacy
  * param and the implementation.
  */
-void LogicLink::start () { controlOut (Request{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_START_CAPTURE)); }
+void LogicLink::onStart () { controlOut (Request{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_START_CAPTURE)); }
 
 /****************************************************************************/
 
-void LogicLink::stop ()
-{
-        // stop_ = true;
-        controlOut (Request{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_STOP_CAPTURE));
-}
+void LogicLink::onStop () { controlOut (Request{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_STOP_CAPTURE)); }
 
 /****************************************************************************/
 
@@ -136,7 +128,8 @@ void LogicLink::clearErrors () { controlOut (Request{}.clazz (LOGIC_LINK_CLASS_L
 /****************************************************************************/
 
 void LogicLink::configureTransmission (TransmissionParams const &params)
-{AbstractDevice::configureTransmission (params);
+{
+        AbstractDevice::configureTransmission (params);
         controlOut (Request{}
                             .clazz (LOGIC_LINK_CLASS_LA)
                             .verb (LL_VERB_SET_USB_TRANSFER_PARAMS)

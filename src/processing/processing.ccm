@@ -9,6 +9,7 @@
 module;
 #include "common/params.hh"
 #include <algorithm>
+#include <atomic>
 #include <climits>
 #include <span>
 #include <variant>
@@ -27,7 +28,16 @@ namespace logic {
  * @param strategy Describes what to do.
  * @param discard Whether to discard the data or sotre it indefinitely in the RAM.
  */
-export void analyze (Queue<RawCompressedBlock> *queue, IBackend *backend, IAnalyzer *strategy, bool discard = false, bool decompress = false);
+export struct Analyze {
+public:
+        void operator() (Queue<RawCompressedBlock> *queue, IBackend *backend, IAnalyzer *strategy, bool discard = false,
+                         bool decompress = false);
+
+        void kill () { running = false; }
+
+private:
+        std::atomic_bool running = true;
+};
 
 RawData decompress (RawCompressedBlock const &rcd);
 

@@ -47,24 +47,6 @@ common::acq::Params AutoDevice::configureAcquisition (common::acq::Params const 
 
 /****************************************************************************/
 
-void AutoDevice::start ()
-{
-        asrt (delegate);
-        input ()->start (); // TODO mess. fix.
-        // delegate->start ();
-}
-
-/****************************************************************************/
-
-void AutoDevice::stop ()
-{
-        asrt (delegate);
-        input ()->stop ();
-        // delegate->stop ();
-}
-
-/****************************************************************************/
-
 common::usb::Stats AutoDevice::getStats ()
 {
         asrt (delegate);
@@ -113,6 +95,30 @@ void AutoDevice::onDisconnected ()
 {
         std::lock_guard lock{mutex};
         delegate.reset ();
+}
+
+/****************************************************************************/
+
+void AutoDevice::onStart ()
+{
+        asrt (delegate);
+        delegate->onStart ();
+}
+
+/****************************************************************************/
+
+void AutoDevice::onStop ()
+{
+        asrt (delegate);
+        delegate->onStop ();
+}
+
+/****************************************************************************/
+
+size_t AutoDevice::transferLen () const
+{
+        asrt (delegate);
+        return delegate->transferLen ();
 }
 
 /****************************************************************************/

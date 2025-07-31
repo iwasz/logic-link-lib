@@ -37,21 +37,23 @@ public:
          */
         ~UsbAsync () override;
 
-        void open (DeviceHooks const &deviceHooks, DeviceInfo const &info) override;
+        void open (DeviceInfo const &info) override;
 
         void controlOut (std::vector<uint8_t> const &request) override;
         std::vector<uint8_t> controlIn (size_t len) override;
 
         void start () override { request_.store (Request::start); }
-        void stop () override { request_ = Request::stop; }
+        void stop () override { request_.store (Request::stop); }
 
-        void run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB) override;
-        void detect () override;
+        void run (Queue<RawCompressedBlock> *queue, IInputObserver *observer) override;
 
 private:
         static void transferCallback (struct libusb_transfer *transfer);
         static int hotplugCallback (struct libusb_context * /* ctx */, struct libusb_device *dev, libusb_hotplug_event event, void *userData);
+
         static void handleUsbEvents (int *completed, int timeoutS, libusb_transfer *transfer);
+        static void handleUsbEventsCompleted (int *completed, libusb_transfer *transfer);
+        static void handleUsbEventsTimeout (int timeoutMs, libusb_transfer *transfer);
 
         /// Number of bytes received so far irrespective of the buffer size.
         size_t receivedB () const { return allTransferedB; }

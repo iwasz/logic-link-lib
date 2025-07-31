@@ -20,7 +20,7 @@ namespace logic {
 using namespace std::chrono;
 using namespace std::string_literals;
 
-void analyze (Queue<RawCompressedBlock> *queue, IBackend *backend, IAnalyzer *strategy, bool discard, bool decompress)
+void Analyze::operator() (Queue<RawCompressedBlock> *queue, IBackend *backend, IAnalyzer *strategy, bool discard, bool decompress)
 {
         if (strategy != nullptr) {
                 strategy->start ();
@@ -30,7 +30,7 @@ void analyze (Queue<RawCompressedBlock> *queue, IBackend *backend, IAnalyzer *st
                 queue->start ();
         }
 
-        while (true) {
+        while (running) {
                 std::unique_ptr<RawCompressedBlock> rcd = (discard) ? (queue->pop ()) : (queue->next ());
 
                 if (!rcd) {

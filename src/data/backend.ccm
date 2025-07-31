@@ -118,13 +118,16 @@ export struct IBackend {
 /**
  * Simple backend for unit testing, and CLI app development.
  * TODO locking
+ * TODO implementation
  */
 export class BlockBackend : public IBackend {
 public:
+        BlockBackend () : groups (16) {}
+
         void append (size_t groupIdx, std::vector<Bytes> &&s) override
         {
-                std::lock_guard lock{mutex};
-                groups.at (groupIdx).append (std::move (s));
+                // std::lock_guard lock{mutex};
+                // groups.at (groupIdx).append (std::move (s));
         }
 
         SubRange range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;

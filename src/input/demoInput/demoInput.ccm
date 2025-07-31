@@ -24,14 +24,15 @@ namespace logic {
  */
 export class DemoInput : public AbstractInput {
 public:
+        void open (DeviceInfo const &info) override {}
+
         void controlOut (std::vector<uint8_t> const &request) override {}
         std::vector<uint8_t> controlIn (size_t /* len */) override { return {}; }
 
         void start () override;
         void stop () override;
 
-        void run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB) override;
-        void detect () override {}
+        void run (Queue<RawCompressedBlock> *queue, IInputObserver *observer) override;
 
 private:
         std::atomic_bool running_;

@@ -16,9 +16,9 @@ import :input.demo;
 
 namespace logic {
 
-void DemoInput::run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB)
+void DemoInput::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
 {
-        Bytes singleTransfer (singleTransferLenB);
+        Bytes singleTransfer (observer->transferLen ());
 
         while (true) {
                 if (running_) {

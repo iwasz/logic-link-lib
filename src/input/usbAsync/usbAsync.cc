@@ -48,10 +48,8 @@ UsbAsync::UsbAsync ()
 
 /****************************************************************************/
 
-void UsbAsync::open (DeviceHooks const &deviceHooks, DeviceInfo const &info)
+void UsbAsync::open (DeviceInfo const &info)
 {
-        AbstractInput::open (deviceHooks, info);
-
         if (dev = libusb_open_device_with_vid_pid (nullptr, VID, PID); dev == nullptr) {
                 throw Exception ("Error finding USB device.");
         }
@@ -135,16 +133,15 @@ void UsbAsync::handleUsbEvents (int *completed, int timeoutMs, libusb_transfer *
         timeout.tv_sec = timeoutMs / 1000;
         timeout.tv_usec = (timeoutMs % 1000) * 1000;
 
-        for (int i = 0; i < 1; ++i) {
-                // while (*completed == 0) {
+        do {
                 if (auto r = libusb_handle_events_timeout_completed (nullptr, &timeout, completed); r < 0) {
                         if (r == LIBUSB_ERROR_INTERRUPTED) {
-                                std::println ("Interrupted");
+                                // std::println ("USB Interrupted");
                                 continue;
                         }
 
                         if (transfer != nullptr) {
-                                std::println ("libusb_handle_events failed: {}, cancelling transfer and retrying", libusb_error_name (r));
+                                // std::println ("libusb_handle_events failed: {}, cancelling transfer and retrying", libusb_error_name (r));
                                 libusb_cancel_transfer (transfer);
                         }
 
@@ -156,14 +153,26 @@ void UsbAsync::handleUsbEvents (int *completed, int timeoutMs, libusb_transfer *
                         transfer->status = LIBUSB_TRANSFER_NO_DEVICE;
                         *completed = 1;
                 }
-        }
+        } while (timeoutMs == 0 && *completed == 0);
+}
+
+/*--------------------------------------------------------------------------*/
+
+void UsbAsync::handleUsbEventsCompleted (int *completed, libusb_transfer *transfer) { handleUsbEvents (completed, 0, transfer); }
+
+/*--------------------------------------------------------------------------*/
+
+void UsbAsync::handleUsbEventsTimeout (int timeoutMs, libusb_transfer *transfer)
+{
+        int completed = 0;
+        handleUsbEvents (&completed, timeoutMs, transfer);
 }
 
 /**
  * Acquires ~~`wholeDataLenB` bytes of~~ data (blocking function) block by block (`singleTransferLenB`).
  * See src/feature/analyzer/flexio.cc in the firmware project for the other side of the connection.
  */
-void UsbAsync::run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB)
+void UsbAsync::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
 {
         int rc = libusb_hotplug_register_callback (NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0, VID, PID,
                                                    LIBUSB_HOTPLUG_MATCH_ANY, hotplugCallback, this, &callback_handle);
@@ -199,11 +208,11 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB)
 
         while (true) {
                 if (state_.load () == State::disconnected) {
-                        handleUsbEvents (&completed, 1000, nullptr);
+                        handleUsbEventsTimeout (1000, nullptr);
                 }
 
                 if (state_.load () == State::connectedIdle) {
-                        handleUsbEvents (&completed, 10, nullptr); // Still LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT can be reporterd.
+                        handleUsbEventsTimeout (10, nullptr); // Still LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT can be reporterd.
 
                         if (request_ == Request::start) {
                                 request_ = Request::none;
@@ -213,7 +222,7 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB)
                 }
 
                 if (state_.load () == State::transferring) {
-                        Bytes singleTransfer (singleTransferLenB);
+                        Bytes singleTransfer (observer->transferLen ());
 
                         if (!startPoint) { // TODO move to a benchmarking class
                                 startPoint = high_resolution_clock::now ();
@@ -225,22 +234,24 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB)
                         completed = 0;
 
                         if (auto r = libusb_submit_transfer (transfer); r < 0) {
-                                throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::to_string (r)};
+                                throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
                         }
 
+                        std::print (".");
+
                         if (!started) {
-                                deviceHooks ().startHook ();
+                                observer->onStart ();
+                                std::println ("onStart");
                                 started = true;
                         }
 
-                        handleUsbEvents (&completed, 0, transfer);
+                        handleUsbEventsCompleted (&completed, transfer);
 
                         if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
-                                std::println ("{}", libusb_error_name (transfer->status)); // TODO remove
                                 throw Exception{"USB transfer status error Code: " + std::string{libusb_error_name (transfer->status)}};
                         }
 
-                        if (size_t (transfer->actual_length) != singleTransferLenB) {
+                        if (size_t (transfer->actual_length) != observer->transferLen ()) {
                                 std::println ("Short: {}", transfer->actual_length);
                         }
 
@@ -268,16 +279,13 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, size_t singleTransferLenB)
                         startPoint.reset ();
 
                         if (request_ == Request::stop && singleTransfer.empty ()) {
+                                observer->onStop ();
                                 request_ = Request::none;
                                 state_ = State::connectedIdle;
                         }
                 }
         }
 }
-
-/****************************************************************************/
-
-void UsbAsync::detect () {}
 
 /****************************************************************************/
 
