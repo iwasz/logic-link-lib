@@ -30,7 +30,7 @@ TEST_CASE ("Valid", "[integrity]")
                 0b00000000000000000011100000000000U, //
         };
 
-        an::ClockSignalCheck csc; // dmaBlockLength is not important in  this case
+        ClockSignalCheck csc; // dmaBlockLength is not important in  this case
         REQUIRE ((csc.analyzeDataIntegrity (a.data (), a.size ())) == 0);
         REQUIRE ((csc.analyzeDataIntegrity (b.data (), b.size ())) == 0);
 }
@@ -52,7 +52,7 @@ TEST_CASE ("Valid one by one", "[integrity]")
                 0b00000000000000000011100000000000U, //
         };
 
-        an::ClockSignalCheck csc;
+        ClockSignalCheck csc;
 
         for (auto const &x : a) {
                 csc.analyzeDataIntegrity (x);
@@ -81,12 +81,12 @@ TEST_CASE ("Invalid", "[integrity]")
                 0b00000000000000000011100000000000U, //
         };
 
-        an::ClockSignalCheck csc;
+        ClockSignalCheck csc;
         REQUIRE ((csc.analyzeDataIntegrity (a.data (), a.size ())) == 1);
         REQUIRE ((csc.analyzeDataIntegrity (b.data (), b.size ())) == 2);
 
         // Reatart test
-        csc = an::ClockSignalCheck{};
+        csc = ClockSignalCheck{};
         REQUIRE ((csc.analyzeDataIntegrity (a.data (), a.size ())) == 1);
         REQUIRE ((csc.analyzeDataIntegrity (b.data (), b.size ())) == 2);
 }
@@ -108,7 +108,7 @@ TEST_CASE ("Invalid one by one", "[integrity]")
                 0b00000000000000000011100000000000U, //
         };
 
-        an::ClockSignalCheck csc;
+        ClockSignalCheck csc;
 
         for (auto const &x : a) {
                 csc.analyzeDataIntegrity (x);
@@ -125,6 +125,6 @@ TEST_CASE ("Use case 1", "[integrity]")
                 0b00000000111111111100000000001111U, //
         };
 
-        an::ClockSignalCheck csc; // dmaBlockLength is not important in  this case
+        ClockSignalCheck csc; // dmaBlockLength is not important in  this case
         REQUIRE ((csc.analyzeDataIntegrity (a.data (), a.size ())) == 0);
 }

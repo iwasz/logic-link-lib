@@ -31,16 +31,17 @@ class MockBackend : public IBacked {}; // for testingf
  */
 class RealBackend : public IBacked {}; // for testingf
 } // namespace private_aka_data_etc
-#endif
 
 TEST_CASE ("Valid", "[uart]")
 {
         SampleBlockStream in;
         // in.digital.push_back (Bytes{1, 2, 3});
 
-        an::uart::UartAnalyzer a{0};
+        UartAnalyzer a{0};
         /* auto out =  */ a.run (in);
 
         // REQUIRE ((csc.analyzeDataIntegrity (a.data (), a.size ())) == 0);
         // REQUIRE ((csc.analyzeDataIntegrity (b.data (), b.size ())) == 0);
 }
+
+#endif

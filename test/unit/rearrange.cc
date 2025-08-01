@@ -43,7 +43,7 @@ TEST_CASE ("flexio", "[rearrange]")
                 common::acq::Params params;
                 params.digitalChannels = 8;
                 params.digitalEncoding = common::acq::DigitalChannelEncoding::flexio;
-                auto sd = an::rearrange (raw, params);
+                auto sd = rearrange (raw, params);
 
                 REQUIRE (std::get<Bytes> (sd.at (0).buffer) == Bytes{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07});
                 REQUIRE (std::get<Bytes> (sd.at (1).buffer) == Bytes{0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17});
@@ -83,7 +83,7 @@ TEST_CASE ("flexio", "[rearrange]")
                 common::acq::Params params;
                 params.digitalChannels = 4;
                 params.digitalEncoding = common::acq::DigitalChannelEncoding::flexio;
-                auto sd = an::rearrange (raw, params);
+                auto sd = rearrange (raw, params);
 
                 REQUIRE (std::get<Bytes> (sd.at (0).buffer)
                          == Bytes{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f});
@@ -115,7 +115,7 @@ TEST_CASE ("flexio", "[rearrange]")
                         0b11001100, 0b01000100, 0b11001100, 0b01000100, // CH0 SHIFTBUF1
                 };
 
-                auto sd = an::rearrangeFlexio<1, 2> (raw);
+                auto sd = rearrangeFlexio<1, 2> (raw);
 
                 REQUIRE (std::get<Bytes> (sd.at (0).buffer)
                          == Bytes{
@@ -144,7 +144,7 @@ TEST_CASE ("flexio", "[rearrange]")
                 common::acq::Params params;
                 params.digitalChannels = 1;
                 params.digitalEncoding = common::acq::DigitalChannelEncoding::flexio;
-                auto sd = an::rearrange (raw, params);
+                auto sd = rearrange (raw, params);
 
                 REQUIRE (std::get<Bytes> (sd.at (0).buffer)
                          == Bytes{
@@ -173,7 +173,7 @@ TEST_CASE ("flexio", "[rearrange]")
         //         common::acq::Params params;
         //         params.digitalChannels = 1;
         //         params.digitalEncoding = common::acq::DigitalChannelEncoding::flexio;
-        //         SampleData sd = an::rearrange (raw, params);
+        //         SampleData sd = rearrange (raw, params);
 
         //         REQUIRE (std::get<Bytes>(sd.at (0).buffer)
         //                  == Buffer{
@@ -202,7 +202,7 @@ TEST_CASE ("flexio", "[rearrange]")
                 common::acq::Params params;
                 params.digitalChannels = 1;
                 params.digitalEncoding = common::acq::DigitalChannelEncoding::flexio;
-                auto sd = an::rearrange (raw, params);
+                auto sd = rearrange (raw, params);
 
                 REQUIRE (std::get<Bytes> (sd.at (0).buffer)
                          == Bytes{
@@ -230,7 +230,7 @@ TEST_CASE ("flexio", "[rearrange]")
                         0b00000000, 0b00000000, 0b00000000, 0b00000000, // CH0 SHIFTBUF7
                 };
 
-                auto sd = an::rearrangeFlexio<1, 8> (raw);
+                auto sd = rearrangeFlexio<1, 8> (raw);
 
                 REQUIRE (std::get<Bytes> (sd.at (0).buffer)
                          == Bytes{
@@ -261,18 +261,46 @@ TEST_CASE ("flexio", "[rearrange]")
                 common::acq::Params params;
                 params.digitalChannels = 2;
                 params.digitalEncoding = common::acq::DigitalChannelEncoding::flexio;
-                auto sd = an::rearrange (raw, params);
+                auto sd = rearrange (raw, params);
 
                 REQUIRE (std::get<Bytes> (sd.at (0).buffer)
                          == Bytes{
-                                 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, //
-                                 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, //
+                                 0x00,
+                                 0x01,
+                                 0x02,
+                                 0x03,
+                                 0x04,
+                                 0x05,
+                                 0x06,
+                                 0x07, //
+                                 0x08,
+                                 0x09,
+                                 0x0a,
+                                 0x0b,
+                                 0x0c,
+                                 0x0d,
+                                 0x0e,
+                                 0x0f, //
                          });
 
                 REQUIRE (std::get<Bytes> (sd.at (1).buffer)
                          == Bytes{
-                                 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, //
-                                 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, //
+                                 0x10,
+                                 0x11,
+                                 0x12,
+                                 0x13,
+                                 0x14,
+                                 0x15,
+                                 0x16,
+                                 0x17, //
+                                 0x18,
+                                 0x19,
+                                 0x1a,
+                                 0x1b,
+                                 0x1c,
+                                 0x1d,
+                                 0x1e,
+                                 0x1f, //
                          });
         }
 }

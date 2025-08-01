@@ -56,6 +56,7 @@ target_sources(${PROJECT_NAME}
     frontend.cc
     backend.cc
     bitSpan.cc
+    eventQueue.cc
 
   PUBLIC FILE_SET CXX_MODULES FILES
     utils.ccm

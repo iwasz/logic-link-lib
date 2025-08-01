@@ -221,7 +221,7 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
                         }
                 }
 
-                if (state_.load () == State::transferring) {
+                if (observer != nullptr && state_.load () == State::transferring) {
                         Bytes singleTransfer (observer->transferLen ());
 
                         if (!startPoint) { // TODO move to a benchmarking class

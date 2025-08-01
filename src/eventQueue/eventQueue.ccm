@@ -1,0 +1,121 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <algorithm>
+#include <functional>
+#include <mutex>
+#include <string>
+export module logic:events;
+
+namespace logic {
+
+export struct IEvent {
+        virtual ~IEvent () = default;
+};
+
+export struct ICallback {
+        virtual ~ICallback () = default;
+        virtual void execute (IEvent const *event) = 0;
+};
+
+export class UsbConnected : public IEvent {
+public:
+        UsbConnected (std::string deviceName) : deviceName{std::move (deviceName)} {}
+        std::string deviceName;
+};
+
+export struct UsbCallback : public ICallback {
+        explicit UsbCallback (std::function<void (std::string const &)> callback) : callback{std::move (callback)} {}
+        void execute (IEvent const *event) override;
+        std::function<void (std::string const &)> callback;
+};
+
+void UsbCallback::execute (IEvent const *event)
+{
+        UsbConnected const *con = dynamic_cast<UsbConnected const *> (event);
+        callback (con->deviceName);
+};
+
+/**
+ *
+ */
+export class EventQueue {
+public:
+        /// Callbacks are not protected, add from single thread only.
+        void addCallback (std::string const &name, std::unique_ptr<ICallback> callback) { callbacks[name] = std::move (callback); }
+
+        void addEvent (std::string const &name, std::unique_ptr<IEvent> event)
+        {
+                {
+                        std::lock_guard lock{mutex};
+                        events.emplace_back (std::make_pair (name, std::move (event)));
+                }
+
+                cv.notify_all ();
+        }
+
+        void run ();
+        void wait ();
+
+private:
+        using Events = std::vector<std::pair<std::string, std::unique_ptr<IEvent>>>;
+        using Callbacks = std::unordered_map<std::string, std::unique_ptr<ICallback>>;
+
+        void runImpl (Events const &evts);
+
+        Events events;
+        Callbacks callbacks;
+        std::mutex mutex;
+        std::condition_variable cv;
+};
+
+/****************************************************************************/
+
+void EventQueue::run ()
+{
+        Events copy;
+
+        {
+                std::lock_guard lock{mutex};
+                copy = std::move (events);
+                events = Events{};
+        }
+
+        runImpl (copy);
+}
+
+/****************************************************************************/
+
+void EventQueue::wait ()
+{
+        Events copy;
+
+        {
+                std::unique_lock lock{mutex};
+                cv.wait (lock, [this] { return !events.empty (); });
+                copy = std::move (events);
+                events = Events{};
+        }
+
+        runImpl (copy);
+}
+
+/****************************************************************************/
+
+void EventQueue::runImpl (Events const &evts)
+{
+        for (auto const &[name, evt] : evts) {
+                if (auto i = callbacks.find (name); i != callbacks.cend ()) {
+                        auto &callback = callbacks.at (name);
+                        callback->execute (evt.get ());
+                }
+        }
+}
+
+} // namespace logic

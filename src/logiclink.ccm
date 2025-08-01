@@ -28,3 +28,4 @@ export import :analyzer.debug.clockSignal;
 export import :util.span;
 export import :util.poly;
 export import :processing;
+export import :events;
