@@ -23,13 +23,12 @@ namespace logic {
  *
  */
 class Session {
-
-        void stop () { device->stop (); }
-
 public:
-        Queue<RawCompressedBlock> rawQueue;
+        // void stop () { device->stop (); }
 
-        std::shared_ptr<IInput> input;
+        // public:
+        Queue<RawCompressedBlock> rawQueue;
+        // std::shared_ptr<IInput> input;
         std::shared_ptr<IDevice> device;
         std::unique_ptr<IBackend> backend;
         std::unique_ptr<IFrontend> frontend;

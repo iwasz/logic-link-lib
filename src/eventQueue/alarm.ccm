@@ -1,0 +1,45 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <any>
+#include <functional>
+#include <mutex>
+#include <string>
+#include <typeindex>
+#include <unordered_map>
+export module logic:event.alarm;
+
+namespace logic {
+
+/**
+ * Kind of a persistent event that gets set, and cleared. On both ocasions
+ * it calls the cupplied callback. Named like that because I maintain a system
+ * where such a thing is called like that and it resides in my mental model.
+ */
+export struct IAlarm {
+        IAlarm () = default;
+        IAlarm (IAlarm const &) = default;
+        IAlarm &operator= (IAlarm const &) = default;
+        IAlarm (IAlarm &&) noexcept = default;
+        IAlarm &operator= (IAlarm &&) noexcept = default;
+        virtual ~IAlarm () = default;
+
+        /**
+         * Execute the callback. If set is true excecute the "set" callback,
+         * if false, execute the "clear" callback.
+         */
+        virtual void execute (bool set, std::any const &func) = 0;
+};
+
+export struct AbstractAlarm {
+        struct Set {};
+        struct Clear {};
+};
+
+} // namespace logic

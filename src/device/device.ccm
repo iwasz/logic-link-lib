@@ -20,6 +20,7 @@ export module logic:device;
 import :input;
 
 namespace logic {
+class Session;
 
 export struct TransmissionParams {
         uint32_t usbTransfer{};
@@ -51,9 +52,9 @@ export struct IDevice : public IInputObserver {
          */
         virtual void configureTransmission (TransmissionParams const &params) = 0;
 
-        virtual void start () = 0;
+        virtual void start (Session *session) = 0;
         virtual void stop () = 0;
-        virtual void run (Queue<RawCompressedBlock> *queue) = 0;
+        virtual void run () = 0;
 
         /**
          * Get device statistics - speciffic to the device itself and the USB interface.
@@ -106,9 +107,9 @@ export struct AbstractDevice : public IDevice {
 public:
         explicit AbstractDevice (IInput *input) : input_{input} {}
 
-        void start () override { input_->start (); }
+        void start (Session *session) override { input_->start (session); }
         void stop () override { input_->stop (); }
-        void run (Queue<RawCompressedBlock> *queue) override { input_->run (queue, this); }
+        void run () override { input_->run (); }
 
         void configureTransmission (TransmissionParams const &params) override { transmissionParams_ = params; }
 

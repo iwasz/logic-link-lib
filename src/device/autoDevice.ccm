@@ -1,60 +1,60 @@
-/****************************************************************************
- *                                                                          *
- *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
- *  ~~~~~~~~                                                                *
- *  License : see COPYING file for details.                                 *
- *  ~~~~~~~~~                                                               *
- ****************************************************************************/
+// /****************************************************************************
+//  *                                                                          *
+//  *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+//  *  ~~~~~~~~                                                                *
+//  *  License : see COPYING file for details.                                 *
+//  *  ~~~~~~~~~                                                               *
+//  ****************************************************************************/
 
-module;
-#include "common/error.hh"
-#include "common/params.hh"
-#include "common/stats.hh"
-#include <cstdlib>
-#include <mutex>
-#include <unordered_set>
-export module logic:device.autoDevice;
-import :device;
-import :device.factory;
+// module;
+// #include "common/error.hh"
+// #include "common/params.hh"
+// #include "common/stats.hh"
+// #include <cstdlib>
+// #include <mutex>
+// #include <unordered_set>
+// export module logic:device.autoDevice;
+// import :device;
+// import :device.factory;
 
-namespace logic {
+// namespace logic {
 
-/**
- * Device wrapper that automatically creates a device when hotplug event
- * gets reported. Until then, it does nothing, i.e. calling its methods
- * has no effect.
- */
-export class AutoDevice : public AbstractDevice {
-public:
-        AutoDevice (IInput *input, Factory *factory) : AbstractDevice (input), factory_{factory} {}
+// /**
+//  * Device wrapper that automatically creates a device when hotplug event
+//  * gets reported. Until then, it does nothing, i.e. calling its methods
+//  * has no effect.
+//  */
+// export class AutoDevice : public AbstractDevice {
+// public:
+//         AutoDevice (IInput *input, Factory *factory) : AbstractDevice (input), factory_{factory} {}
 
-        common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
-        void configureTransmission (TransmissionParams const &params) override;
+//         common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
+//         void configureTransmission (TransmissionParams const &params) override;
 
-        void run (Queue<RawCompressedBlock> *queue) override;
+//         void run (Queue<RawCompressedBlock> *queue) override;
 
-        common::usb::Stats getStats () override;
+//         common::usb::Stats getStats () override;
 
-        std::unordered_set<logs::Code> getErrors () override;
-        void clearErrors () override;
+//         std::unordered_set<logs::Code> getErrors () override;
+//         void clearErrors () override;
 
-        /*--------------------------------------------------------------------------*/
+//         /*--------------------------------------------------------------------------*/
 
-        void onConnected (std::string const &name);
-        void onDisconnected ();
-        void onStart () override;
-        void onStop () override;
-        size_t transferLen () const override;
+//         void onConnected (std::string const &name);
+//         void onDisconnected ();
+//         void onStart () override;
+//         void onStop () override;
+//         size_t transferLen () const override;
 
-        bool isReady () const override;
-        void waitReady () const override;
+//         bool isReady () const override;
+//         void waitReady () const override;
 
-private:
-        mutable std::mutex mutex;
-        mutable std::condition_variable cv;
+// private:
+//         mutable std::mutex mutex;
+//         mutable std::condition_variable cv;
 
-        std::unique_ptr<IDevice> delegate;
-        Factory *factory_;
-};
+//         std::unique_ptr<IDevice> delegate;
+//         Factory *factory_;
+// };
 
-} // namespace logic
+// } // namespace logic

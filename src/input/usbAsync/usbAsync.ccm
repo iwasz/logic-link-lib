@@ -7,16 +7,46 @@
  ****************************************************************************/
 
 module;
+#include <any>
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <libusb.h>
 #include <mutex>
+#include <string>
 #include <vector>
 export module logic:input.usb;
 export import :input;
+export import :event;
 
 namespace logic {
+
+class Session;
+
+/**
+ *
+ */
+export class UsbConnected : public IEvent {
+public:
+        explicit UsbConnected (std::string deviceName) : deviceName{std::move (deviceName)} {}
+
+        void execute (std::any const &func) override
+        {
+                auto f = std::any_cast<std::function<void (std::string const &)>> (func);
+                f (deviceName);
+        }
+
+private:
+        std::string deviceName;
+};
+
+/**
+ *
+ */
+export struct UsbDisconnected : public UsbConnected {
+        using UsbConnected::UsbConnected;
+};
 
 /**
  *
@@ -26,7 +56,7 @@ public:
         /**
          * Construct a new UsbAsync object and initializes the libusb.
          */
-        UsbAsync ();
+        UsbAsync (EventQueue *eventQueue);
         UsbAsync (UsbAsync const &) = delete;
         UsbAsync &operator= (UsbAsync const &) = delete;
         UsbAsync (UsbAsync &&) noexcept = delete;
@@ -42,10 +72,9 @@ public:
         void controlOut (std::vector<uint8_t> const &request) override;
         std::vector<uint8_t> controlIn (size_t len) override;
 
-        void start () override { request_.store (Request::start); }
+        void start (Session *session) override;
         void stop () override { request_.store (Request::stop); }
-
-        void run (Queue<RawCompressedBlock> *queue, IInputObserver *observer) override;
+        void run () override;
 
 private:
         static void transferCallback (struct libusb_transfer *transfer);
@@ -55,9 +84,6 @@ private:
         static void handleUsbEventsCompleted (int *completed, libusb_transfer *transfer);
         static void handleUsbEventsTimeout (int timeoutMs, libusb_transfer *transfer);
 
-        /// Number of bytes received so far irrespective of the buffer size.
-        size_t receivedB () const { return allTransferedB; }
-
         enum class Request : uint8_t { none, start, stop };
         enum class State : uint8_t { disconnected, connectedIdle, transferring };
 
@@ -66,14 +92,14 @@ private:
 
         std::atomic<Request> request_;
         std::atomic<State> state_;
+        Session *session{};
 
-        uint32_t usbTransfer{}; // TODO validate
-        uint32_t usbBlock{};
-
-        std::mutex mutex;
-        TimePoint globalStart;
-        TimePoint globalStop;
-        size_t allTransferedB{};
+        /// Number of bytes received so far irrespective of the buffer size.
+        // size_t receivedB () const { return allTransferedB; }
+        // std::mutex mutex;
+        // TimePoint globalStart;
+        // TimePoint globalStop;
+        // size_t allTransferedB{};
 };
 
 } // namespace logic

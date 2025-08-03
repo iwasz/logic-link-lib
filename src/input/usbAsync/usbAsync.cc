@@ -22,7 +22,6 @@ module;
 #include <unordered_set>
 #include <vector>
 module logic;
-import :input.usb;
 
 namespace logic {
 using namespace std::string_literals;
@@ -31,7 +30,7 @@ using namespace std::chrono;
 
 /****************************************************************************/
 
-UsbAsync::UsbAsync ()
+UsbAsync::UsbAsync (EventQueue *eventQueue) : AbstractInput (eventQueue)
 {
         if (int r = libusb_init_context (/*ctx=*/nullptr, /*options=*/nullptr, /*num_options=*/0); r < 0) {
                 throw Exception ("Failed to init USB (libusb_init_context): "s + libusb_error_name (r));
@@ -86,6 +85,15 @@ UsbAsync::~UsbAsync ()
 
 /****************************************************************************/
 
+void UsbAsync::start (Session *session)
+{
+        // std::lock_guard lock{mutex};
+        this->session = session;
+        request_.store (Request::start);
+}
+
+/****************************************************************************/
+
 void UsbAsync::transferCallback (struct libusb_transfer *transfer)
 {
         auto *completed = reinterpret_cast<int *> (transfer->user_data);
@@ -104,12 +112,13 @@ int UsbAsync::hotplugCallback (struct libusb_context * /* ctx */, struct libusb_
 
         if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event) {
                 if (int rc = libusb_open (dev, &devHandle); LIBUSB_SUCCESS != rc) {
-                        std::println ("Could not open USB device"); // TODO better error handling.
+                        that->eventQueue ()->addEvent<ErrorEvent> ("Could not open USB device"s);
                 }
                 else {
                         that->state_.store (State::connectedIdle);
-                        std::println ("Opened an USB device"); // TODO remove
-                        that->hotplugHooks ().connected ("logicLink");
+                        std::string deviceName = "logicLink"; // TODO detect what has been connected
+                        that->eventQueue ()->addEvent<UsbConnected> (deviceName);
+                        that->addConnected (deviceName);
                 }
         }
         else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
@@ -117,8 +126,9 @@ int UsbAsync::hotplugCallback (struct libusb_context * /* ctx */, struct libusb_
                         libusb_close (devHandle);
                         devHandle = NULL;
                         that->state_.store (State::disconnected);
-                        std::println ("Closed an USB device"); // TODO remove
-                        that->hotplugHooks ().disconnected ();
+                        std::string deviceName = "logicLink"; // TODO detect what has been DISconnected
+                        that->eventQueue ()->addEvent<UsbDisconnected> (deviceName);
+                        that->removeConnected (deviceName);
                 }
         }
 
@@ -172,7 +182,7 @@ void UsbAsync::handleUsbEventsTimeout (int timeoutMs, libusb_transfer *transfer)
  * Acquires ~~`wholeDataLenB` bytes of~~ data (blocking function) block by block (`singleTransferLenB`).
  * See src/feature/analyzer/flexio.cc in the firmware project for the other side of the connection.
  */
-void UsbAsync::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
+void UsbAsync::run ()
 {
         int rc = libusb_hotplug_register_callback (NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0, VID, PID,
                                                    LIBUSB_HOTPLUG_MATCH_ANY, hotplugCallback, this, &callback_handle);
@@ -197,8 +207,8 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
                  * For now we allocate the whole (rather big) memory buffer all at once. This is
                  * because we must avoid reallocations in the future.
                  */
-                std::lock_guard lock{mutex};
-                globalStart = high_resolution_clock::now ();
+                // std::lock_guard lock{mutex};
+                // globalStart = high_resolution_clock::now ();
         }
 
         int completed{};
@@ -221,8 +231,8 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
                         }
                 }
 
-                if (observer != nullptr && state_.load () == State::transferring) {
-                        Bytes singleTransfer (observer->transferLen ());
+                if (state_.load () == State::transferring) {
+                        Bytes singleTransfer (session->device->transferLen ());
 
                         if (!startPoint) { // TODO move to a benchmarking class
                                 startPoint = high_resolution_clock::now ();
@@ -240,7 +250,7 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
                         std::print (".");
 
                         if (!started) {
-                                observer->onStart ();
+                                session->device->onStart ();
                                 std::println ("onStart");
                                 started = true;
                         }
@@ -251,7 +261,7 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
                                 throw Exception{"USB transfer status error Code: " + std::string{libusb_error_name (transfer->status)}};
                         }
 
-                        if (size_t (transfer->actual_length) != observer->transferLen ()) {
+                        if (size_t (transfer->actual_length) != session->device->transferLen ()) {
                                 std::println ("Short: {}", transfer->actual_length);
                         }
 
@@ -260,18 +270,18 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
                         benchmarkB += singleTransfer.size ();
 
                         {
-                                std::lock_guard lock{mutex};
-                                allTransferedB += singleTransfer.size ();
+                                // std::lock_guard lock{mutex};
+                                // allTransferedB += singleTransfer.size ();
                         }
 
                         if (!singleTransfer.empty ()) {
                                 auto mbps = (double (benchmarkB) / double (duration_cast<microseconds> (now - *startPoint).count ())) * 8;
                                 RawCompressedBlock rcd{mbps, 0, std::move (singleTransfer)}; // TODO resize blocks (if needed)
-                                queue->push (std::move (rcd));
+                                session->rawQueue.push (std::move (rcd));
 
                                 {
-                                        std::lock_guard lock{mutex};
-                                        globalStop = high_resolution_clock::now (); // We want to be up to date, and skip possible time-out.
+                                        // std::lock_guard lock{mutex};
+                                        // globalStop = high_resolution_clock::now (); // We want to be up to date, and skip possible time-out.
                                 }
                         }
 
@@ -279,9 +289,10 @@ void UsbAsync::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
                         startPoint.reset ();
 
                         if (request_ == Request::stop && singleTransfer.empty ()) {
-                                observer->onStop ();
+                                session->device->onStop ();
                                 request_ = Request::none;
                                 state_ = State::connectedIdle;
+                                session = nullptr;
                         }
                 }
         }

@@ -15,22 +15,22 @@ namespace logic {
 
 std::unique_ptr<IDevice> Factory::create (std::string const &name)
 {
-        if (name == "auto" || name.empty ()) {
-                auto autoDev = std::make_unique<logic::AutoDevice> (&usb, this);
+        // if (name == "auto" || name.empty ()) {
+        //         auto autoDev = std::make_unique<logic::AutoDevice> (&usb, this);
 
-                logic::HotplugHooks htp;
-                htp.connected = [&autoDev] (std::string const &name) { autoDev->onConnected (name); };
-                htp.disconnected = [&autoDev] { autoDev->onDisconnected (); };
-                usb.hotplug (htp);
-                return autoDev;
-        }
+        //         logic::HotplugHooks htp;
+        //         htp.connected = [&autoDev] (std::string const &name) { autoDev->onConnected (name); };
+        //         htp.disconnected = [&autoDev] { autoDev->onDisconnected (); };
+        //         usb.hotplug (htp);
+        //         return autoDev;
+        // }
 
         if (name == "logicLink") {
-                return std::make_unique<LogicLink> (&usb);
+                return std::make_unique<LogicLink> (&usb_);
         }
 
         if (name == "demoLogicLink") {
-                return std::make_unique<LogicLink> (&demo);
+                return std::make_unique<LogicLink> (&demo_);
         }
 
         throw Exception{"Factory::create is unable to create a device of name " + name};

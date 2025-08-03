@@ -7,39 +7,22 @@
  ****************************************************************************/
 
 module;
-#include <algorithm>
+#include <any>
 #include <functional>
 #include <mutex>
-#include <string>
-export module logic:events;
+#include <typeindex>
+#include <unordered_map>
+export module logic:event.queue;
+export import :event;
+export import :event.alarm;
 
 namespace logic {
 
-export struct IEvent {
-        virtual ~IEvent () = default;
-};
-
-export struct ICallback {
-        virtual ~ICallback () = default;
-        virtual void execute (IEvent const *event) = 0;
-};
-
-export class UsbConnected : public IEvent {
-public:
-        UsbConnected (std::string deviceName) : deviceName{std::move (deviceName)} {}
-        std::string deviceName;
-};
-
-export struct UsbCallback : public ICallback {
-        explicit UsbCallback (std::function<void (std::string const &)> callback) : callback{std::move (callback)} {}
-        void execute (IEvent const *event) override;
-        std::function<void (std::string const &)> callback;
-};
-
-void UsbCallback::execute (IEvent const *event)
-{
-        UsbConnected const *con = dynamic_cast<UsbConnected const *> (event);
-        callback (con->deviceName);
+template <typename T>
+concept alarm = requires (T t) {
+        t.execute (std::any{});
+        typename T::Set;
+        typename T::Clear;
 };
 
 /**
@@ -48,31 +31,36 @@ void UsbCallback::execute (IEvent const *event)
 export class EventQueue {
 public:
         /// Callbacks are not protected, add from single thread only.
-        void addCallback (std::string const &name, std::unique_ptr<ICallback> callback) { callbacks[name] = std::move (callback); }
-
-        void addEvent (std::string const &name, std::unique_ptr<IEvent> event)
+        template <typename T, typename Call> void addCallback (Call &&call)
         {
-                {
-                        std::lock_guard lock{mutex};
-                        events.emplace_back (std::make_pair (name, std::move (event)));
-                }
-
-                cv.notify_all ();
+                eventCallbacks[typeid (T)] = std::any (std::function{std::forward<Call> (call)});
         }
 
+        /// Lock-protected, thread safe.
+        template <typename T, typename... Parms> void addEvent (Parms &&...param);
+        template <typename T, typename... Parms> void addAlarm (Parms &&...param);
+        template <typename T, typename... Parms> void clearAlarm (Parms &&...param);
+
+        /// Lock-protected, thread safe.
         void run ();
-        void wait ();
+        /// Lock-protected, thread safe.
+        void waitForEvents ();
 
 private:
-        using Events = std::vector<std::pair<std::string, std::unique_ptr<IEvent>>>;
-        using Callbacks = std::unordered_map<std::string, std::unique_ptr<ICallback>>;
+        using Pair = std::pair<std::type_index, std::unique_ptr<IEvent>>;
+        using Events = std::vector<Pair>;
+        using EventCallbacks = std::unordered_map<std::type_index, std::any>;
+        using Alarms = std::unordered_map<std::type_index, std::unique_ptr<IAlarm>>;
 
         void runImpl (Events const &evts);
 
         Events events;
-        Callbacks callbacks;
+        EventCallbacks eventCallbacks;
         std::mutex mutex;
-        std::condition_variable cv;
+        std::condition_variable eventCv;
+
+        Alarms alarms;
+        std::condition_variable alarmCv;
 };
 
 /****************************************************************************/
@@ -92,13 +80,13 @@ void EventQueue::run ()
 
 /****************************************************************************/
 
-void EventQueue::wait ()
+void EventQueue::waitForEvents ()
 {
         Events copy;
 
         {
                 std::unique_lock lock{mutex};
-                cv.wait (lock, [this] { return !events.empty (); });
+                eventCv.wait (lock, [this] { return !events.empty (); });
                 copy = std::move (events);
                 events = Events{};
         }
@@ -111,11 +99,61 @@ void EventQueue::wait ()
 void EventQueue::runImpl (Events const &evts)
 {
         for (auto const &[name, evt] : evts) {
-                if (auto i = callbacks.find (name); i != callbacks.cend ()) {
-                        auto &callback = callbacks.at (name);
-                        callback->execute (evt.get ());
+                if (auto i = eventCallbacks.find (name); i != eventCallbacks.cend ()) {
+                        auto &callback = eventCallbacks.at (name);
+                        evt->execute (callback);
                 }
         }
+}
+
+/****************************************************************************/
+
+template <typename T, typename... Parms> void EventQueue::addEvent (Parms &&...param)
+{
+        {
+                std::lock_guard lock{mutex};
+                events.emplace_back (Pair{typeid (T), std::make_unique<T> (std::forward<Parms> (param)...)});
+        }
+
+        eventCv.notify_all ();
+}
+
+/****************************************************************************/
+
+template <typename T, typename... Parms> void EventQueue::addAlarm (Parms &&...param)
+{
+        {
+                std::lock_guard lock{mutex};
+                auto s = alarms.size ();
+                alarms[typeid (T)] = std::make_unique<T> (std::forward<Parms> (param)...);
+
+                if (alarms.size () != s) { // New alarm
+                        // addEvent<typename > (std::forward<Parms> (param)...);
+                        events.emplace_back (Pair{typeid (T::Set), std::make_unique<T> (std::forward<Parms> (param)...)});
+                }
+        }
+
+        alarmCv.notify_all ();
+        eventCv.notify_all ();
+}
+
+/****************************************************************************/
+
+template <typename T, typename... Parms> void EventQueue::clearAlarm (Parms &&...param)
+{
+        {
+                std::lock_guard lock{mutex};
+                auto s = alarms.size ();
+                alarms.erase (typeid (T));
+
+                if (alarms.size () != s) { // Alarm removed
+                        // addEvent<typename T::Clear> (std::forward<Parms> (param)...);
+                        events.emplace_back (Pair{typeid (T::Clear), std::make_unique<T> (std::forward<Parms> (param)...)});
+                }
+        }
+
+        alarmCv.notify_all ();
+        eventCv.notify_all ();
 }
 
 } // namespace logic

@@ -18,21 +18,23 @@ export module logic:input.demo;
 export import :input;
 
 namespace logic {
+class Session;
 
 /**
  *
  */
 export class DemoInput : public AbstractInput {
 public:
+        using AbstractInput::AbstractInput;
         void open (DeviceInfo const &info) override {}
 
         void controlOut (std::vector<uint8_t> const &request) override {}
         std::vector<uint8_t> controlIn (size_t /* len */) override { return {}; }
 
-        void start () override;
+        void start (Session *session) override;
         void stop () override;
 
-        void run (Queue<RawCompressedBlock> *queue, IInputObserver *observer) override;
+        void run () override;
 
 private:
         std::atomic_bool running_;
@@ -43,7 +45,7 @@ private:
         uint32_t usbTransfer{}; // TODO validate
         uint32_t usbBlock{};
 
-        std::mutex mutex;
+        Session *session{};
 };
 
 } // namespace logic

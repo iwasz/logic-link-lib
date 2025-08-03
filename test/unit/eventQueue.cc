@@ -7,36 +7,52 @@
  ****************************************************************************/
 
 #include <catch2/catch_test_macros.hpp>
-#include <functional>
+#include <thread>
 import logic;
 using namespace logic;
+using namespace std::chrono_literals;
 
 TEST_CASE ("Event queue", "[eventQueue]")
 {
-
         EventQueue events;
         std::string lastName;
 
-        std::function<void (std::string const &)> fun{[&lastName] (std::string const &name) { lastName = name; }};
-
-        events.addCallback ("connected", std::make_unique<UsbCallback> (fun));
-        events.addEvent ("connected", std::make_unique<UsbConnected> ("deviceName"));
+        events.addCallback<UsbConnected> ([&lastName] (std::string const &name) { lastName = name; });
+        events.addEvent<UsbConnected> (std::string{"deviceName"});
 
         REQUIRE (lastName.empty ());
         events.run ();
         REQUIRE (lastName == "deviceName");
 }
 
-// TEST_CASE ("Event queue threads", "[eventQueue]")
-// {
+TEST_CASE ("Event queue threads", "[eventQueue]")
+{
+        EventQueue events;
+        std::vector<std::string> names;
 
-//         EventQueue events;
-//         std::string lastName;
+        events.addCallback<UsbConnected> ([&names] (std::string const &name) { names.push_back (name); });
 
-//         events.addCallback<UsbConnected> ([&lastName] (std::string const &name) { lastName = name; });
-//         events.addEvent<UsbConnected> ("deviceName");
+        std::thread t{[&events] {
+                for (int i = 0; i < 10; ++i) {
+                        events.addEvent<UsbConnected> (std::to_string (i));
+                        std::this_thread::sleep_for (10ms);
+                }
+        }};
 
-//         REQUIRE (lastName.empty ());
-//         events.run ();
-//         REQUIRE (lastName == "deviceName");
-// }
+        std::thread t2{[&events] {
+                for (int i = 10; i < 20; ++i) {
+                        events.addEvent<UsbConnected> (std::to_string (i));
+                        std::this_thread::sleep_for (10ms);
+                }
+        }};
+
+        REQUIRE (names.empty ());
+
+        while (names.size () < 20) {
+                events.run ();
+        }
+
+        REQUIRE (names.size () == 20);
+        t.join ();
+        t2.join ();
+}

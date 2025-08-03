@@ -11,20 +11,25 @@ module;
 #include <algorithm>
 #include <atomic>
 #include <cstdlib>
+#include <mutex>
 module logic;
 import :input.demo;
 
 namespace logic {
 
-void DemoInput::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
+void DemoInput::run ()
 {
-        Bytes singleTransfer (observer->transferLen ());
+        Bytes singleTransfer;
 
         while (true) {
                 if (running_) {
+                        singleTransfer.resize (session->device->transferLen ());
                         std::ranges::generate (singleTransfer, [] { return std::rand () % 256; });
                         RawCompressedBlock rcd{0, 0, std::move (singleTransfer)}; // TODO resize blocks (if needed)
-                        queue->push (std::move (rcd));
+                        session->rawQueue.push (std::move (rcd));
+                }
+                else {
+                        session = nullptr;
                 }
 
                 if (stop_ && singleTransfer.empty ()) {
@@ -35,7 +40,12 @@ void DemoInput::run (Queue<RawCompressedBlock> *queue, IInputObserver *observer)
 
 /****************************************************************************/
 
-void DemoInput::start () { running_ = true; }
+void DemoInput::start (Session *session)
+{
+        std::lock_guard lock{mutex};
+        this->session = session;
+        running_ = true;
+}
 
 /****************************************************************************/
 
