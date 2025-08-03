@@ -29,3 +29,4 @@ export import :util.span;
 export import :util.poly;
 export import :processing;
 export import :event.queue;
+export import :session;

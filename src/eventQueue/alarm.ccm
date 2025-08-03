@@ -7,13 +7,9 @@
  ****************************************************************************/
 
 module;
-#include <any>
-#include <functional>
-#include <mutex>
-#include <string>
-#include <typeindex>
-#include <unordered_map>
+#include <memory>
 export module logic:event.alarm;
+import :event;
 
 namespace logic {
 
@@ -22,7 +18,7 @@ namespace logic {
  * it calls the cupplied callback. Named like that because I maintain a system
  * where such a thing is called like that and it resides in my mental model.
  */
-export struct IAlarm {
+export struct IAlarm : public IEvent {
         IAlarm () = default;
         IAlarm (IAlarm const &) = default;
         IAlarm &operator= (IAlarm const &) = default;
@@ -30,14 +26,13 @@ export struct IAlarm {
         IAlarm &operator= (IAlarm &&) noexcept = default;
         virtual ~IAlarm () = default;
 
-        /**
-         * Execute the callback. If set is true excecute the "set" callback,
-         * if false, execute the "clear" callback.
-         */
-        virtual void execute (bool set, std::any const &func) = 0;
+        virtual std::size_t hash () const = 0;
+        // virtual std::unique_ptr<IAlarm> clone () const = 0;
 };
 
-export struct AbstractAlarm {
+bool operator== (IAlarm const &a, IAlarm const &b) { return a.hash () == b.hash (); }
+
+export struct AbstractAlarm : public IAlarm {
         struct Set {};
         struct Clear {};
 };

@@ -20,7 +20,7 @@ export module logic:device;
 import :input;
 
 namespace logic {
-class Session;
+export class Session;
 
 export struct TransmissionParams {
         uint32_t usbTransfer{};

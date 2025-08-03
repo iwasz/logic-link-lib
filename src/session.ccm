@@ -22,7 +22,7 @@ namespace logic {
 /**
  *
  */
-class Session {
+export class Session {
 public:
         // void stop () { device->stop (); }
 

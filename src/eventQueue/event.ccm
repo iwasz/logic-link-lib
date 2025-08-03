@@ -27,7 +27,7 @@ export struct IEvent {
         IEvent (IEvent &&) noexcept = default;
         IEvent &operator= (IEvent &&) noexcept = default;
         virtual ~IEvent () = default;
-        virtual void execute (std::any const &func) = 0;
+        virtual void execute (std::any const &func) const = 0;
 };
 
 /**
@@ -35,7 +35,7 @@ export struct IEvent {
  */
 export class AbstractNullaryEvent : public IEvent {
 public:
-        void execute (std::any const &func) override
+        void execute (std::any const &func) const override
         {
                 auto f = std::any_cast<std::function<void ()>> (func);
                 f ();
@@ -49,7 +49,7 @@ export class ErrorEvent : public IEvent {
 public:
         explicit ErrorEvent (std::string message) : message{std::move (message)} {}
 
-        void execute (std::any const &func) override
+        void execute (std::any const &func) const override
         {
                 auto f = std::any_cast<std::function<void (std::string const &)>> (func);
                 f (message);

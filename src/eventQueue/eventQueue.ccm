@@ -7,11 +7,14 @@
  ****************************************************************************/
 
 module;
+#include <algorithm>
 #include <any>
 #include <functional>
 #include <mutex>
+#include <ranges>
 #include <typeindex>
 #include <unordered_map>
+#include <unordered_set>
 export module logic:event.queue;
 export import :event;
 export import :event.alarm;
@@ -30,6 +33,26 @@ concept alarm = requires (T t) {
  */
 export class EventQueue {
 public:
+        using Pair = std::pair<std::type_index, std::unique_ptr<IEvent>>;
+        using Events = std::vector<Pair>;
+        using EventCallbacks = std::unordered_map<std::type_index, std::any>;
+
+        struct AlarmHash {
+                size_t operator() (std::unique_ptr<IAlarm> const &a) const
+                {
+                        IAlarm const &pa = *a;
+                        auto h1 = std::hash<std::type_index>{}(typeid (pa));
+                        auto h2 = a->hash ();
+                        return h1 ^ (h2 << 1);
+                }
+        };
+
+        struct AlarmEqual {
+                bool operator() (std::unique_ptr<IAlarm> const &a, std::unique_ptr<IAlarm> const &b) const { return *a == *b; }
+        };
+
+        using Alarms = std::unordered_set<std::unique_ptr<IAlarm>, AlarmHash, AlarmEqual>;
+
         /// Callbacks are not protected, add from single thread only.
         template <typename T, typename Call> void addCallback (Call &&call)
         {
@@ -38,29 +61,32 @@ public:
 
         /// Lock-protected, thread safe.
         template <typename T, typename... Parms> void addEvent (Parms &&...param);
-        template <typename T, typename... Parms> void addAlarm (Parms &&...param);
-        template <typename T, typename... Parms> void clearAlarm (Parms &&...param);
 
         /// Lock-protected, thread safe.
         void run ();
         /// Lock-protected, thread safe.
         void waitForEvents ();
 
-private:
-        using Pair = std::pair<std::type_index, std::unique_ptr<IEvent>>;
-        using Events = std::vector<Pair>;
-        using EventCallbacks = std::unordered_map<std::type_index, std::any>;
-        using Alarms = std::unordered_map<std::type_index, std::unique_ptr<IAlarm>>;
+        template <typename T, typename... Parms> void setAlarm (Parms &&...param);
+        template <typename T, typename... Parms> void clearAlarm (Parms &&...param);
 
+        /// Works in rarre cases when all alarms have the same callback signature.
+        // template <typename Call> void visitAlarms (Call &&clbk) const; // REMOVED, useless
+
+        /// Visits all alarms of type T. NOTE! callbacks called under a LOCK!
+        template <typename T, typename Call> void visitAlarms (Call &&clbk, size_t limit = 0) const;
+        template <typename T, typename Call> void waitAlarms (Call &&clbk, size_t limit = 0) const;
+
+private:
         void runImpl (Events const &evts);
 
         Events events;
         EventCallbacks eventCallbacks;
-        std::mutex mutex;
-        std::condition_variable eventCv;
+        mutable std::mutex mutex;
+        mutable std::condition_variable eventCv;
 
         Alarms alarms;
-        std::condition_variable alarmCv;
+        mutable std::condition_variable alarmCv;
 };
 
 /****************************************************************************/
@@ -120,16 +146,17 @@ template <typename T, typename... Parms> void EventQueue::addEvent (Parms &&...p
 
 /****************************************************************************/
 
-template <typename T, typename... Parms> void EventQueue::addAlarm (Parms &&...param)
+template <typename T, typename... Parms> void EventQueue::setAlarm (Parms &&...param)
 {
         {
                 std::lock_guard lock{mutex};
                 auto s = alarms.size ();
-                alarms[typeid (T)] = std::make_unique<T> (std::forward<Parms> (param)...);
+                auto alarm = std::make_unique<T> (std::forward<Parms> (param)...);
+                auto event = std::make_unique<T> (*alarm);
+                alarms.insert (std::move (alarm));
 
                 if (alarms.size () != s) { // New alarm
-                        // addEvent<typename > (std::forward<Parms> (param)...);
-                        events.emplace_back (Pair{typeid (T::Set), std::make_unique<T> (std::forward<Parms> (param)...)});
+                        events.emplace_back (Pair{typeid (typename T::Set), std::move (event)});
                 }
         }
 
@@ -144,16 +171,92 @@ template <typename T, typename... Parms> void EventQueue::clearAlarm (Parms &&..
         {
                 std::lock_guard lock{mutex};
                 auto s = alarms.size ();
-                alarms.erase (typeid (T));
+                auto alarm = std::make_unique<T> (std::forward<Parms> (param)...);
+                auto event = std::make_unique<T> (*alarm);
+                alarms.erase (std::move (alarm));
 
                 if (alarms.size () != s) { // Alarm removed
-                        // addEvent<typename T::Clear> (std::forward<Parms> (param)...);
-                        events.emplace_back (Pair{typeid (T::Clear), std::make_unique<T> (std::forward<Parms> (param)...)});
+                        events.emplace_back (Pair{typeid (typename T::Clear), std::move (event)});
                 }
         }
 
         alarmCv.notify_all ();
         eventCv.notify_all ();
+}
+
+/****************************************************************************/
+
+// EventQueue::Alarms EventQueue::getAlarms (std::any const &callback) const
+// {
+//         std::lock_guard lock{mutex};
+//         Alarms copy;
+//         std::ranges::transform (alarms, std::inserter (copy, copy.begin ()), [] (auto const &p) { return p->clone (); });
+//         return copy;
+// }
+
+// template <typename Call> void EventQueue::visitAlarms (Call &&clbk) const
+// {
+//         std::any callback{std::function{std::forward<Call> (clbk)}};
+//         std::lock_guard lock{mutex};
+
+//         for (auto const &p : alarms) {
+//                 p->execute (callback);
+//         }
+// }
+
+template <typename T, typename Call> void EventQueue::visitAlarms (Call &&clbk, size_t limit) const
+{
+        std::any callback{std::function{std::forward<Call> (clbk)}};
+        std::lock_guard lock{mutex};
+
+        // TODO why doesn't it work? `no known conversion from 'std::vector<int>' to 'chars_format' for 1st argument`
+        // for (auto const &p : alarms | std::views::filter ([] (std::unique_ptr<IAlarm> const &p) {
+        //                              auto const &r = *p;
+        //                              return typeid (r) == typeid (const T);
+        //                      })) {
+        //         p->execute (callback);
+        // }
+
+        size_t cnt{};
+        for (auto const &p : alarms) {
+                auto const &r = *p;
+                if (typeid (r) == typeid (const T)) {
+                        p->execute (callback);
+
+                        if (limit > 0 && ++cnt >= limit) {
+                                break;
+                        }
+                }
+        }
+}
+
+/****************************************************************************/
+
+template <typename T, typename Call> void EventQueue::waitAlarms (Call &&clbk, size_t limit) const
+{
+        std::any callback{std::function{std::forward<Call> (clbk)}};
+
+        std::unique_lock lock{mutex};
+        alarmCv.wait (lock, [this] {
+                return std::ranges::find_if (alarms,
+                                             [] (auto const &p) {
+                                                     auto const &r = *p;
+                                                     return (typeid (r) == typeid (const T));
+                                             })
+                        != alarms.cend ();
+        });
+
+        size_t cnt{};
+        for (auto const &p : alarms) {
+                auto const &r = *p;
+                if (typeid (r) == typeid (const T)) {
+                        p->execute (callback);
+
+                        if (limit > 0 && ++cnt >= limit) {
+                                break;
+                        }
+                }
+        }
 }
 
 } // namespace logic

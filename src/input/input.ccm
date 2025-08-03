@@ -17,7 +17,7 @@ export import :data;
 import :event.queue;
 
 namespace logic {
-class Session;
+export class Session;
 
 export struct DeviceInfo {
         int vid{};

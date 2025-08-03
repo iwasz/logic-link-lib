@@ -27,25 +27,42 @@ class Session;
 /**
  *
  */
-export class UsbConnected : public IEvent {
-public:
-        explicit UsbConnected (std::string deviceName) : deviceName{std::move (deviceName)} {}
+// export class UsbConnected : public IEvent {
+// public:
+//         explicit UsbConnected (std::string deviceName) : deviceName{std::move (deviceName)} {}
 
-        void execute (std::any const &func) override
+//         void execute (std::any const &func) const override
+//         {
+//                 auto f = std::any_cast<std::function<void (std::string const &)>> (func);
+//                 f (deviceName);
+//         }
+
+// private:
+//         std::string deviceName;
+// };
+
+/**
+ *
+ */
+// export struct UsbDisconnected : public UsbConnected {
+//         using UsbConnected::UsbConnected;
+// };
+
+export class UsbConnectedAlarm : public AbstractAlarm {
+public:
+        explicit UsbConnectedAlarm (std::string deviceName) : deviceName{std::move (deviceName)} {}
+
+        void execute (std::any const &func) const override
         {
                 auto f = std::any_cast<std::function<void (std::string const &)>> (func);
                 f (deviceName);
         }
 
+        std::size_t hash () const override { return std::hash<std::string>{}(deviceName); }
+        // std::unique_ptr<IAlarm> clone () const override { return std::make_unique<UsbConnectedAlarm> (deviceName); }
+
 private:
         std::string deviceName;
-};
-
-/**
- *
- */
-export struct UsbDisconnected : public UsbConnected {
-        using UsbConnected::UsbConnected;
 };
 
 /**
