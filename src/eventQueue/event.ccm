@@ -9,10 +9,7 @@
 module;
 #include <any>
 #include <functional>
-#include <mutex>
 #include <string>
-#include <typeindex>
-#include <unordered_map>
 export module logic:event;
 
 namespace logic {

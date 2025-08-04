@@ -118,8 +118,6 @@ int UsbAsync::hotplugCallback (struct libusb_context * /* ctx */, struct libusb_
                         that->state_.store (State::connectedIdle);
                         std::string deviceName = "logicLink"; // TODO detect what has been connected
                         that->eventQueue ()->setAlarm<UsbConnectedAlarm> (deviceName);
-                        that->addConnected (deviceName); // TDOO remove - alarms took over this functionaluty
-                        // TODO Remove autoDevce
                 }
         }
         else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
@@ -129,7 +127,6 @@ int UsbAsync::hotplugCallback (struct libusb_context * /* ctx */, struct libusb_
                         that->state_.store (State::disconnected);
                         std::string deviceName = "logicLink"; // TODO detect what has been DISconnected
                         that->eventQueue ()->clearAlarm<UsbConnectedAlarm> (deviceName);
-                        that->removeConnected (deviceName); // TDOO remove - alarms took over this functionaluty
                 }
         }
 

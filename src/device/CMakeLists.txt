@@ -1,7 +1,6 @@
 target_sources(${PROJECT_NAME}
   PRIVATE
     device.cc
-    # autoDevice.cc
     logicLink.cc
     factory.cc
 
@@ -9,5 +8,4 @@ target_sources(${PROJECT_NAME}
     device.ccm
     logicLink.ccm
     factory.ccm
-    # autoDevice.ccm
 )

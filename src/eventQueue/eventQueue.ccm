@@ -70,9 +70,6 @@ public:
         template <typename T, typename... Parms> void setAlarm (Parms &&...param);
         template <typename T, typename... Parms> void clearAlarm (Parms &&...param);
 
-        /// Works in rarre cases when all alarms have the same callback signature.
-        // template <typename Call> void visitAlarms (Call &&clbk) const; // REMOVED, useless
-
         /// Visits all alarms of type T. NOTE! callbacks called under a LOCK!
         template <typename T, typename Call> void visitAlarms (Call &&clbk, size_t limit = 0) const;
         template <typename T, typename Call> void waitAlarms (Call &&clbk, size_t limit = 0) const;
@@ -185,24 +182,6 @@ template <typename T, typename... Parms> void EventQueue::clearAlarm (Parms &&..
 }
 
 /****************************************************************************/
-
-// EventQueue::Alarms EventQueue::getAlarms (std::any const &callback) const
-// {
-//         std::lock_guard lock{mutex};
-//         Alarms copy;
-//         std::ranges::transform (alarms, std::inserter (copy, copy.begin ()), [] (auto const &p) { return p->clone (); });
-//         return copy;
-// }
-
-// template <typename Call> void EventQueue::visitAlarms (Call &&clbk) const
-// {
-//         std::any callback{std::function{std::forward<Call> (clbk)}};
-//         std::lock_guard lock{mutex};
-
-//         for (auto const &p : alarms) {
-//                 p->execute (callback);
-//         }
-// }
 
 template <typename T, typename Call> void EventQueue::visitAlarms (Call &&clbk, size_t limit) const
 {
