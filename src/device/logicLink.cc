@@ -22,9 +22,9 @@ import :device.link;
 namespace logic {
 using namespace common::usb;
 
-LogicLink::LogicLink (IInput *input) : AbstractDevice{input}
+LogicLink::LogicLink (IInput *input) : AbstractUsbDevice{input}
 {
-        DeviceInfo info = {
+        UsbDeviceInfo info = {
                 .vid = VID,
                 .pid = PID,
                 .claimInterface = 0,
@@ -42,7 +42,7 @@ common::acq::Params LogicLink::configureAcquisition (common::acq::Params const &
         using enum common::acq::Mode;
 
         if (legacy) {
-                controlOut (Request{}
+                controlOut (UsbRequest{}
                                     .clazz (GREATFET_CLASS_LA)
                                     .verb (LA_VERB_CONFIGURE)
                                     .sampleRate (params.digitalSampleRate)
@@ -56,7 +56,7 @@ common::acq::Params LogicLink::configureAcquisition (common::acq::Params const &
                 return params;
         }
 
-        controlOut (Request{}
+        controlOut (UsbRequest{}
                             .clazz (LOGIC_LINK_CLASS_LA)
                             .verb (LL_VERB_CONFIGURE)
                             .sampleRate (params.digitalSampleRate)
@@ -87,17 +87,17 @@ common::acq::Params LogicLink::configureAcquisition (common::acq::Params const &
  * to provide the data in format digestable for the sigrok library. Consider removing the legacy
  * param and the implementation.
  */
-void LogicLink::onStart () { controlOut (Request{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_START_CAPTURE)); }
+void LogicLink::onStart () { controlOut (UsbRequest{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_START_CAPTURE)); }
 
 /****************************************************************************/
 
-void LogicLink::onStop () { controlOut (Request{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_STOP_CAPTURE)); }
+void LogicLink::onStop () { controlOut (UsbRequest{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_STOP_CAPTURE)); }
 
 /****************************************************************************/
 
 common::usb::Stats LogicLink::getStats ()
 {
-        controlOut (Request{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_STATS));
+        controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_STATS));
         auto rawStats = input ()->controlIn (sizeof (common::usb::Stats));
         common::usb::Stats stats{};
         memcpy (&stats, rawStats.data (), rawStats.size ());
@@ -108,7 +108,7 @@ common::usb::Stats LogicLink::getStats ()
 
 std::unordered_set<logs::Code> LogicLink::getErrors ()
 {
-        controlOut (Request{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_ERRORS));
+        controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_ERRORS));
         auto rawStats = input ()->controlIn (MAX_CONTROL_PAYLOAD_SIZE);
 
         if (rawStats.empty ()) { // Should not happen.
@@ -123,14 +123,14 @@ std::unordered_set<logs::Code> LogicLink::getErrors ()
 
 /****************************************************************************/
 
-void LogicLink::clearErrors () { controlOut (Request{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_ERRORS)); }
+void LogicLink::clearErrors () { controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_ERRORS)); }
 
 /****************************************************************************/
 
-void LogicLink::configureTransmission (TransmissionParams const &params)
+void LogicLink::configureTransmission (UsbTransmissionParams const &params)
 {
-        AbstractDevice::configureTransmission (params);
-        controlOut (Request{}
+        AbstractUsbDevice::configureTransmission (params);
+        controlOut (UsbRequest{}
                             .clazz (LOGIC_LINK_CLASS_LA)
                             .verb (LL_VERB_SET_USB_TRANSFER_PARAMS)
                             .integer (params.usbTransfer)

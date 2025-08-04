@@ -7,10 +7,9 @@
  ****************************************************************************/
 
 module;
+#include <any>
 #include <cstdint>
 #include <mutex>
-#include <string>
-#include <unordered_set>
 #include <vector>
 export module logic:input;
 export import :data;
@@ -18,27 +17,6 @@ import :event.queue;
 
 namespace logic {
 export class Session;
-
-export struct DeviceInfo {
-        int vid{};
-        int pid{};
-        int claimInterface{};
-        int interfaceNumber{};
-        int alternateSetting{};
-};
-
-export struct IInputObserver {
-        IInputObserver () = default;
-        IInputObserver (IInputObserver const &) = default;
-        IInputObserver &operator= (IInputObserver const &) = default;
-        IInputObserver (IInputObserver &&) noexcept = default;
-        IInputObserver &operator= (IInputObserver &&) noexcept = default;
-        virtual ~IInputObserver () = default;
-
-        virtual void onStart () = 0;
-        virtual void onStop () = 0;
-        virtual size_t transferLen () const = 0;
-};
 
 export struct IInput {
         IInput () = default;
@@ -50,16 +28,17 @@ export struct IInput {
 
         /**
          * Basic USB bookeeping like opening thge device, claiming the interface
-         * and so on.
+         * and so on. std::any used to accomodate for all possible busses, not only
+         * USB.
          */
-        virtual void open (DeviceInfo const &info) = 0;
-        // virtual void hotplug (HotplugHooks const &hotplugHooks) = 0;
+        virtual void open (std::any const &info) = 0;
 
         virtual void controlOut (std::vector<uint8_t> const &request) = 0;
         virtual std::vector<uint8_t> controlIn (size_t len) = 0;
 
         /**
-         * Sends a start command.
+         * Sends a start command. Session contains all that is needed to
+         * collect the acquired data (queue).
          */
         virtual void start (Session *session) = 0;
 
@@ -72,7 +51,7 @@ export struct IInput {
          * Blocking acquisition and event listener method, that pushes the data at the
          * end of the `data` queue and observes the hotplug events.
          */
-        virtual void run (/* Queue<RawCompressedBlock> *queue, IInputObserver *observer */) = 0;
+        virtual void run () = 0;
 };
 
 /**

@@ -7,24 +7,30 @@
  ****************************************************************************/
 
 module;
+#include "common/constants.hh"
 #include <memory>
 #include <string>
 module logic;
 
 namespace logic {
 
+// Factory::Factory ()
+//     : usbDeviceRecipes{
+//               {"logicLink",
+//                {UsbDeviceInfo{
+//                         .vid = common::usb::VID,
+//                         .pid = common::usb::PID,
+//                         .claimInterface = 0,
+//                         .interfaceNumber = 0,
+//                         .alternateSetting = 0,
+//                 },
+//                 [this] { return std::make_unique<LogicLink> (&usb_); }}},
+//       }
+// {
+// }
+
 std::unique_ptr<IDevice> Factory::create (std::string const &name)
 {
-        // if (name == "auto" || name.empty ()) {
-        //         auto autoDev = std::make_unique<logic::AutoDevice> (&usb, this);
-
-        //         logic::HotplugHooks htp;
-        //         htp.connected = [&autoDev] (std::string const &name) { autoDev->onConnected (name); };
-        //         htp.disconnected = [&autoDev] { autoDev->onDisconnected (); };
-        //         usb.hotplug (htp);
-        //         return autoDev;
-        // }
-
         if (name == "logicLink") {
                 return std::make_unique<LogicLink> (&usb_);
         }

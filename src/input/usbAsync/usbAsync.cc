@@ -9,6 +9,7 @@
 module;
 #include "common/constants.hh"
 #include "common/params.hh"
+#include <any>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -16,7 +17,6 @@ module;
 #include <gsl/gsl>
 #include <iterator>
 #include <libusb.h>
-#include <mutex>
 #include <print>
 #include <string>
 #include <unordered_set>
@@ -47,9 +47,11 @@ UsbAsync::UsbAsync (EventQueue *eventQueue) : AbstractInput (eventQueue)
 
 /****************************************************************************/
 
-void UsbAsync::open (DeviceInfo const &info)
+void UsbAsync::open (std::any const &in)
 {
-        if (dev = libusb_open_device_with_vid_pid (nullptr, VID, PID); dev == nullptr) {
+        UsbDeviceInfo const &info = std::any_cast<UsbDeviceInfo const &> (in);
+
+        if (dev = libusb_open_device_with_vid_pid (nullptr, info.vid, info.pid); dev == nullptr) {
                 throw Exception ("Error finding USB device.");
         }
 
@@ -57,11 +59,11 @@ void UsbAsync::open (DeviceInfo const &info)
         //         throw Exception ("Error resetting interface : "s + libusb_error_name (r));
         // }
 
-        if (auto r = libusb_claim_interface (dev, 0); r < 0) {
+        if (auto r = libusb_claim_interface (dev, info.claimInterface); r < 0) {
                 throw Exception ("Error claiming interface : "s + libusb_error_name (r));
         }
 
-        if (auto r = libusb_set_interface_alt_setting (dev, 0, 0); r < 0) {
+        if (auto r = libusb_set_interface_alt_setting (dev, info.interfaceNumber, info.alternateSetting); r < 0) {
                 throw Exception ("Error to libusb_set_interface_alt_setting: "s + libusb_error_name (r));
         }
 
@@ -89,6 +91,12 @@ void UsbAsync::start (Session *session)
 {
         // std::lock_guard lock{mutex};
         this->session = session;
+        this->device = dynamic_cast<AbstractUsbDevice *> (session->device.get ());
+
+        if (this->device == nullptr) {
+                throw Exception{"Use AbstractUsbDevice with UsbAsync."};
+        }
+
         request_.store (Request::start);
 }
 
@@ -182,8 +190,9 @@ void UsbAsync::handleUsbEventsTimeout (int timeoutMs, libusb_transfer *transfer)
  */
 void UsbAsync::run ()
 {
-        int rc = libusb_hotplug_register_callback (NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0, VID, PID,
-                                                   LIBUSB_HOTPLUG_MATCH_ANY, hotplugCallback, this, &callback_handle);
+        int rc = libusb_hotplug_register_callback (NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT,
+                                                   LIBUSB_HOTPLUG_ENUMERATE, VID, PID, LIBUSB_HOTPLUG_MATCH_ANY, hotplugCallback, this,
+                                                   &callback_handle);
 
         if (LIBUSB_SUCCESS != rc) {
                 throw Exception{"Error creating a hotplug callback: " + std::string{libusb_error_name (rc)}};
@@ -230,7 +239,7 @@ void UsbAsync::run ()
                 }
 
                 if (state_.load () == State::transferring) {
-                        Bytes singleTransfer (session->device->transferLen ());
+                        Bytes singleTransfer (device->transferLen ());
 
                         if (!startPoint) { // TODO move to a benchmarking class
                                 startPoint = high_resolution_clock::now ();
@@ -248,7 +257,7 @@ void UsbAsync::run ()
                         std::print (".");
 
                         if (!started) {
-                                session->device->onStart ();
+                                device->onStart ();
                                 std::println ("onStart");
                                 started = true;
                         }
@@ -259,7 +268,7 @@ void UsbAsync::run ()
                                 throw Exception{"USB transfer status error Code: " + std::string{libusb_error_name (transfer->status)}};
                         }
 
-                        if (size_t (transfer->actual_length) != session->device->transferLen ()) {
+                        if (size_t (transfer->actual_length) != device->transferLen ()) {
                                 std::println ("Short: {}", transfer->actual_length);
                         }
 
@@ -287,7 +296,7 @@ void UsbAsync::run ()
                         startPoint.reset ();
 
                         if (request_ == Request::stop && singleTransfer.empty ()) {
-                                session->device->onStop ();
+                                device->onStop ();
                                 request_ = Request::none;
                                 state_ = State::connectedIdle;
                                 session = nullptr;

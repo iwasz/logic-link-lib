@@ -9,6 +9,7 @@
 module;
 #include "common/params.hh"
 #include <algorithm>
+#include <any>
 #include <atomic>
 #include <cstdlib>
 #include <mutex>
@@ -17,13 +18,17 @@ import :input.demo;
 
 namespace logic {
 
+void DemoInput::open (std::any const &info) { blockSize = std::any_cast<size_t> (info); }
+
+/****************************************************************************/
+
 void DemoInput::run ()
 {
         Bytes singleTransfer;
 
         while (true) {
                 if (running_) {
-                        singleTransfer.resize (session->device->transferLen ());
+                        singleTransfer.resize (blockSize);
                         std::ranges::generate (singleTransfer, [] { return std::rand () % 256; });
                         RawCompressedBlock rcd{0, 0, std::move (singleTransfer)}; // TODO resize blocks (if needed)
                         session->rawQueue.push (std::move (rcd));

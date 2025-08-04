@@ -7,8 +7,10 @@
  ****************************************************************************/
 
 module;
+#include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 export module logic:device.factory;
 import :device;
 import :input.usb;
@@ -24,6 +26,7 @@ public:
         Factory &operator= (Factory const &) = delete;
         Factory (Factory &&) = delete;
         Factory &operator= (Factory &&) = delete;
+        ~Factory () = default;
 
         std::unique_ptr<IDevice> create (std::string const &name);
 
@@ -38,6 +41,11 @@ private:
         EventQueue eventQueue_;
         UsbAsync usb_{&eventQueue_};
         DemoInput demo_{&eventQueue_};
+
+        // using FactoryFunction = std::function<std::unique_ptr<IDevice> (void)>;
+        // using UsbRecipe = std::pair<UsbDeviceInfo, FactoryFunction>;
+        // using UsbRecipes = std::unordered_map<std::string, UsbRecipe>;
+        // UsbRecipes usbDeviceRecipes;
 };
 
 }; // namespace logic

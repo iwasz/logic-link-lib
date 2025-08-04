@@ -17,21 +17,17 @@ import :device;
 
 namespace logic {
 
-export class LogicLink : public AbstractDevice {
+export class LogicLink : public AbstractUsbDevice {
 public:
         explicit LogicLink (IInput *input);
 
         common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
-        void configureTransmission (TransmissionParams const &params) override;
+        void configureTransmission (UsbTransmissionParams const &params) override;
 
         common::usb::Stats getStats () override;
 
         std::unordered_set<logs::Code> getErrors () override;
         void clearErrors () override;
-
-        // Gets initialized in the RAII ctor, so must be ready
-        bool isReady () const override { return true; }
-        void waitReady () const override {}
 
         void onStart () override;
         void onStop () override;

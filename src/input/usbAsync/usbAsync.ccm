@@ -13,7 +13,6 @@ module;
 #include <cstdlib>
 #include <functional>
 #include <libusb.h>
-#include <mutex>
 #include <string>
 #include <vector>
 export module logic:input.usb;
@@ -21,32 +20,8 @@ export import :input;
 export import :event;
 
 namespace logic {
-
-class Session;
-
-/**
- *
- */
-// export class UsbConnected : public IEvent {
-// public:
-//         explicit UsbConnected (std::string deviceName) : deviceName{std::move (deviceName)} {}
-
-//         void execute (std::any const &func) const override
-//         {
-//                 auto f = std::any_cast<std::function<void (std::string const &)>> (func);
-//                 f (deviceName);
-//         }
-
-// private:
-//         std::string deviceName;
-// };
-
-/**
- *
- */
-// export struct UsbDisconnected : public UsbConnected {
-//         using UsbConnected::UsbConnected;
-// };
+export class Session;
+export class AbstractUsbDevice;
 
 export class UsbConnectedAlarm : public AbstractAlarm {
 public:
@@ -59,10 +34,21 @@ public:
         }
 
         std::size_t hash () const override { return std::hash<std::string>{}(deviceName); }
-        // std::unique_ptr<IAlarm> clone () const override { return std::make_unique<UsbConnectedAlarm> (deviceName); }
 
 private:
         std::string deviceName;
+};
+
+/**
+ * @brief
+ *
+ */
+export struct UsbDeviceInfo {
+        int vid{};
+        int pid{};
+        int claimInterface{};
+        int interfaceNumber{};
+        int alternateSetting{};
 };
 
 /**
@@ -84,7 +70,7 @@ public:
          */
         ~UsbAsync () override;
 
-        void open (DeviceInfo const &info) override;
+        void open (std::any const &info) override;
 
         void controlOut (std::vector<uint8_t> const &request) override;
         std::vector<uint8_t> controlIn (size_t len) override;
@@ -110,7 +96,9 @@ private:
         std::atomic<Request> request_;
         std::atomic<State> state_;
         Session *session{};
+        AbstractUsbDevice *device{};
 
+        // TODO.
         /// Number of bytes received so far irrespective of the buffer size.
         // size_t receivedB () const { return allTransferedB; }
         // std::mutex mutex;
