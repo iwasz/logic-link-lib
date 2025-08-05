@@ -25,18 +25,24 @@ export class AbstractUsbDevice;
 
 export class UsbConnectedAlarm : public AbstractAlarm {
 public:
-        explicit UsbConnectedAlarm (std::string deviceName) : deviceName{std::move (deviceName)} {}
+        explicit UsbConnectedAlarm (int vid, int pid) : vid{vid}, pid{pid} {}
 
         void execute (std::any const &func) const override
         {
-                auto f = std::any_cast<std::function<void (std::string const &)>> (func);
-                f (deviceName);
+                auto f = std::any_cast<std::function<void (int, int)>> (func);
+                f (vid, pid);
         }
 
-        std::size_t hash () const override { return std::hash<std::string>{}(deviceName); }
+        std::size_t hash () const override
+        {
+                auto h1 = std::hash<int>{}(vid);
+                auto h2 = std::hash<int>{}(pid);
+                return h1 ^ (h2 << 1);
+        }
 
 private:
-        std::string deviceName;
+        int vid{};
+        int pid{};
 };
 
 /**

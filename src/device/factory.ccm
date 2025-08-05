@@ -10,7 +10,7 @@ module;
 #include <functional>
 #include <memory>
 #include <string>
-#include <utility>
+#include <vector>
 export module logic:device.factory;
 import :device;
 import :input.usb;
@@ -21,14 +21,28 @@ namespace logic {
 
 export class Factory {
 public:
-        Factory () = default;
+        Factory ();
         Factory (Factory const &) = delete;
         Factory &operator= (Factory const &) = delete;
         Factory (Factory &&) = delete;
         Factory &operator= (Factory &&) = delete;
         ~Factory () = default;
 
+        /**
+         * Creates a device of a name `name` - non blocking.
+         * - If `name` is empty, creates first detected device (if any).
+         * - If `name` is not empty it attempts to create the corresponding device. Returns
+         *   nullptr when unsuccessful.
+         */
         std::unique_ptr<IDevice> create (std::string const &name);
+
+        /**
+         * Creates a device of a name `name` - BLOCKING.
+         * - If `name` is empty, WAITS for and creates first detected device (if any).
+         * - If `name` is not empty it attempts to create the corresponding device. Returns
+         *   nullptr when unsuccessful. This scenario desn't block.
+         */
+        std::unique_ptr<IDevice> wait (std::string const &name);
 
         EventQueue &eventQueue () { return eventQueue_; }
         UsbAsync &usb () { return usb_; }
@@ -42,10 +56,25 @@ private:
         UsbAsync usb_{&eventQueue_};
         DemoInput demo_{&eventQueue_};
 
-        // using FactoryFunction = std::function<std::unique_ptr<IDevice> (void)>;
-        // using UsbRecipe = std::pair<UsbDeviceInfo, FactoryFunction>;
-        // using UsbRecipes = std::unordered_map<std::string, UsbRecipe>;
-        // UsbRecipes usbDeviceRecipes;
+        std::unique_ptr<IDevice> doCreate (std::string const &name, bool wait);
+
+        using FactoryFunction = std::function<std::unique_ptr<IDevice> (void)>;
+
+        struct UsbEntry {
+                std::string name;
+                int vid{};
+                int pid{};
+                FactoryFunction create;
+        };
+
+        std::vector<UsbEntry> usbEntries;
+
+        struct DemoEntry {
+                std::string name;
+                FactoryFunction create;
+        };
+
+        std::vector<DemoEntry> demoEntries;
 };
 
 }; // namespace logic

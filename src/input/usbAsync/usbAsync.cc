@@ -110,13 +110,16 @@ void UsbAsync::transferCallback (struct libusb_transfer *transfer)
 
 /*--------------------------------------------------------------------------*/
 
-int UsbAsync::hotplugCallback (struct libusb_context * /* ctx */, struct libusb_device *dev, libusb_hotplug_event event, void *userData)
+int UsbAsync::hotplugCallback (libusb_context * /* ctx */, libusb_device *dev, libusb_hotplug_event event, void *userData)
 {
         static libusb_device_handle *devHandle = NULL;
         struct libusb_device_descriptor desc{};
         UsbAsync *that = reinterpret_cast<UsbAsync *> (userData);
 
-        libusb_get_device_descriptor (dev, &desc);
+        if (int rc = libusb_get_device_descriptor (dev, &desc); rc < 0) {
+                that->eventQueue ()->addEvent<ErrorEvent> ("Could not get device's VID and PID."s);
+                return 0;
+        }
 
         if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event) {
                 if (int rc = libusb_open (dev, &devHandle); LIBUSB_SUCCESS != rc) {
@@ -124,8 +127,7 @@ int UsbAsync::hotplugCallback (struct libusb_context * /* ctx */, struct libusb_
                 }
                 else {
                         that->state_.store (State::connectedIdle);
-                        std::string deviceName = "logicLink"; // TODO detect what has been connected
-                        that->eventQueue ()->setAlarm<UsbConnectedAlarm> (deviceName);
+                        that->eventQueue ()->setAlarm<UsbConnectedAlarm> (desc.idVendor, desc.idProduct);
                 }
         }
         else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
@@ -133,8 +135,7 @@ int UsbAsync::hotplugCallback (struct libusb_context * /* ctx */, struct libusb_
                         libusb_close (devHandle);
                         devHandle = NULL;
                         that->state_.store (State::disconnected);
-                        std::string deviceName = "logicLink"; // TODO detect what has been DISconnected
-                        that->eventQueue ()->clearAlarm<UsbConnectedAlarm> (deviceName);
+                        that->eventQueue ()->clearAlarm<UsbConnectedAlarm> (desc.idVendor, desc.idProduct);
                 }
         }
 
