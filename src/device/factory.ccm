@@ -9,6 +9,7 @@
 module;
 #include <functional>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 export module logic:device.factory;
@@ -44,9 +45,22 @@ public:
          */
         std::unique_ptr<IDevice> wait (std::string const &name);
 
+        /**
+         * Returns a list of all detected devices that are currently connected.
+         * DOES NOT block.
+         */
+        std::set<std::string> getConnectedDevices () const;
+
         EventQueue &eventQueue () { return eventQueue_; }
+        EventQueue const &eventQueue () const { return eventQueue_; }
+
         UsbAsync &usb () { return usb_; }
         DemoInput &demo () { return demo_; }
+
+        /*
+         * Um, this is very USB speciffic, but no other ideas right now.
+         */
+        std::string vidPidToName (std::pair<int, int> const &vp) const;
 
 private:
         /**

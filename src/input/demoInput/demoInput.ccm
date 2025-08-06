@@ -40,6 +40,7 @@ public:
         void stop () override;
 
         void run () override;
+        void kill () override { stop_ = true; }
 
 private:
         std::atomic_bool running_;

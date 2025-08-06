@@ -225,6 +225,10 @@ void UsbAsync::run ()
         bool started{};
 
         while (true) {
+                if (request_.load () == Request::kill) {
+                        break;
+                }
+
                 if (state_.load () == State::disconnected) {
                         handleUsbEventsTimeout (1000, nullptr);
                 }

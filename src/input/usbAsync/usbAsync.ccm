@@ -84,6 +84,7 @@ public:
         void start (Session *session) override;
         void stop () override { request_.store (Request::stop); }
         void run () override;
+        void kill () override { request_.store (Request::kill); }
 
 private:
         static void transferCallback (struct libusb_transfer *transfer);
@@ -93,7 +94,7 @@ private:
         static void handleUsbEventsCompleted (int *completed, libusb_transfer *transfer);
         static void handleUsbEventsTimeout (int timeoutMs, libusb_transfer *transfer);
 
-        enum class Request : uint8_t { none, start, stop };
+        enum class Request : uint8_t { none, start, stop, kill };
         enum class State : uint8_t { disconnected, connectedIdle, transferring };
 
         libusb_device_handle *dev{};

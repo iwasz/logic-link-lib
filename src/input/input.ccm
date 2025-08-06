@@ -52,6 +52,11 @@ export struct IInput {
          * end of the `data` queue and observes the hotplug events.
          */
         virtual void run () = 0;
+
+        /**
+         * Breaks the run loop.
+         */
+        virtual void kill () = 0;
 };
 
 /**

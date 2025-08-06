@@ -30,7 +30,7 @@ public:
         Queue<RawCompressedBlock> rawQueue;
         // std::shared_ptr<IInput> input;
         std::shared_ptr<IDevice> device;
-        std::unique_ptr<IBackend> backend;
-        std::unique_ptr<IFrontend> frontend;
+        IBackend *backend{};
+        IFrontend *frontend{};
 };
 } // namespace logic
