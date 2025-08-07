@@ -7,9 +7,7 @@
  ****************************************************************************/
 
 module;
-#include <atomic>
-#include <deque>
-#include <mutex>
+#include <memory>
 export module logic:session;
 import :data;
 import :data.backend;
@@ -29,7 +27,7 @@ public:
         // public:
         Queue<RawCompressedBlock> rawQueue;
         // std::shared_ptr<IInput> input;
-        std::shared_ptr<IDevice> device;
+        std::shared_ptr<IDevice> device; // TODO why shared?
         IBackend *backend{};
         IFrontend *frontend{};
 };

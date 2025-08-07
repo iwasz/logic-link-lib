@@ -13,6 +13,7 @@ module;
 #include "common/stats.hh"
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <ranges>
 #include <unordered_set>
 #include <vector>

@@ -8,7 +8,7 @@
 
 module;
 #include "common/constants.hh"
-#include <print>
+#include <climits>
 #include <vector>
 
 export module logic:data.frontend;
@@ -86,10 +86,7 @@ public:
 
         // ChannelStreams const &range (TimePoint const &begin, TimePoint const &end) override { return current; }
 
-        ChannelStream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override
-        {
-                return current.at (groupIdx);
-        }
+        ChannelStream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override { return current.at (groupIdx); }
 
         // ChannelStream const &group (size_t groupIdx, TimePoint const &begin, TimePoint const &end) override
         // {
@@ -154,4 +151,4 @@ private:
  */
 class SequentialAccessFrontend {};
 
-} // namespace logic::data
+} // namespace logic

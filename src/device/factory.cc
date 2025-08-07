@@ -13,6 +13,7 @@ module;
 #include <ranges>
 #include <set>
 #include <string>
+#include <vector>
 module logic;
 
 namespace logic {
