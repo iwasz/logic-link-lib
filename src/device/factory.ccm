@@ -22,7 +22,7 @@ namespace logic {
 
 export class Factory {
 public:
-        Factory ();
+        Factory (EventQueue *eventQueue);
         Factory (Factory const &) = delete;
         Factory &operator= (Factory const &) = delete;
         Factory (Factory &&) = delete;
@@ -51,8 +51,8 @@ public:
          */
         std::set<std::string> getConnectedDevices () const;
 
-        EventQueue &eventQueue () { return eventQueue_; }
-        EventQueue const &eventQueue () const { return eventQueue_; }
+        // EventQueue &eventQueue () { return eventQueue_; }
+        // EventQueue const &eventQueue () const { return eventQueue_; }
 
         UsbAsync &usb () { return usb_; }
         DemoInput &demo () { return demo_; }
@@ -66,9 +66,9 @@ private:
         /**
          * All inputs are created here and are shared by all the devices.
          */
-        EventQueue eventQueue_;
-        UsbAsync usb_{&eventQueue_};
-        DemoInput demo_{&eventQueue_};
+        EventQueue *eventQueue_;
+        UsbAsync usb_;
+        DemoInput demo_;
 
         std::unique_ptr<IDevice> doCreate (std::string const &name, bool wait);
 

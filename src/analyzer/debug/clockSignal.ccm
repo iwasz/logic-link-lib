@@ -37,9 +37,10 @@ public:
                 // overrunsNo = 0;
         }
 
+        void stop () override {}
+
         // void runRaw (RawData const & /* rd */) override {} // TODO this produces errors in UTs when is removed.
         AugumentedData run (SampleBlockStream const &samples) override;
-        void stop () override;
 
         /// Analyze only `mod`-th 32 bit word out of every `div` words in the stream.
         void setDecimation (int div, int mod)
@@ -159,9 +160,5 @@ void ClockSignalCheck::analyzeDataIntegrity (uint32_t w)
 
         prevWord = w;
 }
-
-/****************************************************************************/
-
-void ClockSignalCheck::stop () {}
 
 } // namespace logic

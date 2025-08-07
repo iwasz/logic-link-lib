@@ -43,6 +43,14 @@ UsbAsync::UsbAsync (EventQueue *eventQueue) : AbstractInput (eventQueue)
 
         // printDevs (devs);
         libusb_free_device_list (devs, 1);
+
+        int rc = libusb_hotplug_register_callback (NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT,
+                                                   LIBUSB_HOTPLUG_ENUMERATE, LIBUSB_HOTPLUG_MATCH_ANY, LIBUSB_HOTPLUG_MATCH_ANY,
+                                                   LIBUSB_HOTPLUG_MATCH_ANY, hotplugCallback, this, &callback_handle);
+
+        if (LIBUSB_SUCCESS != rc) {
+                throw Exception{"Error creating a hotplug callback: " + std::string{libusb_error_name (rc)}};
+        }
 }
 
 /****************************************************************************/
@@ -52,7 +60,7 @@ void UsbAsync::open (std::any const &in)
         UsbDeviceInfo const &info = std::any_cast<UsbDeviceInfo const &> (in);
 
         if (dev = libusb_open_device_with_vid_pid (nullptr, info.vid, info.pid); dev == nullptr) {
-                throw Exception ("Error finding USB device.");
+                throw Exception ("Error finding USB device. VID: " + std::to_string (info.vid) + ", PID: " + std::to_string (info.pid));
         }
 
         // if (auto r = libusb_reset_device (dev); r < 0) {
@@ -60,11 +68,11 @@ void UsbAsync::open (std::any const &in)
         // }
 
         if (auto r = libusb_claim_interface (dev, info.claimInterface); r < 0) {
-                throw Exception ("Error claiming interface : "s + libusb_error_name (r));
+                throw Exception ("Error claiming interface: "s + std::to_string (info.claimInterface) + ", msg: "s + libusb_error_name (r));
         }
 
         if (auto r = libusb_set_interface_alt_setting (dev, info.interfaceNumber, info.alternateSetting); r < 0) {
-                throw Exception ("Error to libusb_set_interface_alt_setting: "s + libusb_error_name (r));
+                throw Exception ("Error libusb_set_interface_alt_setting: "s + libusb_error_name (r));
         }
 
         /*
@@ -191,14 +199,6 @@ void UsbAsync::handleUsbEventsTimeout (int timeoutMs, libusb_transfer *transfer)
  */
 void UsbAsync::run ()
 {
-        int rc = libusb_hotplug_register_callback (NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT,
-                                                   LIBUSB_HOTPLUG_ENUMERATE, VID, PID, LIBUSB_HOTPLUG_MATCH_ANY, hotplugCallback, this,
-                                                   &callback_handle);
-
-        if (LIBUSB_SUCCESS != rc) {
-                throw Exception{"Error creating a hotplug callback: " + std::string{libusb_error_name (rc)}};
-        }
-
         libusb_transfer *transfer = libusb_alloc_transfer (0);
 
         if (transfer == nullptr) {

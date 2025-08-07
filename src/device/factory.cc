@@ -9,7 +9,6 @@
 module;
 #include "common/constants.hh"
 #include <algorithm>
-#include <iterator>
 #include <memory>
 #include <ranges>
 #include <set>
@@ -18,8 +17,12 @@ module logic;
 
 namespace logic {
 
-Factory::Factory ()
-    : usbEntries{{"logicLink", common::usb::VID, common::usb::PID, [this] { return std::make_unique<LogicLink> (&usb_); }}},
+Factory::Factory (EventQueue *eventQueue)
+    : eventQueue_{eventQueue},
+      usb_{eventQueue},
+      demo_{eventQueue},
+      usbEntries{{"logicLink", common::usb::VID, common::usb::PID, [this] { return std::make_unique<LogicLink> (&usb_); }},
+                 {"saleaeClone", 0x0925, 0x3881, [this] { return std::make_unique<LogicLink> (&usb_); }}}, // TODO remove
       demoEntries{{"demoLogicLink", [this] { return std::make_unique<LogicLink> (&demo_); }}}
 {
 }
@@ -42,7 +45,7 @@ std::unique_ptr<IDevice> Factory::doCreate (std::string const &name, bool wait)
         int dp{};
 
         if (wait) {
-                eventQueue ().waitAlarms<UsbConnectedAlarm> (
+                eventQueue_->waitAlarms<UsbConnectedAlarm> (
                         [&dv, &dp] (int v, int p) {
                                 dv = v;
                                 dp = p;
@@ -50,7 +53,7 @@ std::unique_ptr<IDevice> Factory::doCreate (std::string const &name, bool wait)
                         1);
         }
         else {
-                eventQueue ().visitAlarms<UsbConnectedAlarm> (
+                eventQueue_->visitAlarms<UsbConnectedAlarm> (
                         [&dv, &dp] (int v, int p) {
                                 dv = v;
                                 dp = p;
@@ -88,7 +91,7 @@ std::string Factory::vidPidToName (std::pair<int, int> const &vp) const
 std::set<std::string> Factory::getConnectedDevices () const
 {
         std::vector<std::pair<int, int>> vps;
-        eventQueue ().visitAlarms<UsbConnectedAlarm> ([&vps] (int v, int p) { vps.emplace_back (v, p); });
+        eventQueue_->visitAlarms<UsbConnectedAlarm> ([&vps] (int v, int p) { vps.emplace_back (v, p); });
         auto notEmptyString = [] (auto const &s) { return !s.empty (); };
         return vps | std::views::transform ([this] (auto const &p) { return vidPidToName (p); }) | std::views::filter (notEmptyString)
                 | std::ranges::to<std::set<std::string>> ();
