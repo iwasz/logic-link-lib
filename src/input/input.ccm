@@ -31,7 +31,7 @@ export struct IInput {
          * and so on. std::any used to accomodate for all possible busses, not only
          * USB.
          */
-        virtual void open (std::any const &info) = 0;
+        virtual std::any open (std::any const &info) = 0;
 
         virtual void controlOut (std::vector<uint8_t> const &request) = 0;
         virtual std::vector<uint8_t> controlIn (size_t len) = 0;

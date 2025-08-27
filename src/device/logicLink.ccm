@@ -10,7 +10,7 @@ module;
 #include "common/error.hh"
 #include "common/params.hh"
 #include "common/stats.hh"
-#include <cstdlib>
+#include <libusb.h>
 #include <unordered_set>
 export module logic:device.link;
 import :device;
@@ -20,6 +20,7 @@ namespace logic {
 export class LogicLink : public AbstractUsbDevice {
 public:
         explicit LogicLink (IInput *input);
+        LogicLink (IInput *input, libusb_device *dev);
 
         common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
         void configureTransmission (UsbTransmissionParams const &params) override;

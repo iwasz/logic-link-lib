@@ -24,6 +24,7 @@ Factory::Factory (EventQueue *eventQueue)
       demo_{eventQueue},
       usbEntries{{"logicLink", common::usb::VID, common::usb::PID, [this] { return std::make_unique<LogicLink> (&usb_); }},
                  {"saleaeClone", 0x0925, 0x3881, [this] { return std::make_unique<LogicLink> (&usb_); }}}, // TODO remove
+
       demoEntries{{"demoLogicLink", [this] { return std::make_unique<LogicLink> (&demo_); }}}
 {
 }
@@ -32,6 +33,7 @@ Factory::Factory (EventQueue *eventQueue)
 
 std::unique_ptr<IDevice> Factory::doCreate (std::string const &name, bool wait)
 {
+        // TODO It creates first device with a name match even if it was not connected.
         auto nameMatch = [&name] (auto const &e) { return e.name == name; };
 
         if (auto i = std::ranges::find_if (usbEntries, nameMatch); i != usbEntries.cend ()) {
@@ -62,18 +64,24 @@ std::unique_ptr<IDevice> Factory::doCreate (std::string const &name, bool wait)
                         1);
         }
 
-        if (auto i = std::ranges::find_if (usbEntries, [&dv, &dp] (auto const &e) { return e.vid == dv && e.pid == dp; });
-            i != usbEntries.cend ()) {
-                return i->create ();
-        }
-
-        return {};
+        return createUsb (dv, dp);
 }
 
 /****************************************************************************/
 
 std::unique_ptr<IDevice> Factory::create (std::string const &name) { return doCreate (name, false); }
 std::unique_ptr<IDevice> Factory::wait (std::string const &name) { return doCreate (name, true); }
+
+std::unique_ptr<IDevice> Factory::create (UsbConnectedAlarm const *alarm) { return createUsb (alarm->vid (), alarm->pid ()); }
+std::unique_ptr<IDevice> Factory::createUsb (int vid, int pid)
+{
+        if (auto i = std::ranges::find_if (usbEntries, [vid, pid] (auto const &e) { return e.vid == vid && e.pid == pid; });
+            i != usbEntries.cend ()) {
+                return i->create ();
+        }
+
+        return {};
+}
 
 /****************************************************************************/
 

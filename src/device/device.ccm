@@ -15,6 +15,7 @@ module;
 #include <concepts>
 #include <cstdint>
 #include <cstdlib>
+#include <libusb.h>
 #include <unordered_set>
 #include <vector>
 export module logic:device;
@@ -131,11 +132,15 @@ export struct UsbTransmissionParams {
 export struct AbstractUsbDevice : public AbstractDevice {
 public:
         using AbstractDevice::AbstractDevice;
+        AbstractUsbDevice (IInput *input, libusb_device *dev) : AbstractDevice{input}, dev{dev} {}
 
         void configureTransmission (std::any const &params) override { configureTransmission (std::any_cast<UsbTransmissionParams> (params)); }
         virtual void configureTransmission (UsbTransmissionParams const &params) { transmissionParams_ = params; }
         virtual size_t transferLen () const { return transmissionParams_.usbTransfer; }
         void controlOut (UsbRequest const &request) { input ()->controlOut (request.data ()); }
+
+protected:
+        libusb_device *dev{};
 
 private:
         UsbTransmissionParams transmissionParams_;

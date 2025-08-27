@@ -38,6 +38,11 @@ public:
         std::unique_ptr<IDevice> create (std::string const &name);
 
         /**
+         * Create an USB device from hot-swap event.
+         */
+        std::unique_ptr<IDevice> create (UsbConnectedAlarm const *alarm);
+
+        /**
          * Creates a device of a name `name` - BLOCKING.
          * - If `name` is empty, WAITS for and creates first detected device (if any).
          * - If `name` is not empty it attempts to create the corresponding device. Returns
@@ -63,6 +68,8 @@ public:
         std::string vidPidToName (std::pair<int, int> const &vp) const;
 
 private:
+        std::unique_ptr<IDevice> createUsb (int vid, int pid);
+
         /**
          * All inputs are created here and are shared by all the devices.
          */

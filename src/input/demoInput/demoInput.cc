@@ -18,7 +18,7 @@ import :input.demo;
 
 namespace logic {
 
-void DemoInput::open (std::any const &info) { blockSize = std::any_cast<size_t> (info); }
+std::any DemoInput::open (std::any const &info) { blockSize = std::any_cast<size_t> (info); return {}; }
 
 /****************************************************************************/
 

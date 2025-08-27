@@ -55,9 +55,10 @@ UsbAsync::UsbAsync (EventQueue *eventQueue) : AbstractInput (eventQueue)
 
 /****************************************************************************/
 
-void UsbAsync::open (std::any const &in)
+std::any UsbAsync::open (std::any const &in)
 {
         UsbDeviceInfo const &info = std::any_cast<UsbDeviceInfo const &> (in);
+        // libusb_device_handle *dev{};
 
         if (dev = libusb_open_device_with_vid_pid (nullptr, info.vid, info.pid); dev == nullptr) {
                 throw Exception ("Error finding USB device. VID: " + std::to_string (info.vid) + ", PID: " + std::to_string (info.pid));
@@ -83,6 +84,8 @@ void UsbAsync::open (std::any const &in)
         //         close();
         //         throw Exception ("Error to libusb_set_configuration: "s + libusb_error_name (r));
         // }
+
+        return dev;
 }
 
 /****************************************************************************/
@@ -99,7 +102,7 @@ void UsbAsync::start (Session *session)
 {
         // std::lock_guard lock{mutex};
         this->session = session;
-        this->device = dynamic_cast<AbstractUsbDevice *> (session->device.get ());
+        this->device = dynamic_cast<AbstractUsbDevice *> (session->device);
 
         if (this->device == nullptr) {
                 throw Exception{"Use AbstractUsbDevice with UsbAsync."};
@@ -120,8 +123,8 @@ void UsbAsync::transferCallback (struct libusb_transfer *transfer)
 
 int UsbAsync::hotplugCallback (libusb_context * /* ctx */, libusb_device *dev, libusb_hotplug_event event, void *userData)
 {
-        static libusb_device_handle *devHandle = NULL;
-        struct libusb_device_descriptor desc{};
+        libusb_device_handle *devHandle{};
+        libusb_device_descriptor desc{};
         UsbAsync *that = reinterpret_cast<UsbAsync *> (userData);
 
         if (int rc = libusb_get_device_descriptor (dev, &desc); rc < 0) {
@@ -135,7 +138,7 @@ int UsbAsync::hotplugCallback (libusb_context * /* ctx */, libusb_device *dev, l
                 }
                 else {
                         that->state_.store (State::connectedIdle);
-                        that->eventQueue ()->setAlarm<UsbConnectedAlarm> (desc.idVendor, desc.idProduct);
+                        that->eventQueue ()->setAlarm<UsbConnectedAlarm> (devHandle, &desc);
                 }
         }
         else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
@@ -143,7 +146,7 @@ int UsbAsync::hotplugCallback (libusb_context * /* ctx */, libusb_device *dev, l
                         libusb_close (devHandle);
                         devHandle = NULL;
                         that->state_.store (State::disconnected);
-                        that->eventQueue ()->clearAlarm<UsbConnectedAlarm> (desc.idVendor, desc.idProduct);
+                        that->eventQueue ()->clearAlarm<UsbConnectedAlarm> (devHandle, &desc);
                 }
         }
 

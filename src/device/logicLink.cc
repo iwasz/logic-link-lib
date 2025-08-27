@@ -14,6 +14,7 @@ module;
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <libusb.h>
 #include <ranges>
 #include <unordered_set>
 #include <vector>
@@ -35,6 +36,10 @@ LogicLink::LogicLink (IInput *input) : AbstractUsbDevice{input}
 
         input->open (info);
 }
+
+/****************************************************************************/
+
+LogicLink::LogicLink (IInput *input, libusb_device *dev) : AbstractUsbDevice{input, dev} {}
 
 /****************************************************************************/
 
