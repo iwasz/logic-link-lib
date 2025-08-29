@@ -9,51 +9,47 @@
 module;
 #include "common/params.hh"
 #include <algorithm>
-#include <any>
 #include <atomic>
 #include <cstdlib>
+#include <libusb.h>
 #include <mutex>
 module logic;
 import :input.demo;
 
 namespace logic {
 
-std::any DemoInput::open (std::any const &info) { blockSize = std::any_cast<size_t> (info); return {}; }
-
-/****************************************************************************/
-
 void DemoInput::run ()
 {
-        Bytes singleTransfer;
+        // Bytes singleTransfer;
 
-        while (true) {
-                if (running_) {
-                        singleTransfer.resize (blockSize);
-                        std::ranges::generate (singleTransfer, [] { return std::rand () % 256; });
-                        RawCompressedBlock rcd{0, 0, std::move (singleTransfer)}; // TODO resize blocks (if needed)
-                        session->rawQueue.push (std::move (rcd));
-                }
-                else {
-                        session = nullptr;
-                }
+        // while (true) {
+        //         if (running_) {
+        //                 singleTransfer.resize (blockSize);
+        //                 std::ranges::generate (singleTransfer, [] { return std::rand () % 256; });
+        //                 RawCompressedBlock rcd{0, 0, std::move (singleTransfer)}; // TODO resize blocks (if needed)
+        //                 session->rawQueue.push (std::move (rcd));
+        //         }
+        //         else {
+        //                 session = nullptr;
+        //         }
 
-                if (stop_ && singleTransfer.empty ()) {
-                        break;
-                }
-        }
+        //         if (stop_ && singleTransfer.empty ()) {
+        //                 break;
+        //         }
+        // }
 }
 
 /****************************************************************************/
 
-void DemoInput::start (Session *session)
+void DemoInput::start (UsbHandle const &handle)
 {
         std::lock_guard lock{mutex};
-        this->session = session;
+        // this->session = session;
         running_ = true;
 }
 
 /****************************************************************************/
 
-void DemoInput::stop () { running_ = false; }
+void DemoInput::stop (UsbDevice */* dev */) { running_ = false; }
 
 } // namespace logic

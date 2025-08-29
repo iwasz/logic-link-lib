@@ -7,10 +7,8 @@
  ****************************************************************************/
 
 module;
-#include <any>
-#include <cstdint>
+#include <libusb.h>
 #include <mutex>
-#include <vector>
 export module logic:input;
 export import :data;
 import :event.queue;
@@ -18,6 +16,20 @@ import :event.queue;
 namespace logic {
 export class Session;
 
+/**
+ * Responsibilities:
+ * - Running some kind of an event loop for a communiaction channel like USB.
+ *
+ * Notes:
+ * This interface is used (only?) when invoking its run method via std::async, which
+ * in turn is generic, and doesn't require an (object oriented) interface. Despite this
+ * I somehow feel better having it.
+ *
+ * Configurations (ORed):
+ * - Session + deviceA (single tab, single device)
+ * - Session + deviceA + deviceB (single tab, multiple devices)
+ * - SessionA + deviceA... , SessionB + DeviceB
+ */
 export struct IInput {
         IInput () = default;
         IInput (IInput const &) = default;
@@ -25,27 +37,6 @@ export struct IInput {
         IInput (IInput &&) noexcept = default;
         IInput &operator= (IInput &&) noexcept = default;
         virtual ~IInput () = default;
-
-        /**
-         * Basic USB bookeeping like opening thge device, claiming the interface
-         * and so on. std::any used to accomodate for all possible busses, not only
-         * USB.
-         */
-        virtual std::any open (std::any const &info) = 0;
-
-        virtual void controlOut (std::vector<uint8_t> const &request) = 0;
-        virtual std::vector<uint8_t> controlIn (size_t len) = 0;
-
-        /**
-         * Sends a start command. Session contains all that is needed to
-         * collect the acquired data (queue).
-         */
-        virtual void start (Session *session) = 0;
-
-        /**
-         * Send stop request to the device and inform the algorithms that it was sent.
-         */
-        virtual void stop () = 0;
 
         /**
          * Blocking acquisition and event listener method, that pushes the data at the
@@ -60,7 +51,7 @@ export struct IInput {
 };
 
 /**
- * A helper.
+ * A helper that has a notion of the EventQueue.
  */
 export class AbstractInput : public IInput {
 public:
@@ -69,9 +60,6 @@ public:
 
 private:
         EventQueue *eventQueue_;
-
-protected:
-        mutable std::mutex mutex;
 };
 
 } // namespace logic

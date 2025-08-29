@@ -24,22 +24,16 @@ import :device.link;
 namespace logic {
 using namespace common::usb;
 
-LogicLink::LogicLink (IInput *input) : AbstractUsbDevice{input}
+LogicLink::LogicLink (IInput *inp, libusb_device_handle *dev) : UsbDevice{inp, dev}
 {
-        UsbDeviceInfo info = {
-                .vid = VID,
-                .pid = PID,
+        UsbInterface info = {
                 .claimInterface = 0,
                 .interfaceNumber = 0,
                 .alternateSetting = 0,
         };
 
-        input->open (info);
+        open (info);
 }
-
-/****************************************************************************/
-
-LogicLink::LogicLink (IInput *input, libusb_device *dev) : AbstractUsbDevice{input, dev} {}
 
 /****************************************************************************/
 
@@ -58,7 +52,7 @@ common::acq::Params LogicLink::configureAcquisition (common::acq::Params const &
                  * This one requests data from the control ep. It wants 9B of response from
                  * the previous transfer (configure sample rate and chgannel)
                  */
-                auto request = input ()->controlIn (9);
+                auto request = controlIn (9);
                 return params;
         }
 
@@ -71,7 +65,7 @@ common::acq::Params LogicLink::configureAcquisition (common::acq::Params const &
                             .channels (params.analogChannels)
                             .integer (uint8_t (params.mode)));
 
-        auto request = input ()->controlIn (13);
+        auto request = controlIn (13);
 
         common::acq::Params paramsOut{};
         common::serialize (&request)
@@ -104,7 +98,7 @@ void LogicLink::onStop () { controlOut (UsbRequest{}.clazz (GREATFET_CLASS_LA).v
 common::usb::Stats LogicLink::getStats ()
 {
         controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_STATS));
-        auto rawStats = input ()->controlIn (sizeof (common::usb::Stats));
+        auto rawStats = controlIn (sizeof (common::usb::Stats));
         common::usb::Stats stats{};
         memcpy (&stats, rawStats.data (), rawStats.size ());
         return stats;
@@ -115,7 +109,7 @@ common::usb::Stats LogicLink::getStats ()
 std::unordered_set<logs::Code> LogicLink::getErrors ()
 {
         controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_ERRORS));
-        auto rawStats = input ()->controlIn (MAX_CONTROL_PAYLOAD_SIZE);
+        auto rawStats = controlIn (MAX_CONTROL_PAYLOAD_SIZE);
 
         if (rawStats.empty ()) { // Should not happen.
                 return {};
@@ -135,7 +129,7 @@ void LogicLink::clearErrors () { controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLAS
 
 void LogicLink::configureTransmission (UsbTransmissionParams const &params)
 {
-        AbstractUsbDevice::configureTransmission (params);
+        UsbDevice::configureTransmission (params);
         controlOut (UsbRequest{}
                             .clazz (LOGIC_LINK_CLASS_LA)
                             .verb (LL_VERB_SET_USB_TRANSFER_PARAMS)

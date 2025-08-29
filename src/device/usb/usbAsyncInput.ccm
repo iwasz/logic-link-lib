@@ -1,0 +1,143 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <any>
+#include <atomic>
+#include <cstdint>
+#include <cstdlib>
+#include <functional>
+#include <libusb.h>
+#include <memory>
+#include <unordered_map>
+export module logic:input.usb;
+export import :usbInput;
+export import :event;
+
+namespace logic {
+export struct UsbDevice;
+export class UsbAsyncInput;
+
+/**
+ * Internal structure for getting track of all the managed devces.
+ */
+struct UsbHandleInternal : public UsbHandle {
+        UsbHandleInternal (UsbHandle const &h, UsbAsyncInput *input);
+        UsbHandleInternal (UsbHandleInternal const &) = delete;
+        UsbHandleInternal &operator= (UsbHandleInternal const &) = delete;
+        UsbHandleInternal (UsbHandleInternal &&) = delete;
+        UsbHandleInternal &operator= (UsbHandleInternal &&) = delete;
+        ~UsbHandleInternal ();
+
+        Bytes singleTransfer;
+        libusb_transfer *transfer{};
+        bool stopRequest{};
+        UsbAsyncInput *input{};
+};
+
+/**
+ * Abstraction over asynchronous libusb implementation, with a (blocking) event
+ * processing loop meant to be used from a separate thread. Remember that synchronous
+ * libusb implementation is based on the asyc one, so in order to gain full control
+ * async was choosen as more low level. Another aspect is the hot-swap and multiple
+ * USB devices - from this point of view synchronous variant is much harder to use.
+ */
+export class UsbAsyncInput : public UsbInput {
+public:
+        friend struct UsbHandleInternal;
+
+        /**
+         * Construct a new UsbAsync object and initializes the libusb.
+         */
+        UsbAsyncInput (EventQueue *eventQueue);
+        UsbAsyncInput (UsbAsyncInput const &) = delete;
+        UsbAsyncInput &operator= (UsbAsyncInput const &) = delete;
+        UsbAsyncInput (UsbAsyncInput &&) noexcept = delete;
+        UsbAsyncInput &operator= (UsbAsyncInput &&) noexcept = delete;
+
+        /**
+         * Gracefully de-inits the libusb.
+         */
+        ~UsbAsyncInput () override;
+
+        /*--------------------------------------------------------------------------*/
+
+        void run () override;
+        void kill () override { request_.store (Request::kill); }
+
+        /**
+         * Starts the continuous, main bulk transfer. Inits the libusb transfer
+         * structure, our internal data buffer, and makest this bulk transfer to
+         * be resubmited everytime it finishes (hence continuous).
+         */
+        void start (UsbHandle const &handle) override;
+        void stop (UsbDevice *dev) override;
+
+private:
+        static void transferCallback (struct libusb_transfer *transfer);
+        static int hotplugCallback (struct libusb_context * /* ctx */, struct libusb_device *dev, libusb_hotplug_event event, void *userData);
+
+        enum class Request : uint8_t { none, /* start, stop, */ kill };
+        // enum class State : uint8_t { disconnected, connectedIdle, transferring };
+
+        // // TODO This is the biggest flaw! This makes this class work only for single device!
+        // libusb_device_handle *dev{};
+        libusb_hotplug_callback_handle hotplugCallbackHandle{};
+
+        std::atomic<Request> request_;
+        // std::atomic<State> state_;
+        // Session *session{};
+        // UsbDevice *device{};
+
+        using UsbHandles = std::unordered_map<libusb_device_handle const *, std::unique_ptr<UsbHandleInternal>>;
+        UsbHandles handles;
+
+        // TODO.
+        /// Number of bytes received so far irrespective of the buffer size.
+        // size_t receivedB () const { return allTransferedB; }
+        std::mutex mutex;
+        // TimePoint globalStart;
+        // TimePoint globalStop;
+        // size_t allTransferedB{};
+};
+
+/**
+ * @brief
+ *
+ */
+export class UsbConnectedAlarm : public AbstractAlarm {
+public:
+        explicit UsbConnectedAlarm (libusb_device_handle *devHandle, libusb_device_descriptor *desc)
+            : devHandle_{devHandle}, vid_{desc->idVendor}, pid_{desc->idProduct}
+        {
+        }
+
+        void execute (std::any const &func) const override
+        {
+                auto f = std::any_cast<std::function<void (UsbConnectedAlarm const *)>> (func);
+                f (this);
+        }
+
+        std::size_t hash () const override { return std::hash<std::size_t>{}(size_t (devHandle_)); }
+
+        int vid () const { return vid_; }
+        int pid () const { return pid_; }
+        libusb_device_handle *devHandle () const { return devHandle_; };
+
+private:
+        /*
+         * Im using this raw type, becasue this is the concrete alarm, so it pertains only
+         * USB devices. Second, this pointer is a definite way of telling two connected USB
+         * devices apart. If you connect 2 identical USB devices VID and PID is not enough.
+         */
+        libusb_device_handle *devHandle_{};
+        int vid_{};
+        int pid_{};
+};
+
+} // namespace logic

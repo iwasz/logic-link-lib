@@ -13,14 +13,13 @@ module;
 #include <libusb.h>
 #include <unordered_set>
 export module logic:device.link;
-import :device;
+import :usbDevice;
 
 namespace logic {
 
-export class LogicLink : public AbstractUsbDevice {
+export class LogicLink : public UsbDevice {
 public:
-        explicit LogicLink (IInput *input);
-        LogicLink (IInput *input, libusb_device *dev);
+        LogicLink (IInput *input, libusb_device_handle *dev);
 
         common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
         void configureTransmission (UsbTransmissionParams const &params) override;

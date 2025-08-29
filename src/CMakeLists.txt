@@ -1,4 +1,3 @@
-add_subdirectory(input)
 add_subdirectory(processing)
 add_subdirectory(analyzer)
 add_subdirectory(data)

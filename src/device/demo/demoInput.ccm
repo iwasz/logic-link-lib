@@ -8,17 +8,15 @@
 
 module;
 #include "common/params.hh"
-#include <any>
 #include <atomic>
-#include <cstdint>
+#include <mutex>
 #include <cstdlib>
 #include <libusb.h>
-#include <vector>
 export module logic:input.demo;
-export import :input;
+export import :usbInput;
 
 namespace logic {
-class Session;
+// class Session;
 
 /**
  * Demo input device that can be providedinstead of the UsbAsync device.
@@ -28,16 +26,12 @@ class Session;
  * separate from the USB bus. Is the API universal enough to accomodate other
  * busses? For instance could a WiFi connection be handled by this API?
  */
-export class DemoInput : public AbstractInput {
+export class DemoInput : public UsbInput {
 public:
-        using AbstractInput::AbstractInput;
-        std::any open (std::any const &info) override;
+        using UsbInput::UsbInput;
 
-        void controlOut (std::vector<uint8_t> const &request) override {}
-        std::vector<uint8_t> controlIn (size_t /* len */) override { return {}; }
-
-        void start (Session *session) override;
-        void stop () override;
+        void start (UsbHandle const &handle) override;
+        void stop (UsbDevice *dev) override;
 
         void run () override;
         void kill () override { stop_ = true; }
@@ -49,7 +43,8 @@ private:
         common::acq::Params acquisitionParams;
 
         size_t blockSize{}; /// The size (in digital samples) of every generated block
-        Session *session{};
+        // Session *session{};
+        std::mutex mutex;
 };
 
 } // namespace logic

@@ -1,0 +1,93 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <functional>
+#include <libusb.h>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
+export module logic:device.factory.usb;
+import :device;
+import :input.usb;
+import :input.demo;
+import :event;
+
+namespace logic::usb {
+
+export class Factory {
+public:
+        Factory (EventQueue *eventQueue);
+        Factory (Factory const &) = delete;
+        Factory &operator= (Factory const &) = delete;
+        Factory (Factory &&) = delete;
+        Factory &operator= (Factory &&) = delete;
+        ~Factory () = default;
+
+        /**
+         * Create a device by name - waits (blocks) if no matching device was connected.
+         */
+        std::unique_ptr<IDevice> create (std::string const &name) const;
+
+        /**
+         * Create a device by vid and pid - waits (blocks) if no matching device was connected.
+         */
+        std::unique_ptr<IDevice> create (int vid, int pid) const;
+
+        /**
+         * Create an USB device from hot-swap event (blocking). It first checks if
+         * a simmilar event is active, possibly blocking if it's not. If there's no
+         * matching event it will wait for it. If there is one, it creates an IDevice
+         * based on that event.
+         */
+        std::unique_ptr<IDevice> create (UsbConnectedAlarm const *alarm) const;
+
+        /**
+         * Returns a list of all detected devices that are currently connected.
+         * DOES NOT block.
+         */
+        std::set<std::string> getConnectedDevices () const;
+
+        UsbAsyncInput &usb () { return usb_; }
+
+        /*
+         * Um, this is very USB speciffic, but no other ideas right now.
+         */
+        std::string vidPidToName (std::pair<int, int> const &vp) const;
+
+private:
+        /**
+         * All inputs are created here and are shared by all the devices.
+         */
+        EventQueue *eventQueue_;
+        UsbAsyncInput usb_;
+
+        using FactoryFunction = std::function<std::unique_ptr<IDevice> (libusb_device_handle *h)>;
+
+        struct UsbEntry {
+                std::string name;
+                int vid{};
+                int pid{};
+                FactoryFunction create;
+        };
+
+        std::vector<UsbEntry> usbEntries;
+
+        UsbEntry const *find (int vid, int pid) const;
+        UsbEntry const *find (std::string const &name) const;
+
+        // struct DemoEntry {
+        //         std::string name;
+        //         FactoryFunction create;
+        // };
+
+        // std::vector<DemoEntry> demoEntries;
+};
+
+}; // namespace logic::usb
