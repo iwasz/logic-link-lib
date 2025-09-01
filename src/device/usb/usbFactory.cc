@@ -17,9 +17,9 @@ module;
 #include <vector>
 module logic;
 
-namespace logic::usb {
+namespace logic {
 
-Factory::Factory (EventQueue *eventQueue)
+UsbFactory::UsbFactory (EventQueue *eventQueue)
     : eventQueue_{eventQueue},
       usb_{eventQueue},
       //       demo_{eventQueue},
@@ -39,8 +39,27 @@ Factory::Factory (EventQueue *eventQueue)
 
 /****************************************************************************/
 
-std::unique_ptr<IDevice> Factory::create (std::string const &name) const
+std::unique_ptr<IDevice> UsbFactory::create () const
 {
+        std::unique_ptr<IDevice> ret;
+
+        eventQueue_->waitAlarms<UsbConnectedAlarm> (
+                [this, &ret] (UsbConnectedAlarm const *currentAlarm) {
+                        ret = find (currentAlarm->vid (), currentAlarm->pid ())->create (currentAlarm->devHandle ());
+                },
+                1);
+
+        return ret;
+}
+
+/****************************************************************************/
+
+std::unique_ptr<IDevice> UsbFactory::create (std::string const &name) const
+{
+        if (name.empty ()) {
+                return create ();
+        }
+
         auto const *en = find (name);
 
         if (en == nullptr) {
@@ -52,11 +71,11 @@ std::unique_ptr<IDevice> Factory::create (std::string const &name) const
 
 /****************************************************************************/
 
-std::unique_ptr<IDevice> Factory::create (UsbConnectedAlarm const *alarm) const { return create (alarm->vid (), alarm->pid ()); }
+std::unique_ptr<IDevice> UsbFactory::create (UsbConnectedAlarm const *alarm) const { return create (alarm->vid (), alarm->pid ()); }
 
 /****************************************************************************/
 
-std::unique_ptr<IDevice> Factory::create (int vid, int pid) const
+std::unique_ptr<IDevice> UsbFactory::create (int vid, int pid) const
 {
         std::unique_ptr<IDevice> ret;
 
@@ -77,7 +96,7 @@ std::unique_ptr<IDevice> Factory::create (int vid, int pid) const
 
 /****************************************************************************/
 
-std::string Factory::vidPidToName (std::pair<int, int> const &vp) const
+std::string UsbFactory::vidPidToName (std::pair<int, int> const &vp) const
 {
         auto const *en = find (vp.first, vp.second);
         return (en != nullptr) ? (en->name) : ("");
@@ -85,7 +104,7 @@ std::string Factory::vidPidToName (std::pair<int, int> const &vp) const
 
 /****************************************************************************/
 
-Factory::UsbEntry const *Factory::find (int vid, int pid) const
+UsbFactory::UsbEntry const *UsbFactory::find (int vid, int pid) const
 {
         if (auto i = std::ranges::find_if (usbEntries, [vid, pid] (auto const &e) { return e.vid == vid && e.pid == pid; });
             i != usbEntries.cend ()) {
@@ -97,7 +116,7 @@ Factory::UsbEntry const *Factory::find (int vid, int pid) const
 
 /****************************************************************************/
 
-Factory::UsbEntry const *Factory::find (std::string const &name) const
+UsbFactory::UsbEntry const *UsbFactory::find (std::string const &name) const
 {
         if (auto i = std::ranges::find_if (usbEntries, [&name] (auto const &e) { return e.name == name; }); i != usbEntries.cend ()) {
                 return &*i;
@@ -108,7 +127,7 @@ Factory::UsbEntry const *Factory::find (std::string const &name) const
 
 /****************************************************************************/
 
-std::set<std::string> Factory::getConnectedDevices () const
+std::set<std::string> UsbFactory::getConnectedDevices () const
 {
         std::vector<std::pair<int, int>> vps;
         eventQueue_->visitAlarms<UsbConnectedAlarm> ([&vps] (int v, int p) { vps.emplace_back (v, p); });
@@ -117,4 +136,4 @@ std::set<std::string> Factory::getConnectedDevices () const
                 | std::ranges::to<std::set<std::string>> ();
 }
 
-}; // namespace logic::usb
+}; // namespace logic

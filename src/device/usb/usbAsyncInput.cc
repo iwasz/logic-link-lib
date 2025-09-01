@@ -200,105 +200,22 @@ void UsbAsyncInput::stop (UsbDevice *device)
  */
 void UsbAsyncInput::run ()
 {
-        {
-                /*
-                 * For now we allocate the whole (rather big) memory buffer all at once. This is
-                 * because we must avoid reallocations in the future.
-                 */
-                // std::lock_guard lock{mutex};
-                // globalStart = high_resolution_clock::now ();
-        }
-
-        // int completed{};
-        // size_t benchmarkB{};
         std::optional<high_resolution_clock::time_point> startPoint;
-        // bool started{};
 
         while (true) {
                 if (request_.load () == Request::kill) {
                         break;
                 }
 
-                // if (state_.load () == State::disconnected) {
-                //         handleUsbEventsTimeout (1000, nullptr);
-                // }
-
-                // if (state_.load () == State::connectedIdle) {
-                //         handleUsbEventsTimeout (10, nullptr); // Still LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT can be reporterd.
-
-                //         if (request_ == Request::start) {
-                //                 request_ = Request::none;
-                //                 state_ = State::transferring;
-                //                 started = false;
-                //         }
-                // }
-
-                // if (state_.load () == State::transferring) {
-                // Bytes singleTransfer (device->transferLen ());
-
                 if (!startPoint) { // TODO move to a benchmarking class
                         startPoint = high_resolution_clock::now ();
                 }
-
-                // libusb_fill_bulk_transfer (transfer, dev, common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (),
-                // transferCallback,
-                //                            &completed, common::usb::TIMEOUT_MS);
-
-                // completed = 0;
-
-                // if (auto r = libusb_submit_transfer (transfer); r < 0) {
-                //         throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
-                // }
-
-                // std::print (".");
-
-                // if (!started) {
-                //         device->onStart ();
-                //         std::println ("onStart");
-                //         started = true;
-                // }
 
                 if (auto r = libusb_handle_events (nullptr); r < 0) {
                         std::println ("libusb error: {}", r);
                 }
 
-                // if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
-                //         throw Exception{"USB transfer status error Code: " + std::string{libusb_error_name (transfer->status)}};
-                // }
-
-                // if (size_t (transfer->actual_length) != device->transferLen ()) {
-                //         std::println ("Short: {}", transfer->actual_length);
-                // }
-
-                // singleTransfer.resize (transfer->actual_length);
-                // auto now = high_resolution_clock::now ();
-                // benchmarkB += singleTransfer.size ();
-
-                // {
-                //         // std::lock_guard lock{mutex};
-                //         // allTransferedB += singleTransfer.size ();
-                // }
-
-                // if (!singleTransfer.empty ()) {
-                //         auto mbps = (double (benchmarkB) / double (duration_cast<microseconds> (now - *startPoint).count ())) * 8;
-                //         RawCompressedBlock rcd{mbps, 0, std::move (singleTransfer)}; // TODO resize blocks (if needed)
-                //         session->rawQueue.push (std::move (rcd));
-
-                //         {
-                //                 // std::lock_guard lock{mutex};
-                //                 // globalStop = high_resolution_clock::now (); // We want to be up to date, and skip possible time-out.
-                //         }
-                // }
-
-                // benchmarkB = 0;
                 startPoint.reset ();
-
-                // if (request_ == Request::stop && singleTransfer.empty ()) {
-                //         device->onStop ();
-                //         request_ = Request::none;
-                //         state_ = State::connectedIdle;
-                //         session = nullptr;
-                // }
         }
 }
 

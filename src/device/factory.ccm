@@ -40,7 +40,7 @@ public:
         UsbAsyncInput &usb () { return usbFactory.usb (); }
 
 private:
-        usb::Factory usbFactory;
+        UsbFactory usbFactory;
 };
 
 /****************************************************************************/

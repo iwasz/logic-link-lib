@@ -19,19 +19,33 @@ import :input.usb;
 import :input.demo;
 import :event;
 
-namespace logic::usb {
+namespace logic {
 
-export class Factory {
+/**
+ * Tool for creating UsbDevices.
+ *
+ * Very curious and sad thing, but I encountered a vscode / debug plugin
+ * bug when I had 2 classes called Factory (in different namespaces).
+ * It led to some kind of indefinite recurence in liblldb / vgdb vscode
+ * plugins and debug adapter crash. LLDB and GDB alone worked OK.
+ */
+export class UsbFactory {
 public:
-        Factory (EventQueue *eventQueue);
-        Factory (Factory const &) = delete;
-        Factory &operator= (Factory const &) = delete;
-        Factory (Factory &&) = delete;
-        Factory &operator= (Factory &&) = delete;
-        ~Factory () = default;
+        UsbFactory (EventQueue *eventQueue);
+        UsbFactory (UsbFactory const &) = delete;
+        UsbFactory &operator= (UsbFactory const &) = delete;
+        UsbFactory (UsbFactory &&) = delete;
+        UsbFactory &operator= (UsbFactory &&) = delete;
+        ~UsbFactory () = default;
+
+        /**
+         * Create an IDevice instance for the first connected USB device or wait.
+         */
+        std::unique_ptr<IDevice> create () const;
 
         /**
          * Create a device by name - waits (blocks) if no matching device was connected.
+         * If name is empty, delegates to create().
          */
         std::unique_ptr<IDevice> create (std::string const &name) const;
 
@@ -90,4 +104,4 @@ private:
         // std::vector<DemoEntry> demoEntries;
 };
 
-}; // namespace logic::usb
+}; // namespace logic

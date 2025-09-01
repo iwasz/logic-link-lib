@@ -16,7 +16,6 @@ module;
 #include <cstdint>
 #include <cstdlib>
 #include <libusb.h>
-#include <string>
 #include <vector>
 export module logic:usbDevice;
 import :usbInput;

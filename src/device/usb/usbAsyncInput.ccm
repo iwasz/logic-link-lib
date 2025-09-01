@@ -83,10 +83,7 @@ private:
         static int hotplugCallback (struct libusb_context * /* ctx */, struct libusb_device *dev, libusb_hotplug_event event, void *userData);
 
         enum class Request : uint8_t { none, /* start, stop, */ kill };
-        // enum class State : uint8_t { disconnected, connectedIdle, transferring };
 
-        // // TODO This is the biggest flaw! This makes this class work only for single device!
-        // libusb_device_handle *dev{};
         libusb_hotplug_callback_handle hotplugCallbackHandle{};
 
         std::atomic<Request> request_;
