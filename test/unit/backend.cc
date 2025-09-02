@@ -8,7 +8,7 @@
 
 module;
 #include <catch2/catch_test_macros.hpp>
-module logic;
+module logic.data;
 import utils;
 
 using namespace logic;

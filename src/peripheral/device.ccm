@@ -1,0 +1,111 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include "common/error.hh"
+#include "common/params.hh"
+#include "common/stats.hh"
+#include <any>
+#include <functional>
+#include <libusb.h>
+#include <memory>
+#include <unordered_set>
+export module logic.peripheral:device;
+import :input.usb;
+import logic.core;
+
+namespace logic {
+
+/**
+ * IDevice concrete classes are responsible of configuring the devices (for instance
+ * by sending USB control requests) and initial decompresing and decoding.
+ */
+export struct IDevice {
+        IDevice () = default;
+        IDevice (IDevice const &) = default;
+        IDevice &operator= (IDevice const &) = default;
+        IDevice (IDevice &&) noexcept = default;
+        IDevice &operator= (IDevice &&) noexcept = default;
+        virtual ~IDevice () = default;
+
+        virtual std::string name () const = 0;
+
+        /**
+         * Request acquisition parameters like number of channels and the
+         * sample rate.
+         */
+        virtual common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) = 0;
+
+        /**
+         * Configure buffer sizes intrinsic to the device - hence the std::any
+         * interface. Concreet classes are responsible for converting the argument
+         * and using it.
+         */
+        virtual void configureTransmission (std::any const &params) = 0;
+
+        /**
+         * Sets the session and informs an IInput object assigned to this device
+         * that the start was requested. Real request gets sent from onStart.
+         */
+        virtual void start (Queue<RawCompressedBlock> *queue) = 0;
+        virtual void stop () = 0;
+        // virtual void run () = 0;
+
+        virtual void onStart () = 0;
+        virtual void onStop () = 0;
+
+        /**
+         * Get device statistics - speciffic to the device itself and the USB interface.
+         * If this was to be a member of the IInput interface, it would have to have better,
+         * more generic interface.
+         */
+        virtual common::usb::Stats getStats () = 0;
+
+        /**
+         * Get error list from the device if any.
+         */
+        virtual std::unordered_set<logs::Code> getErrors () = 0;
+        virtual void clearErrors () = 0;
+};
+
+class AbstractDevice : public IDevice {
+public:
+        std::string name () const override { return name_; }
+        std::string &name () { return name_; }
+
+private:
+        std::string name_;
+};
+
+/**
+ * Raised when new device gents detected. Universal alarm for all
+ * kinds of devices (be it USB, or demo or others).
+ */
+export class DeviceAlarm : public AbstractAlarm {
+public:
+        explicit DeviceAlarm (std::shared_ptr<IDevice> const &device) : device_{device} {}
+
+        void execute (std::any const &func) const override
+        {
+                auto f = std::any_cast<std::function<void (std::shared_ptr<IDevice> const &)>> (func);
+                f (device_);
+        }
+
+        std::size_t hash () const override { return std::hash<std::size_t>{}(size_t (device_.get ())); }
+
+        std::shared_ptr<IDevice> device () const { return device_; };
+
+private:
+        /*
+         * Pointer is shared because internal factories can delete an IDevice instance
+         * upon device disconnection or error.
+         */
+        std::shared_ptr<IDevice> device_;
+};
+
+} // namespace logic

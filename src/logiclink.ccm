@@ -10,26 +10,12 @@
  * Common library for cli and gui.
  */
 export module logic;
-export import :data;
-export import :data.frontend;
-export import :data.backend;
-export import :data.acqParams;
-export import :exception;
-export import :constant;
-export import :device;
-export import :usbDevice;
-export import :device.link;
-// export import :device.autoDevice;
-export import :device.factory;
-export import :device.factory.usb;
-export import :input;
-export import :input.usb;
-export import :input.usb.async;
-export import :analyzer;
-export import :analyzer.debug.clockSignal;
-// export import :analyzer.lowLevel.uart;
-export import :util.span;
-export import :util.poly;
-export import :processing;
-export import :event.queue;
+
 export import :session;
+
+export import logic.analysis;
+export import logic.core;
+export import logic.data;
+export import logic.peripheral;
+export import logic.processing;
+export import logic.util;

@@ -1,0 +1,164 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <cstdio>
+#include <gsl/gsl>
+#include <print>
+export module logic.analysis:debug.clockSignal;
+import :analyzer;
+import logic.data;
+
+namespace logic {
+
+/**
+ * Analyze a (perfect) square signal down to single sample.
+ * Check data integrity in a continuous data stream (may be invoked many times).
+ * Returns number of errors detected. It looks for a pattern of 0es and the 1s
+ * (or other way around) and determines its period. Then looks for another
+ * stream of 0s and then 1s (or vice versa) and again calculates the period. If
+ * these periods do not match an error counter is increased. So any square signal
+ * will work provided that has steady (down to a single sample) frequency.
+ * @arg size bytes
+ */
+export class ClockSignalCheck : public SingleChannelAnalyzer {
+public:
+        using SingleChannelAnalyzer::SingleChannelAnalyzer;
+
+        void start () override
+        {
+                // lastBufferNo = {};
+                devBlockNo = 0;
+                // overrunsNo = 0;
+        }
+
+        void stop () override {}
+
+        // void runRaw (RawData const & /* rd */) override {} // TODO this produces errors in UTs when is removed.
+        AugumentedData run (SampleBlockStream const &samples) override;
+
+        /// Analyze only `mod`-th 32 bit word out of every `div` words in the stream.
+        void setDecimation (int div, int mod)
+        {
+                decimationDiv = div;
+                decimationMod = mod;
+        }
+
+        // These are public to facilitate unit testing.
+        size_t analyzeDataIntegrity (uint32_t const *data, size_t sizeW);
+        void analyzeDataIntegrity (uint32_t w);
+        size_t errorNum () const { return errorNum_; }
+
+private:
+        size_t devBlockNo{};
+        size_t wordInBlockNo{};
+        bool skip = true;   // Skip first (incomplete) level.
+        bool secondLevel{}; // Every periodic square signal has first level and second level.
+        bool prevBit{};
+        std::optional<uint32_t> prevPeriod;
+        uint32_t period{};
+        uint32_t prevWord{};
+        size_t errorNum_{};
+        bool lastPeriodWasError{}; // For skipping 2 consecutive errors
+        std::optional<int> decimationDiv;
+        std::optional<int> decimationMod;
+        // std::vector<uint32_t> copy;
+};
+
+using namespace std::string_literals;
+
+/****************************************************************************/
+
+AugumentedData ClockSignalCheck::run (SampleBlockStream const & /* samples */)
+{
+        // auto const &bytes = std::get<Bytes> (samples.at (channel ()).buffer);
+        // auto dmaBlocksNum = bytes.size () / dmaBlockLenB (); // We assume % is 0.
+
+        // for (size_t i = 0; i < dmaBlocksNum; ++i) {
+        //         analyzeDataIntegrity (reinterpret_cast<uint32_t const *> (bytes.data () + i * dmaBlockLenB ()), dmaBlockLenB () / 4);
+        //         ++devBlockNo;
+        // }
+
+        return {};
+}
+
+/****************************************************************************/
+
+size_t ClockSignalCheck::analyzeDataIntegrity (uint32_t const *data, size_t sizeW)
+{
+        uint32_t const *data32 = reinterpret_cast<uint32_t const *> (data);
+        wordInBlockNo = 0;
+
+        for (size_t i = 0; i < sizeW; ++i) {
+                uint32_t const &w = *(data32 + i);
+
+                if (!decimationDiv || (i % *decimationDiv == decimationMod)) {
+                        analyzeDataIntegrity (w);
+                }
+
+                ++wordInBlockNo;
+        }
+
+        return errorNum_;
+}
+
+/****************************************************************************/
+
+void ClockSignalCheck::analyzeDataIntegrity (uint32_t w)
+{
+        if (skip) { // TODO Assumes there's an edge in the first 32 bits. Fix.
+                prevBit = bool (w & 1);
+        }
+
+        for (size_t j = 0; j < CHAR_BIT * sizeof (uint32_t); ++j) {
+                bool bit = bool ((w >> j) & 1);
+
+                // Skip initial stream of same values (first level). Most likely it's not complete.
+                if (skip) {
+                        if (bit != prevBit) {
+                                skip = false;
+                                ++period;
+                        }
+                }
+                else {
+                        if (bit != prevBit) {
+                                if (!secondLevel) {
+                                        secondLevel = true;
+                                        ++period;
+                                }
+                                else {
+                                        secondLevel = false;
+
+                                        if (prevPeriod != std::nullopt && *prevPeriod != period) {
+                                                if (!lastPeriodWasError) {
+                                                        ++errorNum_;
+                                                        std::println ("{}:{}. {:032b} {:032b} {}:{}", devBlockNo, wordInBlockNo, w, prevWord,
+                                                                      *prevPeriod, period);
+                                                        lastPeriodWasError = true;
+                                                }
+                                        }
+                                        else {
+                                                prevPeriod = period;
+                                                lastPeriodWasError = false;
+                                        }
+
+                                        period = 1;
+                                }
+                        }
+                        else {
+                                ++period;
+                        }
+                }
+
+                prevBit = bit;
+        }
+
+        prevWord = w;
+}
+
+} // namespace logic

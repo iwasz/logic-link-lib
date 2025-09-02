@@ -9,7 +9,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
 
-import logic;
+import logic.util;
+import logic.data;
 
 using namespace logic;
 using namespace logic::util;

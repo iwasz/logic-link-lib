@@ -10,8 +10,8 @@ module;
 #include <climits>
 #include <cstdint>
 #include <iterator>
-export module logic:util.span;
-import :data;
+export module logic.util:span;
+// import :data;
 
 namespace logic::util {
 

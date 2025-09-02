@@ -6,10 +6,9 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-module;
-#include <vector>
-module logic.data;
-
-namespace logic {
-
-} // namespace logic
+export module logic.core;
+export import :event;
+export import :exception;
+export import :constant;
+export import :event.alarm;
+export import :event.queue;

@@ -11,10 +11,10 @@ module;
 #include <climits>
 #include <vector>
 
-export module logic:data.frontend;
-import :data;
-import :data.backend;
-import :util.span;
+export module logic.data:frontend;
+import :types;
+import :backend;
+import logic.util;
 
 export namespace logic {
 

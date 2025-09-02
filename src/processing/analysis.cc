@@ -12,9 +12,7 @@ module;
 #include <climits>
 #include <mutex>
 #include <print>
-module logic;
-import :processing;
-import :data.backend;
+module logic.processing;
 
 namespace logic {
 using namespace std::chrono;

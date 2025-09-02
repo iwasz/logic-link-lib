@@ -6,10 +6,7 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-module;
-#include <vector>
-module logic.data;
-
-namespace logic {
-
-} // namespace logic
+export module logic.analysis;
+export import :analyzer;
+export import :lowLevel.uart;
+export import :debug.clockSignal;

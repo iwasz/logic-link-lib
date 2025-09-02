@@ -6,10 +6,6 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-module;
-#include <vector>
-module logic.data;
-
-namespace logic {
-
-} // namespace logic
+export module logic.util;
+export import :poly;
+export import :span;

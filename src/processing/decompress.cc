@@ -6,8 +6,7 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-module logic;
-import :processing;
+module logic.processing;
 
 namespace logic {
 

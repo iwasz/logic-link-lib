@@ -11,7 +11,7 @@ module;
 #include <algorithm>
 #include <span>
 #include <vector>
-module logic;
+module logic.data;
 
 namespace logic {
 

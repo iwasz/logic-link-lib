@@ -8,7 +8,7 @@
 
 module;
 #include "common/params.hh"
-export module logic:data.acqParams;
+export module logic.data:acqParams;
 
 namespace acq {
 

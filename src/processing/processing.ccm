@@ -14,10 +14,9 @@ module;
 #include <span>
 #include <variant>
 #include <vector>
-export module logic:processing;
-import :data;
-import :analyzer;
-import :session;
+export module logic.processing;
+import logic.data;
+import logic.analysis;
 
 namespace logic {
 

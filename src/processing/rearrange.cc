@@ -15,8 +15,8 @@ module;
 #include <span>
 #include <variant>
 #include <vector>
-module logic;
-import :processing;
+module logic.processing;
+import logic.core;
 
 namespace logic {
 

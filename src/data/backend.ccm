@@ -11,8 +11,8 @@ module;
 #include <deque>
 #include <mutex>
 #include <vector>
-export module logic:data.backend;
-import :data;
+export module logic.data:backend;
+import :types;
 
 namespace logic {
 

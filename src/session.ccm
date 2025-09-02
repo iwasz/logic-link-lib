@@ -7,11 +7,8 @@
  ****************************************************************************/
 
 export module logic:session;
-import :data;
-import :data.backend;
-import :data.frontend;
-import :device;
-import :input;
+import logic.data;
+import logic.peripheral;
 
 namespace logic {
 

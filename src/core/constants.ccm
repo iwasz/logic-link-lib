@@ -1,0 +1,41 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <array>
+#include <cstdint>
+#include <string>
+export module logic.core:constant;
+
+export namespace logic {
+/**
+ * This size has to be requested by the USB host (PC). After sending exactly this
+ * amount, USB bulk transaction finishes, and the client application running on the
+ * host immediately issues another transfer of this size.
+ */
+// constexpr uint32_t DEFAULT_USB_TRANSFER_SIZE_B = 10 * 65536;
+// constexpr uint32_t DEFAULT_USB_TRANSFER_SIZE_B = 32768;
+constexpr uint32_t DEFAULT_USB_TRANSFER_SIZE_B = 16384;
+
+/**
+ * This size gets transferred from the buffer to the USB peripheral at once.
+ */
+constexpr uint32_t DEFAULT_USB_BLOCK_SIZE_B = 8192;
+
+template <size_t N> constexpr std::array<std::string, N> digitalChannels ()
+{
+        std::array<std::string, N> ret;
+
+        for (size_t i = 0; i < N; ++i) {
+                ret[i] = "D" /* + std::to_string (i) */;
+        }
+
+        return ret;
+}
+
+} // namespace logic

@@ -1,0 +1,242 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <algorithm>
+#include <any>
+#include <condition_variable>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <typeindex>
+#include <unordered_map>
+#include <unordered_set>
+export module logic.core:event.queue;
+import :event;
+import :event.alarm;
+
+namespace logic {
+
+template <typename T>
+concept alarm = requires (T t) {
+        t.execute (std::any{});
+        typename T::Set;
+        typename T::Clear;
+};
+
+/**
+ *
+ */
+export class EventQueue {
+public:
+        using Pair = std::pair<std::type_index, std::unique_ptr<IEvent>>;
+        using Events = std::vector<Pair>;
+        using EventCallbacks = std::unordered_map<std::type_index, std::any>;
+
+        struct AlarmHash {
+                size_t operator() (std::unique_ptr<IAlarm> const &a) const
+                {
+                        IAlarm const &pa = *a;
+                        auto h1 = std::hash<std::type_index>{}(typeid (pa));
+                        auto h2 = a->hash ();
+                        return h1 ^ (h2 << 1);
+                }
+        };
+
+        struct AlarmEqual {
+                bool operator() (std::unique_ptr<IAlarm> const &a, std::unique_ptr<IAlarm> const &b) const { return *a == *b; }
+        };
+
+        using Alarms = std::unordered_set<std::unique_ptr<IAlarm>, AlarmHash, AlarmEqual>;
+
+        /// Callbacks are not protected, add from single thread only.
+        template <typename T, typename Call> void addCallback (Call &&call)
+        {
+                eventCallbacks[typeid (T)] = std::any (std::function{std::forward<Call> (call)});
+        }
+
+        /// Lock-protected, thread safe.
+        template <typename T, typename... Parms> void addEvent (Parms &&...param);
+
+        /// Lock-protected, thread safe.
+        void run ();
+        /// Lock-protected, thread safe.
+        void waitForEvents ();
+
+        template <typename T, typename... Parms> void setAlarm (Parms &&...param);
+        template <typename T, typename... Parms> void clearAlarm (Parms &&...param);
+
+        /// Visits all alarms of type T. NOTE! callbacks called under a LOCK!
+        template <typename T, typename Call> void visitAlarms (Call &&clbk, size_t limit = 0) const;
+        template <typename T, typename Call> void waitAlarms (Call &&clbk, size_t limit = 0) const;
+
+private:
+        void runImpl (Events const &evts);
+
+        Events events;
+        EventCallbacks eventCallbacks;
+        mutable std::mutex mutex;
+        mutable std::condition_variable eventCv;
+
+        Alarms alarms;
+        mutable std::condition_variable alarmCv;
+};
+
+/****************************************************************************/
+
+void EventQueue::run ()
+{
+        Events copy;
+
+        {
+                std::lock_guard lock{mutex};
+                copy = std::move (events);
+                events = Events{};
+        }
+
+        runImpl (copy);
+}
+
+/****************************************************************************/
+
+void EventQueue::waitForEvents ()
+{
+        Events copy;
+
+        {
+                std::unique_lock lock{mutex};
+                eventCv.wait (lock, [this] { return !events.empty (); });
+                copy = std::move (events);
+                events = Events{};
+        }
+
+        runImpl (copy);
+}
+
+/****************************************************************************/
+
+void EventQueue::runImpl (Events const &evts)
+{
+        for (auto const &[name, evt] : evts) {
+                if (auto i = eventCallbacks.find (name); i != eventCallbacks.cend ()) {
+                        auto &callback = eventCallbacks.at (name);
+                        evt->execute (callback);
+                }
+        }
+}
+
+/****************************************************************************/
+
+template <typename T, typename... Parms> void EventQueue::addEvent (Parms &&...param)
+{
+        {
+                std::lock_guard lock{mutex};
+                events.emplace_back (Pair{typeid (T), std::make_unique<T> (std::forward<Parms> (param)...)});
+        }
+
+        eventCv.notify_all ();
+}
+
+/****************************************************************************/
+
+template <typename T, typename... Parms> void EventQueue::setAlarm (Parms &&...param)
+{
+        {
+                std::lock_guard lock{mutex};
+                auto s = alarms.size ();
+                auto alarm = std::make_unique<T> (std::forward<Parms> (param)...);
+                auto event = std::make_unique<T> (*alarm);
+                alarms.insert (std::move (alarm));
+
+                if (alarms.size () != s) { // New alarm
+                        events.emplace_back (Pair{typeid (typename T::Set), std::move (event)});
+                }
+        }
+
+        alarmCv.notify_all ();
+        eventCv.notify_all ();
+}
+
+/****************************************************************************/
+
+template <typename T, typename... Parms> void EventQueue::clearAlarm (Parms &&...param)
+{
+        {
+                std::lock_guard lock{mutex};
+                auto s = alarms.size ();
+                auto alarm = std::make_unique<T> (std::forward<Parms> (param)...);
+                auto event = std::make_unique<T> (*alarm);
+                alarms.erase (std::move (alarm));
+
+                if (alarms.size () != s) { // Alarm removed
+                        events.emplace_back (Pair{typeid (typename T::Clear), std::move (event)});
+                }
+        }
+
+        alarmCv.notify_all ();
+        eventCv.notify_all ();
+}
+
+/****************************************************************************/
+
+template <typename T, typename Call> void EventQueue::visitAlarms (Call &&clbk, size_t limit) const
+{
+        std::any callback{std::function{std::forward<Call> (clbk)}};
+        std::lock_guard lock{mutex};
+
+        // TODO why doesn't it work? `no known conversion from 'std::vector<int>' to 'chars_format' for 1st argument`
+        // for (auto const &p : alarms | std::views::filter ([] (std::unique_ptr<IAlarm> const &p) {
+        //                              auto const &r = *p;
+        //                              return typeid (r) == typeid (const T);
+        //                      })) {
+        //         p->execute (callback);
+        // }
+
+        size_t cnt{};
+        for (auto const &p : alarms) {
+                auto const &r = *p;
+                if (typeid (r) == typeid (const T)) {
+                        p->execute (callback);
+
+                        if (limit > 0 && ++cnt >= limit) {
+                                break;
+                        }
+                }
+        }
+}
+
+/****************************************************************************/
+
+template <typename T, typename Call> void EventQueue::waitAlarms (Call &&clbk, size_t limit) const
+{
+        std::any callback{std::function{std::forward<Call> (clbk)}};
+
+        std::unique_lock lock{mutex};
+        alarmCv.wait (lock, [this] {
+                return std::ranges::find_if (alarms,
+                                             [] (auto const &p) {
+                                                     auto const &r = *p;
+                                                     return (typeid (r) == typeid (const T));
+                                             })
+                        != alarms.cend ();
+        });
+
+        size_t cnt{};
+        for (auto const &p : alarms) {
+                auto const &r = *p;
+                if (typeid (r) == typeid (const T)) {
+                        p->execute (callback);
+
+                        if (limit > 0 && ++cnt >= limit) {
+                                break;
+                        }
+                }
+        }
+}
+
+} // namespace logic

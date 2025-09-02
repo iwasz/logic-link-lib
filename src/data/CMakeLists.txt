@@ -1,12 +1,13 @@
 target_sources(${PROJECT_NAME}
   PUBLIC
-    types.cc
     backend.cc
     frontend.cc
+    types.cc
 
   PUBLIC FILE_SET CXX_MODULES FILES
-    types.ccm
     acqParams.ccm
-    frontend.ccm
     backend.ccm
+    data.ccm
+    frontend.ccm
+    types.ccm
 )

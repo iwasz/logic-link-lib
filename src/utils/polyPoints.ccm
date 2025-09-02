@@ -10,8 +10,8 @@ module;
 #include <climits>
 #include <cstdint>
 #include <vector>
-export module logic:util.poly;
-import :data;
+export module logic.util:poly;
+// import logic.data;
 
 namespace logic::util {
 

@@ -1,0 +1,38 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <cstdint>
+export module logic.analysis:lowLevel.uart;
+import :analyzer;
+import logic.data;
+
+namespace logic::uart {
+
+export enum class Parity : uint8_t { none, odd, even };
+
+export class UartAnalyzer : public AbstractAnalyzer {
+public:
+        using AbstractAnalyzer::AbstractAnalyzer;
+
+        void start () override {}
+        AugumentedData run (SampleBlockStream const &samples) override;
+        void stop () override {}
+
+private:
+};
+
+/****************************************************************************/
+
+AugumentedData UartAnalyzer::run (SampleBlockStream const & /* samples */)
+{
+        AugumentedData ret;
+        return ret;
+}
+
+} // namespace logic::uart

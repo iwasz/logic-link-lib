@@ -15,7 +15,7 @@ module;
 #include <mutex>
 #include <variant>
 #include <vector>
-export module logic:data;
+export module logic.data:types;
 
 export namespace logic {
 

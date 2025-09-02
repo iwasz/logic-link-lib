@@ -10,11 +10,7 @@ module;
 #include "common/constants.hh"
 #include <algorithm>
 #include <vector>
-
-module logic;
-import :data;
-import :data.frontend;
-import :data.backend;
+module logic.data;
 
 namespace logic {
 
@@ -37,4 +33,4 @@ Frontend::Frontend (IBackend *backend) : backend{backend}
 
         current.push_back (std::move (group));
 }
-} // namespace logic::data
+} // namespace logic

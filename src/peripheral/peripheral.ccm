@@ -6,10 +6,12 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-module;
-#include <vector>
-module logic.data;
-
-namespace logic {
-
-} // namespace logic
+export module logic.peripheral;
+export import :device;
+export import :device.factory;
+export import :device.factory.usb;
+export import :device.link;
+export import :input;
+export import :input.usb;
+export import :input.usb.async;
+export import :usbDevice;
