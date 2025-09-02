@@ -9,11 +9,11 @@
 module;
 #include "common/params.hh"
 #include <atomic>
-#include <mutex>
 #include <cstdlib>
 #include <libusb.h>
+#include <mutex>
 export module logic:input.demo;
-export import :usbInput;
+export import :input.usb;
 
 namespace logic {
 // class Session;

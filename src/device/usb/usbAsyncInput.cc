@@ -25,7 +25,7 @@ using namespace std::chrono;
 
 /****************************************************************************/
 
-UsbAsyncInput::UsbAsyncInput (EventQueue *eventQueue) : UsbInput (eventQueue)
+UsbAsyncInput::UsbAsyncInput (EventQueue *eventQueue) : UsbInput (eventQueue), usbFactory{eventQueue, this}
 {
         if (int r = libusb_init_context (/*ctx=*/nullptr, /*options=*/nullptr, /*num_options=*/0); r < 0) {
                 throw Exception ("Failed to init USB (libusb_init_context): "s + libusb_error_name (r));
@@ -62,29 +62,43 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
 {
         libusb_device_handle *devHandle{};
         libusb_device_descriptor desc{};
-        UsbAsyncInput *that = reinterpret_cast<UsbAsyncInput *> (userData);
+        UsbAsyncInput *input = reinterpret_cast<UsbAsyncInput *> (userData);
+        EventQueue *eventQueue = input->eventQueue ();
 
         if (int rc = libusb_get_device_descriptor (dev, &desc); rc < 0) {
-                that->eventQueue ()->addEvent<ErrorEvent> ("Could not get device's VID and PID."s);
+                eventQueue->addEvent<ErrorEvent> ("Could not get device's VID and PID."s);
                 return 0;
         }
 
         if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event) {
                 if (int rc = libusb_open (dev, &devHandle); LIBUSB_SUCCESS != rc) {
-                        that->eventQueue ()->addEvent<ErrorEvent> ("Could not open USB device"s);
+                        eventQueue->addEvent<ErrorEvent> ("Could not open USB device"s);
                 }
                 else {
-                        // that->state_.store (State::connectedIdle);
-                        that->eventQueue ()->setAlarm<UsbConnectedAlarm> (devHandle, &desc);
+                        std::shared_ptr<UsbDevice> device = input->usbFactory.create (desc.idVendor, desc.idProduct, devHandle);
+                        {
+                                std::lock_guard lock{input->mutex};
+                                input->handles[devHandle] = std::make_unique<UsbHandleInternal> (device, input);
+                        }
+                        eventQueue->setAlarm<DeviceAlarm> (device);
                 }
         }
         else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
                 if (devHandle != nullptr) {
-                        libusb_close (devHandle);
-                        devHandle = NULL;
-                        // that->state_.store (State::disconnected);
-                        that->eventQueue ()->clearAlarm<UsbConnectedAlarm> (devHandle, &desc);
-                        // TODO remove from the handles map.
+                        auto &intHandle = input->handles.at (devHandle);
+                        eventQueue->clearAlarm<DeviceAlarm> (intHandle->device);
+
+                        {
+                                /*
+                                 * Remove from the handles set. This releases (or prepares to release)
+                                 * all the resources. Removes the InternalHandle, deletes the shared_ptr
+                                 * device (if upper layers don't use it), which in turn calls libusb_close.
+                                 * If upper layers till hold a shared_pointer to the device, it gets
+                                 * destroyed when they release it.
+                                 */
+                                std::lock_guard lock{input->mutex};
+                                input->handles.erase (devHandle);
+                        }
                 }
         }
 
@@ -97,10 +111,10 @@ void UsbAsyncInput::transferCallback (libusb_transfer *transfer)
 {
         auto *h = reinterpret_cast<UsbHandleInternal *> (transfer->user_data);
 
-        auto removeCurrentHandle = [h, transfer] {
-                std::lock_guard lock{h->input->mutex};
-                h->input->handles.erase (transfer->dev_handle);
-        };
+        // auto removeCurrentHandle = [h, transfer] {
+        //         std::lock_guard lock{h->input->mutex};
+        //         h->input->handles.erase (transfer->dev_handle);
+        // };
 
         if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
                 /*
@@ -108,19 +122,19 @@ void UsbAsyncInput::transferCallback (libusb_transfer *transfer)
                  */
                 auto msg = std::format ("USB transfer status error Code: {}", libusb_error_name (transfer->status));
                 h->input->eventQueue ()->addEvent<ErrorEvent> (msg);
-                removeCurrentHandle ();
+                // removeCurrentHandle ();
                 return;
         }
 
         if (h->stopRequest) {
-                removeCurrentHandle ();
+                // removeCurrentHandle ();
                 return;
         }
 
         if (auto rc = libusb_submit_transfer (transfer); rc < 0) {
                 auto msg = std::format ("libusb_submit_transfer status error Code: {}", libusb_error_name (rc));
                 h->input->eventQueue ()->addEvent<ErrorEvent> (msg);
-                removeCurrentHandle ();
+                // removeCurrentHandle ();
                 return;
         }
 
@@ -144,12 +158,13 @@ void UsbAsyncInput::transferCallback (libusb_transfer *transfer)
                 RawCompressedBlock rcd{mbps, 0, std::move (h->singleTransfer)}; // TODO resize blocks (if needed)
                 h->queue->push (std::move (rcd));
                 h->singleTransfer = Bytes (h->transferLen);
+                // std::println (".");
         }
 }
 
 /*--------------------------------------------------------------------------*/
 
-UsbHandleInternal::UsbHandleInternal (UsbHandle const &h, UsbAsyncInput *input) : UsbHandle (h), input{input}
+void UsbHandleInternal::start ()
 {
         singleTransfer.resize (transferLen);
 
@@ -167,6 +182,8 @@ UsbHandleInternal::UsbHandleInternal (UsbHandle const &h, UsbAsyncInput *input) 
         if (auto r = libusb_submit_transfer (transfer); r < 0) {
                 throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
         }
+
+        device->onStart ();
 }
 
 /*--------------------------------------------------------------------------*/
@@ -175,8 +192,11 @@ void UsbAsyncInput::start (UsbHandle const &handle)
 {
         std::lock_guard lock{mutex};
         auto const *rawDevice = handle.device->device ();
-        handles[rawDevice] = std::make_unique<UsbHandleInternal> (handle, this);
-        handle.device->onStart ();
+        auto &intHandle = handles.at (rawDevice);
+        intHandle->queue = handle.queue;
+        intHandle->transferLen = handle.transferLen;
+        intHandle->stopRequest = false;
+        intHandle->start ();
 }
 
 /*--------------------------------------------------------------------------*/
@@ -189,6 +209,7 @@ void UsbAsyncInput::stop (UsbDevice *device)
 {
         device->onStop ();
         auto &handle = handles[device->device ()];
+        // Gets removed from the list in the hot-swap callback.
         handle->stopRequest = true;
 }
 

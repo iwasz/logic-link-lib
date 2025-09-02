@@ -7,10 +7,8 @@
  ****************************************************************************/
 
 module;
-#include <cstdint>
 #include <libusb.h>
-#include <vector>
-export module logic:usbInput;
+export module logic:input.usb;
 import :input;
 
 namespace logic {

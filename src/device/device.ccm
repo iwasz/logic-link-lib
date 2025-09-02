@@ -11,10 +11,13 @@ module;
 #include "common/params.hh"
 #include "common/stats.hh"
 #include <any>
+#include <functional>
 #include <libusb.h>
+#include <memory>
 #include <unordered_set>
 export module logic:device;
-import :usbInput;
+import :input.usb;
+import :event;
 
 namespace logic {
 export class Session;
@@ -30,6 +33,8 @@ export struct IDevice {
         IDevice (IDevice &&) noexcept = default;
         IDevice &operator= (IDevice &&) noexcept = default;
         virtual ~IDevice () = default;
+
+        virtual std::string name () const = 0;
 
         /**
          * Request acquisition parameters like number of channels and the
@@ -67,6 +72,41 @@ export struct IDevice {
          */
         virtual std::unordered_set<logs::Code> getErrors () = 0;
         virtual void clearErrors () = 0;
+};
+
+class AbstractDevice : public IDevice {
+public:
+        std::string name () const override { return name_; }
+        std::string &name () { return name_; }
+
+private:
+        std::string name_;
+};
+
+/**
+ * Raised when new device gents detected. Universal alarm for all
+ * kinds of devices (be it USB, or demo or others).
+ */
+export class DeviceAlarm : public AbstractAlarm {
+public:
+        explicit DeviceAlarm (std::shared_ptr<IDevice> const &device) : device_{device} {}
+
+        void execute (std::any const &func) const override
+        {
+                auto f = std::any_cast<std::function<void (std::shared_ptr<IDevice> const &)>> (func);
+                f (device_);
+        }
+
+        std::size_t hash () const override { return std::hash<std::size_t>{}(size_t (device_.get ())); }
+
+        std::shared_ptr<IDevice> device () const { return device_; };
+
+private:
+        /*
+         * Pointer is shared because internal factories can delete an IDevice instance
+         * upon device disconnection or error.
+         */
+        std::shared_ptr<IDevice> device_;
 };
 
 } // namespace logic
