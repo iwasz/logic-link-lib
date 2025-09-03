@@ -89,4 +89,14 @@ std::vector<uint8_t> UsbDevice::controlIn (size_t len)
         return request;
 }
 
+/****************************************************************************/
+
+std::string UsbDevice::getString (uint32_t clazz, uint32_t verb, size_t len)
+{
+        controlOut (UsbRequest{}.clazz (clazz).verb (verb));
+        auto data = controlIn (len);
+        auto zero = std::ranges::find (data, '\0');
+        return std::string (reinterpret_cast<char const *> (data.data ()), std::distance (data.begin (), zero));
+}
+
 } // namespace logic

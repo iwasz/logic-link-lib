@@ -21,7 +21,7 @@ export class LogicLink : public UsbDevice {
 public:
         LogicLink (IInput *input, libusb_device_handle *dev);
 
-        constexpr std::string name () const override { return "logicLink"; }
+        std::string name () const override { return "logicLink"; }
 
         common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
         void configureTransmission (UsbTransmissionParams const &params) override;
@@ -33,6 +33,20 @@ public:
 
         void onStart () override;
         void onStop () override;
+
+private:
+        std::string getMcuSerial ();
+};
+
+/**
+ * Dummy device used for ttesting. See UsbFactory class for VID and PID.
+ * Physically this is a logicLinkRevA0 but with PID set to 0x41fe.
+ *
+ */
+export class LogicLinkDummy : public LogicLink {
+public:
+        using LogicLink::LogicLink;
+        constexpr std::string name () const override { return "logicLinkDummy"; }
 };
 
 } // namespace logic

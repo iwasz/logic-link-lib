@@ -25,10 +25,10 @@ UsbFactory::UsbFactory (EventQueue *eventQueue, UsbAsyncInput *usb)
                        .pid = common::usb::PID,
                        .create = [usb] (libusb_device_handle *h) { return std::make_unique<LogicLink> (usb, h); }},
 
-              UsbEntry{.name = "saleaeClone",
-                       .vid = 0x0925,
-                       .pid = 0x3881,
-                       .create = [usb] (libusb_device_handle *h) { return std::make_unique<LogicLink> (usb, h); }},
+              UsbEntry{.name = "logicLinkDummy",
+                       .vid = common::usb::VID,
+                       .pid = common::usb::PID - 1,
+                       .create = [usb] (libusb_device_handle *h) { return std::make_unique<LogicLinkDummy> (usb, h); }},
       }
 {
 }

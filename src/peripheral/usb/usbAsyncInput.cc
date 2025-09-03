@@ -75,36 +75,49 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
                 return 0;
         }
 
-        if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event) {
-                if (int rc = libusb_open (dev, &devHandle); LIBUSB_SUCCESS != rc) {
-                        eventQueue->addEvent<ErrorEvent> (std::format ("Could not open USB device: {}", libusb_error_name (rc)));
-                }
-                else {
-                        std::shared_ptr<UsbDevice> device = input->usbFactory.create (desc.idVendor, desc.idProduct, devHandle);
-                        {
-                                std::lock_guard lock{input->mutex};
-                                input->handles[devHandle] = std::make_unique<UsbHandleInternal> (device, input);
+        // Catch early, because we're in the libusb thread here.
+        try {
+
+                if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event) {
+                        if (int rc = libusb_open (dev, &devHandle); LIBUSB_SUCCESS != rc) {
+                                eventQueue->addEvent<ErrorEvent> (std::format ("Could not open USB device: {}, vid: {}, pid: {}",
+                                                                               libusb_error_name (rc), desc.idVendor, desc.idProduct));
                         }
-                        eventQueue->setAlarm<DeviceAlarm> (device);
+                        else {
+                                std::shared_ptr<UsbDevice> device = input->usbFactory.create (desc.idVendor, desc.idProduct, devHandle);
+                                {
+                                        std::lock_guard lock{input->mutex};
+                                        input->handles[devHandle] = std::make_unique<UsbHandleInternal> (device, input);
+                                }
+                                eventQueue->setAlarm<DeviceAlarm> (device);
+                        }
+                }
+                else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
+                        if (devHandle != nullptr) {
+                                auto &intHandle = input->handles.at (devHandle);
+                                eventQueue->clearAlarm<DeviceAlarm> (intHandle->device);
+
+                                {
+                                        /*
+                                         * Remove from the handles set. This releases (or prepares to release)
+                                         * all the resources. Removes the InternalHandle, deletes the shared_ptr
+                                         * device (if upper layers don't use it), which in turn calls libusb_close.
+                                         * If upper layers till hold a shared_pointer to the device, it gets
+                                         * destroyed when they release it.
+                                         */
+                                        std::lock_guard lock{input->mutex};
+                                        input->handles.erase (devHandle);
+                                }
+                        }
                 }
         }
-        else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
-                if (devHandle != nullptr) {
-                        auto &intHandle = input->handles.at (devHandle);
-                        eventQueue->clearAlarm<DeviceAlarm> (intHandle->device);
-
-                        {
-                                /*
-                                 * Remove from the handles set. This releases (or prepares to release)
-                                 * all the resources. Removes the InternalHandle, deletes the shared_ptr
-                                 * device (if upper layers don't use it), which in turn calls libusb_close.
-                                 * If upper layers till hold a shared_pointer to the device, it gets
-                                 * destroyed when they release it.
-                                 */
-                                std::lock_guard lock{input->mutex};
-                                input->handles.erase (devHandle);
-                        }
-                }
+        catch (std::exception const &e) {
+                eventQueue->addEvent<ErrorEvent> (std::format ("Exception caught in `UsbAsyncInput::hotplugCallback`: {}, vid: {}, pid: {}",
+                                                               e.what (), desc.idVendor, desc.idProduct));
+        }
+        catch (...) {
+                eventQueue->addEvent<ErrorEvent> (std::format (
+                        "Unknown (...) exception caught in `UsbAsyncInput::hotplugCallback`, vid: {}, pid: {}", desc.idVendor, desc.idProduct));
         }
 
         return 0;

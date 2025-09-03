@@ -33,7 +33,16 @@ export struct IDevice {
         IDevice &operator= (IDevice &&) noexcept = default;
         virtual ~IDevice () = default;
 
+        /// Model name
         virtual std::string name () const = 0;
+        /// Hardware revision as described in https://github.com/iwasz/logic-link-doc/blob/main/Versioning.md
+        virtual std::string hwVersion () const = 0;
+        /// Firmware version.
+        virtual std::string fwVersion () const = 0;
+        /// Device serial number flashed into every device.
+        virtual std::string deviceSerial () const = 0;
+        /// MCU serial number or other immutable SN.
+        virtual std::string mcuSerial () const = 0;
 
         /**
          * Request acquisition parameters like number of channels and the
@@ -71,6 +80,20 @@ export struct IDevice {
          */
         virtual std::unordered_set<logs::Code> getErrors () = 0;
         virtual void clearErrors () = 0;
+};
+
+export class AbstractDevice : public IDevice {
+public:
+        std::string hwVersion () const override { return hwVersion_; }
+        std::string fwVersion () const override { return fwVersion_; }
+        std::string deviceSerial () const override { return deviceSerial_; }
+        std::string mcuSerial () const override { return mcuSerial_; }
+
+protected:
+        std::string hwVersion_;
+        std::string fwVersion_;
+        std::string deviceSerial_;
+        std::string mcuSerial_;
 };
 
 /**

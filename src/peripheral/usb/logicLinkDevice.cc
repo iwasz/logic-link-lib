@@ -14,6 +14,7 @@ module;
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <format>
 #include <libusb.h>
 #include <ranges>
 #include <unordered_set>
@@ -33,6 +34,11 @@ LogicLink::LogicLink (IInput *inp, libusb_device_handle *dev) : UsbDevice{inp, d
         };
 
         open (info);
+
+        hwVersion_ = getString (LOGIC_LINK_CLASS_LA, LL_VERB_HW_VERSION, LL_VERSION_SERIAL_MAX_SIZE);
+        fwVersion_ = getString (LOGIC_LINK_CLASS_LA, LL_VERB_FW_VERSION, LL_VERSION_SERIAL_MAX_SIZE);
+        deviceSerial_ = getString (LOGIC_LINK_CLASS_LA, LL_VERB_DEVICE_SERIAL, LL_VERSION_SERIAL_MAX_SIZE);
+        mcuSerial_ = getMcuSerial ();
 }
 
 /****************************************************************************/
@@ -136,6 +142,19 @@ void LogicLink::configureTransmission (UsbTransmissionParams const &params)
                             .integer (params.usbTransfer)
                             .integer (params.usbBlock)
                     /* .integer (dmaBlock) */);
+}
+
+/****************************************************************************/
+
+std::string LogicLink::getMcuSerial ()
+{
+        controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_MCU_SERIAL));
+        auto buf = controlIn (8);
+        int ID_0{};
+        int ID_1{};
+        memcpy (&ID_0, buf.data (), 4);
+        memcpy (&ID_1, buf.data () + 4, 4);
+        return std::format ("{:x}{:x}", ID_0, ID_1);
 }
 
 } // namespace logic
