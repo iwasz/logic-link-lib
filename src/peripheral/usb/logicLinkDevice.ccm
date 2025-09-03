@@ -21,6 +21,8 @@ export class LogicLink : public UsbDevice {
 public:
         LogicLink (IInput *input, libusb_device_handle *dev);
 
+        constexpr std::string name () const override { return "logicLink"; }
+
         common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
         void configureTransmission (UsbTransmissionParams const &params) override;
 

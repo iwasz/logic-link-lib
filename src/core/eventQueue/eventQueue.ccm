@@ -67,6 +67,8 @@ public:
         void run ();
         /// Lock-protected, thread safe.
         void waitForEvents ();
+        /// Removes all events.
+        void clear ();
 
         template <typename T, typename... Parms> void setAlarm (Parms &&...param);
         template <typename T, typename... Parms> void clearAlarm (Parms &&...param);
@@ -100,6 +102,15 @@ void EventQueue::run ()
         }
 
         runImpl (copy);
+}
+
+/****************************************************************************/
+
+void EventQueue::clear ()
+{
+        std::lock_guard lock{mutex};
+        alarms.clear ();
+        events.clear ();
 }
 
 /****************************************************************************/

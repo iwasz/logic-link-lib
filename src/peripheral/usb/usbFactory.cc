@@ -35,29 +35,6 @@ UsbFactory::UsbFactory (EventQueue *eventQueue, UsbAsyncInput *usb)
 
 /****************************************************************************/
 
-// std::unique_ptr<IDevice> UsbFactory::create (UsbConnectedAlarm const *alarm) const { return create (alarm->vid (), alarm->pid ()); }
-
-/****************************************************************************/
-
-// std::unique_ptr<IDevice> UsbFactory::create (int vid, int pid) const
-// {
-//         std::unique_ptr<IDevice> ret;
-
-//         /*
-//          * First lock the event queue and check that the alarm is still there.
-//          * This is done by comparing the vid and pid only.
-//          */
-//         eventQueue_->waitAlarms<UsbConnectedAlarm> (
-//                 [vid, pid, this, &ret] (UsbConnectedAlarm const *currentAlarm) {
-//                         if (vid == currentAlarm->vid () && pid == currentAlarm->pid ()) {
-//                                 ret = find (currentAlarm->vid (), currentAlarm->pid ())->create (currentAlarm->devHandle ());
-//                         }
-//                 },
-//                 1);
-
-//         return ret;
-// }
-
 std::unique_ptr<UsbDevice> UsbFactory::create (int vid, int pid, libusb_device_handle *h) const
 {
         auto const *en = find (vid, pid);
@@ -71,11 +48,7 @@ std::unique_ptr<UsbDevice> UsbFactory::create (int vid, int pid, libusb_device_h
 
 /****************************************************************************/
 
-// std::string UsbFactory::vidPidToName (std::pair<int, int> const &vp) const
-// {
-//         auto const *en = find (vp.first, vp.second);
-//         return (en != nullptr) ? (en->name) : ("");
-// }
+bool UsbFactory::isSupported (int vid, int pid) const { return find (vid, pid) != nullptr; }
 
 /****************************************************************************/
 

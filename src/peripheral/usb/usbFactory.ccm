@@ -41,6 +41,13 @@ public:
          */
         std::unique_ptr<UsbDevice> create (int vid, int pid, libusb_device_handle *h) const;
 
+        /**
+         * Tells if this USB device described by provided vid and pid is
+         * supported, and create method can instantiate a IDevice object
+         * for it.
+         */
+        bool isSupported (int vid, int pid) const;
+
 private:
         /**
          * All inputs are created here and are shared by all the devices.

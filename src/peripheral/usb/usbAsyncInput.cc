@@ -52,6 +52,7 @@ UsbAsyncInput::UsbAsyncInput (EventQueue *eventQueue) : UsbInput (eventQueue), u
 
 UsbAsyncInput::~UsbAsyncInput ()
 {
+        handles.clear ();
         libusb_hotplug_deregister_callback (nullptr, hotplugCallbackHandle);
         libusb_exit (nullptr);
 }
@@ -66,13 +67,17 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
         EventQueue *eventQueue = input->eventQueue ();
 
         if (int rc = libusb_get_device_descriptor (dev, &desc); rc < 0) {
-                eventQueue->addEvent<ErrorEvent> ("Could not get device's VID and PID."s);
+                eventQueue->addEvent<ErrorEvent> (std::format ("Could not get device's VID and PID: {}", libusb_error_name (rc)));
+                return 0;
+        }
+
+        if (!input->usbFactory.isSupported (desc.idVendor, desc.idProduct)) {
                 return 0;
         }
 
         if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event) {
                 if (int rc = libusb_open (dev, &devHandle); LIBUSB_SUCCESS != rc) {
-                        eventQueue->addEvent<ErrorEvent> ("Could not open USB device"s);
+                        eventQueue->addEvent<ErrorEvent> (std::format ("Could not open USB device: {}", libusb_error_name (rc)));
                 }
                 else {
                         std::shared_ptr<UsbDevice> device = input->usbFactory.create (desc.idVendor, desc.idProduct, devHandle);
@@ -221,6 +226,7 @@ void UsbAsyncInput::stop (UsbDevice *device)
  */
 void UsbAsyncInput::run ()
 {
+        static timeval tv = {.tv_sec = 0, .tv_usec = 10000};
         std::optional<high_resolution_clock::time_point> startPoint;
 
         while (true) {
@@ -232,7 +238,7 @@ void UsbAsyncInput::run ()
                         startPoint = high_resolution_clock::now ();
                 }
 
-                if (auto r = libusb_handle_events (nullptr); r < 0) {
+                if (auto r = libusb_handle_events_timeout (nullptr, &tv); r < 0) {
                         std::println ("libusb error: {}", r);
                 }
 
