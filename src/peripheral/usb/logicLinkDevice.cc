@@ -34,11 +34,6 @@ LogicLink::LogicLink (IInput *inp, libusb_device_handle *dev) : UsbDevice{inp, d
         };
 
         open (info);
-
-        hwVersion_ = getString (LOGIC_LINK_CLASS_LA, LL_VERB_HW_VERSION, LL_VERSION_SERIAL_MAX_SIZE);
-        fwVersion_ = getString (LOGIC_LINK_CLASS_LA, LL_VERB_FW_VERSION, LL_VERSION_SERIAL_MAX_SIZE);
-        deviceSerial_ = getString (LOGIC_LINK_CLASS_LA, LL_VERB_DEVICE_SERIAL, LL_VERSION_SERIAL_MAX_SIZE);
-        mcuSerial_ = getMcuSerial ();
 }
 
 /****************************************************************************/
@@ -146,7 +141,7 @@ void LogicLink::configureTransmission (UsbTransmissionParams const &params)
 
 /****************************************************************************/
 
-std::string LogicLink::getMcuSerial ()
+std::string LogicLink::getMcuSerial () const
 {
         controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_MCU_SERIAL));
         auto buf = controlIn (8);
@@ -156,5 +151,10 @@ std::string LogicLink::getMcuSerial ()
         memcpy (&ID_1, buf.data () + 4, 4);
         return std::format ("{:x}{:x}", ID_0, ID_1);
 }
+
+std::string LogicLink::hwVersion () const { return getString (LOGIC_LINK_CLASS_LA, LL_VERB_HW_VERSION, LL_VERSION_SERIAL_MAX_SIZE); }
+std::string LogicLink::fwVersion () const { return getString (LOGIC_LINK_CLASS_LA, LL_VERB_FW_VERSION, LL_VERSION_SERIAL_MAX_SIZE); }
+std::string LogicLink::deviceSerial () const { return getString (LOGIC_LINK_CLASS_LA, LL_VERB_DEVICE_SERIAL, LL_VERSION_SERIAL_MAX_SIZE); }
+std::string LogicLink::mcuSerial () const { return getMcuSerial (); }
 
 } // namespace logic

@@ -82,20 +82,6 @@ export struct IDevice {
         virtual void clearErrors () = 0;
 };
 
-export class AbstractDevice : public IDevice {
-public:
-        std::string hwVersion () const override { return hwVersion_; }
-        std::string fwVersion () const override { return fwVersion_; }
-        std::string deviceSerial () const override { return deviceSerial_; }
-        std::string mcuSerial () const override { return mcuSerial_; }
-
-protected:
-        std::string hwVersion_;
-        std::string fwVersion_;
-        std::string deviceSerial_;
-        std::string mcuSerial_;
-};
-
 /**
  * Raised when new device gents detected. Universal alarm for all
  * kinds of devices (be it USB, or demo or others).

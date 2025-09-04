@@ -71,7 +71,7 @@ export struct UsbInterface {
  * - Can configure USb class / interface and app-logic stuff (using USB requests).
  * TODO In the future it will also decode received data.
  */
-export struct UsbDevice : public AbstractDevice {
+export struct UsbDevice : public IDevice {
 public:
         UsbDevice (IInput *input, libusb_device_handle *dev) : dev_{dev}, input_{dynamic_cast<UsbInput *> (input)} {}
         UsbDevice (UsbDevice const &) = delete;
@@ -103,13 +103,13 @@ protected:
          */
         void open (UsbInterface const &info);
 
-        virtual void controlOut (std::vector<uint8_t> const &request);
-        virtual void controlOut (UsbRequest const &request) { controlOut (request.data ()); }
-        virtual std::vector<uint8_t> controlIn (size_t len);
-        virtual std::string getString (uint32_t clazz, uint32_t verb, size_t len);
+        virtual void controlOut (std::vector<uint8_t> const &request) const;
+        virtual void controlOut (UsbRequest const &request) const { controlOut (request.data ()); }
+        virtual std::vector<uint8_t> controlIn (size_t len) const;
+        virtual std::string getString (uint32_t clazz, uint32_t verb, size_t len) const;
 
 private:
-        libusb_device_handle *dev_{};
+        mutable libusb_device_handle *dev_{};
         UsbTransmissionParams transmissionParams_;
         UsbInput *input_;
 };

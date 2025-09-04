@@ -77,10 +77,9 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
 
         // Catch early, because we're in the libusb thread here.
         try {
-
                 if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event) {
                         if (int rc = libusb_open (dev, &devHandle); LIBUSB_SUCCESS != rc) {
-                                eventQueue->addEvent<ErrorEvent> (std::format ("Could not open USB device: {}, vid: {}, pid: {}",
+                                eventQueue->addEvent<ErrorEvent> (std::format ("Could not open USB device: {}, vid: {:x}, pid: {:x}",
                                                                                libusb_error_name (rc), desc.idVendor, desc.idProduct));
                         }
                         else {
@@ -112,12 +111,13 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
                 }
         }
         catch (std::exception const &e) {
-                eventQueue->addEvent<ErrorEvent> (std::format ("Exception caught in `UsbAsyncInput::hotplugCallback`: {}, vid: {}, pid: {}",
+                eventQueue->addEvent<ErrorEvent> (std::format ("Exception caught in `UsbAsyncInput::hotplugCallback`: {}, vid: {:x}, pid: {:x}",
                                                                e.what (), desc.idVendor, desc.idProduct));
         }
         catch (...) {
-                eventQueue->addEvent<ErrorEvent> (std::format (
-                        "Unknown (...) exception caught in `UsbAsyncInput::hotplugCallback`, vid: {}, pid: {}", desc.idVendor, desc.idProduct));
+                eventQueue->addEvent<ErrorEvent> (
+                        std::format ("Unknown (...) exception caught in `UsbAsyncInput::hotplugCallback`, vid: {:x}, pid: {:x}", desc.idVendor,
+                                     desc.idProduct));
         }
 
         return 0;

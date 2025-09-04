@@ -22,6 +22,10 @@ public:
         LogicLink (IInput *input, libusb_device_handle *dev);
 
         std::string name () const override { return "logicLink"; }
+        std::string hwVersion () const override;
+        std::string fwVersion () const override;
+        std::string deviceSerial () const override;
+        std::string mcuSerial () const override;
 
         common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
         void configureTransmission (UsbTransmissionParams const &params) override;
@@ -35,7 +39,7 @@ public:
         void onStop () override;
 
 private:
-        std::string getMcuSerial ();
+        std::string getMcuSerial () const;
 };
 
 /**

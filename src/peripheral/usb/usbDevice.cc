@@ -54,7 +54,7 @@ void UsbDevice::open (UsbInterface const &info)
 
 /****************************************************************************/
 
-void UsbDevice::controlOut (std::vector<uint8_t> const &request)
+void UsbDevice::controlOut (std::vector<uint8_t> const &request) const
 {
         if (request.size () > common::usb::MAX_CONTROL_PAYLOAD_SIZE) {
                 throw Exception{"MAX_CONTROL_PAYLOAD_SIZE exceeded."};
@@ -62,7 +62,7 @@ void UsbDevice::controlOut (std::vector<uint8_t> const &request)
 
         // Configure sample rate and channels. This sends data.
         if (auto r = libusb_control_transfer (
-                    device (), uint8_t (LIBUSB_RECIPIENT_ENDPOINT) | uint8_t (LIBUSB_REQUEST_TYPE_VENDOR) | uint8_t (LIBUSB_ENDPOINT_OUT),
+                    dev_, uint8_t (LIBUSB_RECIPIENT_ENDPOINT) | uint8_t (LIBUSB_REQUEST_TYPE_VENDOR) | uint8_t (LIBUSB_ENDPOINT_OUT),
                     common::usb::VENDOR_CLASS_REQUEST, 1, 0, const_cast<uint8_t *> (std::data (request)), request.size (),
                     common::usb::TIMEOUT_MS);
             r < 0) {
@@ -72,7 +72,7 @@ void UsbDevice::controlOut (std::vector<uint8_t> const &request)
 
 /****************************************************************************/
 
-std::vector<uint8_t> UsbDevice::controlIn (size_t len)
+std::vector<uint8_t> UsbDevice::controlIn (size_t len) const
 {
         std::vector<uint8_t> request (len);
         /*
@@ -80,7 +80,7 @@ std::vector<uint8_t> UsbDevice::controlIn (size_t len)
          * abstract class like this. Leving this for now as is.
          */
         if (auto r = libusb_control_transfer (
-                    device (), uint8_t (LIBUSB_RECIPIENT_ENDPOINT) | uint8_t (LIBUSB_REQUEST_TYPE_VENDOR) | uint8_t (LIBUSB_ENDPOINT_IN),
+                    dev_, uint8_t (LIBUSB_RECIPIENT_ENDPOINT) | uint8_t (LIBUSB_REQUEST_TYPE_VENDOR) | uint8_t (LIBUSB_ENDPOINT_IN),
                     common::usb::VENDOR_CLASS_REQUEST, 1, 0, request.data (), request.size (), common::usb::TIMEOUT_MS);
             r < 0) {
                 throw Exception (libusb_error_name (r));
@@ -91,7 +91,7 @@ std::vector<uint8_t> UsbDevice::controlIn (size_t len)
 
 /****************************************************************************/
 
-std::string UsbDevice::getString (uint32_t clazz, uint32_t verb, size_t len)
+std::string UsbDevice::getString (uint32_t clazz, uint32_t verb, size_t len) const
 {
         controlOut (UsbRequest{}.clazz (clazz).verb (verb));
         auto data = controlIn (len);
