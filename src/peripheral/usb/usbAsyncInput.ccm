@@ -15,7 +15,7 @@ export module logic.peripheral:input.usb.async;
 import :device.factory.usb;
 
 namespace logic {
-export struct UsbDevice;
+export class UsbDevice;
 export class UsbAsyncInput;
 
 /**

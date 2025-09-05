@@ -17,7 +17,7 @@ module logic.peripheral;
 
 namespace logic {
 
-UsbFactory::UsbFactory (EventQueue *eventQueue, UsbAsyncInput *usb)
+UsbFactory::UsbFactory (EventQueue *eventQueue)
     : eventQueue_{eventQueue},
       usbEntries{
               UsbEntry{.name = "logicLink",

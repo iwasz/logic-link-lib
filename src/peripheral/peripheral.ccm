@@ -7,7 +7,9 @@
  ****************************************************************************/
 
 export module logic.peripheral;
+
 export import :device;
+export import :device.demo;
 export import :device.factory;
 export import :device.factory.usb;
 export import :device.link;

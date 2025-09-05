@@ -16,7 +16,6 @@ export module logic.peripheral:input.demo;
 export import :input;
 
 namespace logic {
-// class Session;
 
 /**
  * Demo input device that can be providedinstead of the UsbAsync device.
@@ -28,7 +27,7 @@ namespace logic {
  */
 export class DemoInput : public AbstractInput {
 public:
-        using AbstractInput::AbstractInput;
+        explicit DemoInput (EventQueue *eventQueue);
 
         void run () override;
         void kill () override { stop_ = true; }
@@ -40,7 +39,6 @@ private:
         common::acq::Params acquisitionParams;
 
         size_t blockSize{}; /// The size (in digital samples) of every generated block
-        // Session *session{};
         std::mutex mutex;
 };
 

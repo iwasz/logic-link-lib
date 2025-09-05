@@ -25,7 +25,7 @@ using namespace std::chrono;
 
 /****************************************************************************/
 
-UsbAsyncInput::UsbAsyncInput (EventQueue *eventQueue) : AbstractInput (eventQueue), usbFactory{eventQueue, this}
+UsbAsyncInput::UsbAsyncInput (EventQueue *eventQueue) : AbstractInput (eventQueue), usbFactory{eventQueue}
 {
         if (int r = libusb_init_context (/*ctx=*/nullptr, /*options=*/nullptr, /*num_options=*/0); r < 0) {
                 throw Exception ("Failed to init USB (libusb_init_context): "s + libusb_error_name (r));

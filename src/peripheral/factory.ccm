@@ -21,7 +21,7 @@ namespace logic {
 
 export class Factory {
 public:
-        Factory (EventQueue *eventQueue) : eventQueue_{eventQueue}, usb_{eventQueue} {}
+        Factory (EventQueue *eventQueue) : eventQueue_{eventQueue}, usb_{eventQueue}, demo_{eventQueue} {}
         Factory (Factory const &) = delete;
         Factory &operator= (Factory const &) = delete;
         Factory (Factory &&) = delete;
@@ -46,15 +46,17 @@ public:
         std::set<std::string> getConnectedDevices () const;
 
         /*
-         * TODO this has to be removed. This is left vecause right now I use it for
+         * TODO these have to be removed. This is left vecause right now I use it for
          * the async future argument both in cli and gui apps. Some more advanced task
          * management should get implemented instead.
          */
         UsbAsyncInput &usb () { return usb_; }
+        DemoInput &demo () { return demo_; }
 
 private:
         EventQueue *eventQueue_;
         UsbAsyncInput usb_;
+        DemoInput demo_;
 };
 
 /****************************************************************************/

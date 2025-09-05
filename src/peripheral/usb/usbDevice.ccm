@@ -72,7 +72,7 @@ export struct UsbInterface {
  * - Can configure USb class / interface and app-logic stuff (using USB requests).
  * TODO In the future it will also decode received data.
  */
-export struct UsbDevice : public IDevice {
+export class UsbDevice : public IDevice {
 public:
         UsbDevice (EventQueue *eventQueue, libusb_device_handle *dev) : deviceHandle_{dev}, eventQueue_{eventQueue} {}
         UsbDevice (UsbDevice const &) = delete;
@@ -112,7 +112,6 @@ protected:
 
 private:
         mutable libusb_device_handle *deviceHandle_{};
-        libusb_device *device_{};
         UsbTransmissionParams transmissionParams_;
         EventQueue *eventQueue_;
 

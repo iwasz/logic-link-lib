@@ -30,7 +30,7 @@ export class UsbAsyncInput;
  */
 export class UsbFactory {
 public:
-        UsbFactory (EventQueue *eventQueue, UsbAsyncInput *usb);
+        UsbFactory (EventQueue *eventQueue);
         UsbFactory (UsbFactory const &) = delete;
         UsbFactory &operator= (UsbFactory const &) = delete;
         UsbFactory (UsbFactory &&) = delete;

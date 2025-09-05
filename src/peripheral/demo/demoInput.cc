@@ -12,11 +12,18 @@ module;
 #include <atomic>
 #include <cstdlib>
 #include <libusb.h>
-#include <mutex>
+#include <memory>
 module logic.peripheral;
 import :input.demo;
 
 namespace logic {
+
+DemoInput::DemoInput (EventQueue *eventQueue) : AbstractInput{eventQueue}
+{
+        eventQueue->setAlarm<DeviceAlarm> (std::make_shared<DemoDevice> (eventQueue));
+}
+
+/****************************************************************************/
 
 void DemoInput::run ()
 {

@@ -1,0 +1,60 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include "common/error.hh"
+#include "common/params.hh"
+#include "common/stats.hh"
+#include <any>
+#include <atomic>
+#include <libusb.h>
+#include <unordered_set>
+export module logic.peripheral:device.demo;
+import logic.core;
+import :input;
+import :device;
+
+namespace logic {
+
+/**
+ *
+ */
+export class DemoDevice : public IDevice {
+public:
+        DemoDevice (EventQueue *eventQueue) : eventQueue_{eventQueue} {}
+
+        std::string name () const override { return "demoDevice"; }
+        std::string hwVersion () const override { return "revX0"; }
+        std::string fwVersion () const override { return "todo_gui_version"; }
+        std::string deviceSerial () const override { return "demod_0001"; }
+        std::string mcuSerial () const override { return "12345678"; }
+
+        common::acq::Params configureAcquisition (common::acq::Params const &params, bool /* legacy */ = false) override;
+        void configureTransmission (std::any const &params) override {}
+        void start (Queue<RawCompressedBlock> *queue) override;
+        void stop () override;
+
+        common::usb::Stats getStats () override { return {}; }
+        std::unordered_set<logs::Code> getErrors () override { return {}; }
+        void clearErrors () override {}
+
+protected:
+        EventQueue *eventQueue () { return eventQueue_; }
+
+private:
+        EventQueue *eventQueue_;
+        common::acq::Params params_;
+
+        /// Used to stop re-issuing the transfer.
+        std::atomic_bool stopRequest;
+
+        /// Current output, destination of the acquired data.
+        Queue<RawCompressedBlock> *queue{};
+};
+
+} // namespace logic
