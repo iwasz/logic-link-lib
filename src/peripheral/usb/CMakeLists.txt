@@ -10,5 +10,4 @@ target_sources(${PROJECT_NAME}
     logicLinkDevice.ccm
     usbAsyncInput.ccm
     usbDevice.ccm
-    usbInput.ccm
 )

@@ -14,6 +14,7 @@ module;
 #include <vector>
 export module logic.peripheral:device.factory.usb;
 import :device;
+import :usbDevice;
 import logic.core;
 
 namespace logic {

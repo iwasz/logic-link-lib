@@ -16,8 +16,8 @@ module;
 #include <memory>
 #include <unordered_set>
 export module logic.peripheral:device;
-import :input.usb;
 import logic.core;
+import logic.data;
 
 namespace logic {
 
@@ -63,10 +63,6 @@ export struct IDevice {
          */
         virtual void start (Queue<RawCompressedBlock> *queue) = 0;
         virtual void stop () = 0;
-        // virtual void run () = 0;
-
-        virtual void onStart () = 0;
-        virtual void onStop () = 0;
 
         /**
          * Get device statistics - speciffic to the device itself and the USB interface.

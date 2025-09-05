@@ -12,6 +12,7 @@ module;
 #include "common/stats.hh"
 #include <algorithm>
 #include <any>
+#include <atomic>
 #include <concepts>
 #include <cstdint>
 #include <cstdlib>
@@ -19,7 +20,7 @@ module;
 #include <vector>
 export module logic.peripheral:usbDevice;
 import logic.core;
-import :input.usb;
+import :input;
 import :device;
 
 namespace logic {
@@ -73,29 +74,27 @@ export struct UsbInterface {
  */
 export struct UsbDevice : public IDevice {
 public:
-        UsbDevice (IInput *input, libusb_device_handle *dev) : deviceHandle_{dev}, input_{dynamic_cast<UsbInput *> (input)} {}
+        UsbDevice (EventQueue *eventQueue, libusb_device_handle *dev) : deviceHandle_{dev}, eventQueue_{eventQueue} {}
         UsbDevice (UsbDevice const &) = delete;
         UsbDevice &operator= (UsbDevice const &) = delete;
-        UsbDevice (UsbDevice &&) = default;
-        UsbDevice &operator= (UsbDevice &&) = default;
-        ~UsbDevice () { libusb_close (deviceHandle_); }
+        UsbDevice (UsbDevice &&) = delete;
+        UsbDevice &operator= (UsbDevice &&) = delete;
+        ~UsbDevice ();
 
         void configureTransmission (std::any const &params) override { configureTransmission (std::any_cast<UsbTransmissionParams> (params)); }
         virtual void configureTransmission (UsbTransmissionParams const &params) { transmissionParams_ = params; }
 
-        void start (Queue<RawCompressedBlock> *queue) override
-        {
-                input_->start (UsbHandle{.device = this, .queue = queue, .transferLen = transmissionParams_.usbTransfer});
-        }
-
-        void stop () override { input_->stop (this); }
-
-        libusb_device_handle *deviceHandle () { return deviceHandle_; };
-        libusb_device *device () { return device_; };
-        libusb_device const *device () const { return device_; };
+        /**
+         * Starts the continuous, main bulk transfer. Inits the libusb transfer
+         * structure, our internal data buffer, and makest this bulk transfer to
+         * be resubmited everytime it finishes (hence continuous).
+         */
+        void start (Queue<RawCompressedBlock> *queue) override;
+        void stop () override;
 
 protected:
-        UsbInput *input () { return input_; }
+        libusb_device_handle *deviceHandle () { return deviceHandle_; };
+        EventQueue *eventQueue () { return eventQueue_; }
 
         /**
          * Basic USB bookeeping like opening thge device, claiming the interface
@@ -103,6 +102,8 @@ protected:
          * USB.
          */
         void open (UsbInterface const &info);
+
+        static void transferCallback (libusb_transfer *transfer);
 
         virtual void controlOut (std::vector<uint8_t> const &request) const;
         virtual void controlOut (UsbRequest const &request) const { controlOut (request.data ()); }
@@ -113,7 +114,19 @@ private:
         mutable libusb_device_handle *deviceHandle_{};
         libusb_device *device_{};
         UsbTransmissionParams transmissionParams_;
-        UsbInput *input_;
+        EventQueue *eventQueue_;
+
+        /// USB transfers are sent directly by this class (called by UsbAsyncInput).
+        libusb_transfer *transfer{};
+
+        /// Data received during the last transfer.
+        Bytes singleTransfer;
+
+        /// Used to stop re-issuing the transfer.
+        std::atomic_bool stopRequest;
+
+        /// Current output, destination of the acquired data.
+        Queue<RawCompressedBlock> *queue{};
 };
 
 } // namespace logic

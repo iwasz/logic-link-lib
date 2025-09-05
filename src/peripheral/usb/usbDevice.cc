@@ -14,25 +14,24 @@ module;
 #include <cstdint>
 #include <cstdlib>
 #include <libusb.h>
+#include <print>
 #include <string>
 #include <vector>
 module logic.peripheral;
 
 namespace logic {
 
+UsbDevice::~UsbDevice ()
+{
+        libusb_free_transfer (transfer);
+        libusb_close (deviceHandle_);
+}
+
+/****************************************************************************/
+
 void UsbDevice::open (UsbInterface const &info)
 {
         using namespace std::string_literals;
-        // UsbDeviceInfo const &info = std::any_cast<UsbDeviceInfo const &> (in);
-        // libusb_device_handle *dev{};
-
-        // if (dev = libusb_open_device_with_vid_pid (nullptr, info.vid, info.pid); dev == nullptr) {
-        //         throw Exception ("Error finding USB device. VID: " + std::to_string (info.vid) + ", PID: " + std::to_string (info.pid));
-        // }
-
-        // if (auto r = libusb_reset_device (dev); r < 0) {
-        //         throw Exception ("Error resetting interface : "s + libusb_error_name (r));
-        // }
 
         if (auto r = libusb_claim_interface (deviceHandle (), info.claimInterface); r < 0) {
                 throw Exception ("Error claiming interface: "s + std::to_string (info.claimInterface) + ", msg: "s + libusb_error_name (r));
@@ -50,6 +49,93 @@ void UsbDevice::open (UsbInterface const &info)
         //         close();
         //         throw Exception ("Error to libusb_set_configuration: "s + libusb_error_name (r));
         // }
+}
+
+/****************************************************************************/
+
+void UsbDevice::start (Queue<RawCompressedBlock> *queue)
+{
+        this->queue = queue;
+
+        if (transmissionParams_.usbTransfer == 0) {
+                throw Exception{"Can't send an USB transfer of length 0."};
+        }
+
+        singleTransfer.resize (transmissionParams_.usbTransfer);
+        stopRequest = false;
+
+        if (transfer = libusb_alloc_transfer (0); transfer == nullptr) {
+                /*
+                 * This is called from an user thread (via UsbAsyncInput::start) so we are
+                 * safe to throw an exception.
+                 */
+                throw Exception{"Libusb could not instantiate a new transfer using `libusb_alloc_transfer`"};
+        }
+
+        libusb_fill_bulk_transfer (transfer, deviceHandle (), common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (),
+                                   &UsbDevice::transferCallback, this, common::usb::TIMEOUT_MS);
+
+        if (auto r = libusb_submit_transfer (transfer); r < 0) {
+                throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
+        }
+}
+
+/****************************************************************************/
+
+void UsbDevice::stop ()
+{
+        stopRequest = true;
+        queue = nullptr;
+}
+
+/****************************************************************************/
+
+void UsbDevice::transferCallback (libusb_transfer *transfer)
+{
+        auto *h = reinterpret_cast<UsbDevice *> (transfer->user_data);
+        auto transferLen = h->transmissionParams_.usbTransfer;
+
+        if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
+                /*
+                 * We're in the interal lubusb thread now, we can't throw, thus I
+                 */
+                auto msg = std::format ("USB transfer status error Code: {}", libusb_error_name (transfer->status));
+                h->eventQueue ()->addEvent<ErrorEvent> (msg);
+                return;
+        }
+
+        if (h->stopRequest) {
+                return;
+        }
+
+        if (auto rc = libusb_submit_transfer (transfer); rc < 0) {
+                auto msg = std::format ("libusb_submit_transfer status error Code: {}", libusb_error_name (rc));
+                h->eventQueue ()->addEvent<ErrorEvent> (msg);
+                return;
+        }
+
+        if (size_t (transfer->actual_length) != transferLen) {
+                // TODO this should be removed
+                std::println ("Short: {}", transfer->actual_length);
+        }
+
+        h->singleTransfer.resize (transfer->actual_length);
+        // auto now = high_resolution_clock::now ();
+        // benchmarkB += singleTransfer.size ();
+
+        {
+                // std::lock_guard lock{mutex};
+                // allTransferedB += singleTransfer.size ();
+        }
+
+        if (!h->singleTransfer.empty ()) {
+                // auto mbps = (double (benchmarkB) / double (duration_cast<microseconds> (now - *startPoint).count ())) * 8;
+                double mbps = 0;
+                RawCompressedBlock rcd{mbps, 0, std::move (h->singleTransfer)}; // TODO resize blocks (if needed)
+                h->queue->push (std::move (rcd));                               // Lock protected
+                h->singleTransfer = Bytes (transferLen);
+                // std::println (".");
+        }
 }
 
 /****************************************************************************/

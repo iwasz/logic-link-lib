@@ -13,7 +13,7 @@ module;
 #include <libusb.h>
 #include <mutex>
 export module logic.peripheral:input.demo;
-export import :input.usb;
+export import :input;
 
 namespace logic {
 // class Session;
@@ -26,12 +26,9 @@ namespace logic {
  * separate from the USB bus. Is the API universal enough to accomodate other
  * busses? For instance could a WiFi connection be handled by this API?
  */
-export class DemoInput : public UsbInput {
+export class DemoInput : public AbstractInput {
 public:
-        using UsbInput::UsbInput;
-
-        void start (UsbHandle const &handle) override;
-        void stop (UsbDevice *dev) override;
+        using AbstractInput::AbstractInput;
 
         void run () override;
         void kill () override { stop_ = true; }

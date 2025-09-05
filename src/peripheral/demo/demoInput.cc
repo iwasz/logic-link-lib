@@ -41,15 +41,15 @@ void DemoInput::run ()
 
 /****************************************************************************/
 
-void DemoInput::start (UsbHandle const &handle)
-{
-        std::lock_guard lock{mutex};
-        // this->session = session;
-        running_ = true;
-}
+// void DemoInput::start (UsbHandle const &handle)
+// {
+//         std::lock_guard lock{mutex};
+//         // this->session = session;
+//         running_ = true;
+// }
 
-/****************************************************************************/
+// /****************************************************************************/
 
-void DemoInput::stop (UsbDevice * /* dev */) { running_ = false; }
+// void DemoInput::stop (UsbDevice * /* dev */) { running_ = false; }
 
 } // namespace logic

@@ -8,40 +8,15 @@
 
 module;
 #include <atomic>
-#include <cstdint>
-#include <cstdlib>
 #include <libusb.h>
 #include <memory>
 #include <unordered_map>
 export module logic.peripheral:input.usb.async;
-import :input.usb;
 import :device.factory.usb;
 
 namespace logic {
 export struct UsbDevice;
 export class UsbAsyncInput;
-
-/**
- * Internal structure for getting track of all the managed devces.
- */
-struct UsbHandleInternal {
-        UsbHandleInternal (std::shared_ptr<UsbDevice> const &device, UsbAsyncInput *input) : device{device}, input{input} {}
-        UsbHandleInternal (UsbHandleInternal const &) = delete;
-        UsbHandleInternal &operator= (UsbHandleInternal const &) = delete;
-        UsbHandleInternal (UsbHandleInternal &&) = delete;
-        UsbHandleInternal &operator= (UsbHandleInternal &&) = delete;
-        ~UsbHandleInternal ();
-
-        void start ();
-
-        std::shared_ptr<UsbDevice> device{};
-        Queue<RawCompressedBlock> *queue{};
-        size_t transferLen{};
-        Bytes singleTransfer;
-        libusb_transfer *transfer{};
-        bool stopRequest{};
-        UsbAsyncInput *input{};
-};
 
 /**
  * Abstraction over asynchronous libusb implementation, with a (blocking) event
@@ -50,7 +25,7 @@ struct UsbHandleInternal {
  * async was choosen as more low level. Another aspect is the hot-swap and multiple
  * USB devices - from this point of view synchronous variant is much harder to use.
  */
-export class UsbAsyncInput : public UsbInput {
+export class UsbAsyncInput : public AbstractInput {
 public:
         friend struct UsbHandleInternal;
 
@@ -71,36 +46,20 @@ public:
         /*--------------------------------------------------------------------------*/
 
         void run () override;
-        void kill () override { request_.store (Request::kill); }
-
-        /**
-         * Starts the continuous, main bulk transfer. Inits the libusb transfer
-         * structure, our internal data buffer, and makest this bulk transfer to
-         * be resubmited everytime it finishes (hence continuous).
-         */
-        void start (UsbHandle const &handle) override;
-        void stop (UsbDevice *dev) override;
+        void kill () override { kill_.store (true); }
 
 private:
-        static void transferCallback (struct libusb_transfer *transfer);
         static int hotplugCallback (struct libusb_context * /* ctx */, struct libusb_device *dev, libusb_hotplug_event event, void *userData);
-
-        enum class Request : uint8_t { none, /* start, stop, */ kill };
-
         libusb_hotplug_callback_handle hotplugCallbackHandle{};
+        std::atomic_bool kill_;
 
-        std::atomic<Request> request_;
-        // std::atomic<State> state_;
-        // Session *session{};
-        // UsbDevice *device{};
-
-        using UsbHandles = std::unordered_map<libusb_device const *, std::unique_ptr<UsbHandleInternal>>;
+        using UsbHandles = std::unordered_map<libusb_device const *, std::shared_ptr<UsbDevice>>;
         UsbHandles handles;
+        std::mutex mutex; // Protects the `handles` collection.
 
         // TODO.
         /// Number of bytes received so far irrespective of the buffer size.
         // size_t receivedB () const { return allTransferedB; }
-        std::mutex mutex;
         // TimePoint globalStart;
         // TimePoint globalStop;
         // size_t allTransferedB{};

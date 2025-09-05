@@ -23,12 +23,12 @@ UsbFactory::UsbFactory (EventQueue *eventQueue, UsbAsyncInput *usb)
               UsbEntry{.name = "logicLink",
                        .vid = common::usb::VID,
                        .pid = common::usb::PID,
-                       .create = [usb] (libusb_device_handle *h) { return std::make_unique<LogicLink> (usb, h); }},
+                       .create = [eventQueue] (libusb_device_handle *h) { return std::make_unique<LogicLink> (eventQueue, h); }},
 
               UsbEntry{.name = "logicLinkDummy",
                        .vid = common::usb::VID,
                        .pid = common::usb::PID - 1,
-                       .create = [usb] (libusb_device_handle *h) { return std::make_unique<LogicLinkDummy> (usb, h); }},
+                       .create = [eventQueue] (libusb_device_handle *h) { return std::make_unique<LogicLinkDummy> (eventQueue, h); }},
       }
 {
 }

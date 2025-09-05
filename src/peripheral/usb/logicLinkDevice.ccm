@@ -19,7 +19,7 @@ namespace logic {
 
 export class LogicLink : public UsbDevice {
 public:
-        LogicLink (IInput *input, libusb_device_handle *dev);
+        LogicLink (EventQueue *eventQueue, libusb_device_handle *dev);
 
         std::string name () const override { return "logicLink"; }
         std::string hwVersion () const override;
@@ -27,19 +27,15 @@ public:
         std::string deviceSerial () const override;
         std::string mcuSerial () const override;
 
+        void start (Queue<RawCompressedBlock> *queue) override;
+        void stop () override;
+
         common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
         void configureTransmission (UsbTransmissionParams const &params) override;
 
         common::usb::Stats getStats () override;
-
         std::unordered_set<logs::Code> getErrors () override;
         void clearErrors () override;
-
-        void onStart () override;
-        void onStop () override;
-
-private:
-        std::string getMcuSerial () const;
 };
 
 /**
