@@ -94,7 +94,7 @@ private:
         // Session *session{};
         // UsbDevice *device{};
 
-        using UsbHandles = std::unordered_map<libusb_device_handle const *, std::unique_ptr<UsbHandleInternal>>;
+        using UsbHandles = std::unordered_map<libusb_device const *, std::unique_ptr<UsbHandleInternal>>;
         UsbHandles handles;
 
         // TODO.

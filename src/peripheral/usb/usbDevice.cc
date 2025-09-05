@@ -34,11 +34,11 @@ void UsbDevice::open (UsbInterface const &info)
         //         throw Exception ("Error resetting interface : "s + libusb_error_name (r));
         // }
 
-        if (auto r = libusb_claim_interface (device (), info.claimInterface); r < 0) {
+        if (auto r = libusb_claim_interface (deviceHandle (), info.claimInterface); r < 0) {
                 throw Exception ("Error claiming interface: "s + std::to_string (info.claimInterface) + ", msg: "s + libusb_error_name (r));
         }
 
-        if (auto r = libusb_set_interface_alt_setting (device (), info.interfaceNumber, info.alternateSetting); r < 0) {
+        if (auto r = libusb_set_interface_alt_setting (deviceHandle (), info.interfaceNumber, info.alternateSetting); r < 0) {
                 throw Exception ("Error libusb_set_interface_alt_setting: "s + libusb_error_name (r));
         }
 
@@ -62,7 +62,7 @@ void UsbDevice::controlOut (std::vector<uint8_t> const &request) const
 
         // Configure sample rate and channels. This sends data.
         if (auto r = libusb_control_transfer (
-                    dev_, uint8_t (LIBUSB_RECIPIENT_ENDPOINT) | uint8_t (LIBUSB_REQUEST_TYPE_VENDOR) | uint8_t (LIBUSB_ENDPOINT_OUT),
+                    deviceHandle_, uint8_t (LIBUSB_RECIPIENT_ENDPOINT) | uint8_t (LIBUSB_REQUEST_TYPE_VENDOR) | uint8_t (LIBUSB_ENDPOINT_OUT),
                     common::usb::VENDOR_CLASS_REQUEST, 1, 0, const_cast<uint8_t *> (std::data (request)), request.size (),
                     common::usb::TIMEOUT_MS);
             r < 0) {
@@ -80,7 +80,7 @@ std::vector<uint8_t> UsbDevice::controlIn (size_t len) const
          * abstract class like this. Leving this for now as is.
          */
         if (auto r = libusb_control_transfer (
-                    dev_, uint8_t (LIBUSB_RECIPIENT_ENDPOINT) | uint8_t (LIBUSB_REQUEST_TYPE_VENDOR) | uint8_t (LIBUSB_ENDPOINT_IN),
+                    deviceHandle_, uint8_t (LIBUSB_RECIPIENT_ENDPOINT) | uint8_t (LIBUSB_REQUEST_TYPE_VENDOR) | uint8_t (LIBUSB_ENDPOINT_IN),
                     common::usb::VENDOR_CLASS_REQUEST, 1, 0, request.data (), request.size (), common::usb::TIMEOUT_MS);
             r < 0) {
                 throw Exception (libusb_error_name (r));

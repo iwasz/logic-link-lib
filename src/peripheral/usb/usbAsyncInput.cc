@@ -86,27 +86,25 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
                                 std::shared_ptr<UsbDevice> device = input->usbFactory.create (desc.idVendor, desc.idProduct, devHandle);
                                 {
                                         std::lock_guard lock{input->mutex};
-                                        input->handles[devHandle] = std::make_unique<UsbHandleInternal> (device, input);
+                                        input->handles[dev] = std::make_unique<UsbHandleInternal> (device, input);
                                 }
                                 eventQueue->setAlarm<DeviceAlarm> (device);
                         }
                 }
                 else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
-                        if (devHandle != nullptr) {
-                                auto &intHandle = input->handles.at (devHandle);
-                                eventQueue->clearAlarm<DeviceAlarm> (intHandle->device);
+                        auto &intHandle = input->handles.at (dev);
+                        eventQueue->clearAlarm<DeviceAlarm> (intHandle->device);
 
-                                {
-                                        /*
-                                         * Remove from the handles set. This releases (or prepares to release)
-                                         * all the resources. Removes the InternalHandle, deletes the shared_ptr
-                                         * device (if upper layers don't use it), which in turn calls libusb_close.
-                                         * If upper layers till hold a shared_pointer to the device, it gets
-                                         * destroyed when they release it.
-                                         */
-                                        std::lock_guard lock{input->mutex};
-                                        input->handles.erase (devHandle);
-                                }
+                        {
+                                /*
+                                 * Remove from the `handles` set. This releases (or prepares to release)
+                                 * all the resources. Removes the InternalHandle, deletes the shared_ptr
+                                 * device (if upper layers don't use it), which in turn calls libusb_close.
+                                 * If upper layers till hold a shared_pointer to the device, it gets
+                                 * destroyed when they release it.
+                                 */
+                                std::lock_guard lock{input->mutex};
+                                input->handles.erase (dev);
                         }
                 }
         }
@@ -194,7 +192,7 @@ void UsbHandleInternal::start ()
                 throw Exception{"Libusb could not instantiate a new transfer using `libusb_alloc_transfer`"};
         }
 
-        libusb_fill_bulk_transfer (transfer, device->device (), common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (),
+        libusb_fill_bulk_transfer (transfer, device->deviceHandle (), common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (),
                                    &UsbAsyncInput::transferCallback, this, common::usb::TIMEOUT_MS);
 
         if (auto r = libusb_submit_transfer (transfer); r < 0) {

@@ -73,12 +73,12 @@ export struct UsbInterface {
  */
 export struct UsbDevice : public IDevice {
 public:
-        UsbDevice (IInput *input, libusb_device_handle *dev) : dev_{dev}, input_{dynamic_cast<UsbInput *> (input)} {}
+        UsbDevice (IInput *input, libusb_device_handle *dev) : deviceHandle_{dev}, input_{dynamic_cast<UsbInput *> (input)} {}
         UsbDevice (UsbDevice const &) = delete;
         UsbDevice &operator= (UsbDevice const &) = delete;
         UsbDevice (UsbDevice &&) = default;
         UsbDevice &operator= (UsbDevice &&) = default;
-        ~UsbDevice () { libusb_close (dev_); }
+        ~UsbDevice () { libusb_close (deviceHandle_); }
 
         void configureTransmission (std::any const &params) override { configureTransmission (std::any_cast<UsbTransmissionParams> (params)); }
         virtual void configureTransmission (UsbTransmissionParams const &params) { transmissionParams_ = params; }
@@ -90,8 +90,9 @@ public:
 
         void stop () override { input_->stop (this); }
 
-        libusb_device_handle const *device () const { return dev_; };
-        libusb_device_handle *device () { return dev_; };
+        libusb_device_handle *deviceHandle () { return deviceHandle_; };
+        libusb_device *device () { return device_; };
+        libusb_device const *device () const { return device_; };
 
 protected:
         UsbInput *input () { return input_; }
@@ -109,7 +110,8 @@ protected:
         virtual std::string getString (uint32_t clazz, uint32_t verb, size_t len) const;
 
 private:
-        mutable libusb_device_handle *dev_{};
+        mutable libusb_device_handle *deviceHandle_{};
+        libusb_device *device_{};
         UsbTransmissionParams transmissionParams_;
         UsbInput *input_;
 };
