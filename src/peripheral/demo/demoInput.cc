@@ -20,7 +20,7 @@ namespace logic {
 
 DemoInput::DemoInput (EventQueue *eventQueue) : AbstractInput{eventQueue}
 {
-        eventQueue->setAlarm<DeviceAlarm> (std::make_shared<DemoDevice> (eventQueue));
+        eventQueue->setAlarm<DemoDeviceAlarm> (std::make_shared<DemoDevice> (eventQueue));
 }
 
 /****************************************************************************/

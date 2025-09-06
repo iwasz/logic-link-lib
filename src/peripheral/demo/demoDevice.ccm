@@ -57,4 +57,13 @@ private:
         Queue<RawCompressedBlock> *queue{};
 };
 
+/**
+ * Demo device detected.
+ */
+export struct DemoDeviceAlarm : public DeviceAlarm {
+        using DeviceAlarm::DeviceAlarm;
+        struct Set {};
+        struct Clear {};
+};
+
 } // namespace logic

@@ -32,7 +32,13 @@ export struct IAlarm : public IEvent {
 
 bool operator== (IAlarm const &a, IAlarm const &b) { return a.hash () == b.hash (); }
 
-export struct AbstractAlarm : public IAlarm {
+export template <typename T> struct AbstractAlarm : public IAlarm {
+        /*
+         * TODO this mechanism doesn't work, because setAlarm always reffers
+         * to these base structures which are the SAME for all derived types.
+         * DeviceAlarm has the same (as typeid same) Set and Clear. Maybe try
+         * some form of CRTP?
+         */
         struct Set {};
         struct Clear {};
 };

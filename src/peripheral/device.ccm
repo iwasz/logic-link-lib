@@ -82,7 +82,7 @@ export struct IDevice {
  * Raised when new device gents detected. Universal alarm for all
  * kinds of devices (be it USB, or demo or others).
  */
-export class DeviceAlarm : public AbstractAlarm {
+export class DeviceAlarm : public AbstractAlarm<DeviceAlarm> {
 public:
         explicit DeviceAlarm (std::shared_ptr<IDevice> const &device) : device_{device} {}
 
