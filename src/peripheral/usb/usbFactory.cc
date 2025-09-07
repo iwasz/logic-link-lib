@@ -20,12 +20,12 @@ namespace logic {
 UsbFactory::UsbFactory (EventQueue *eventQueue)
     : eventQueue_{eventQueue},
       usbEntries{
-              UsbEntry{.name = "logicLink",
+              UsbEntry{.name = "LogicLink",
                        .vid = common::usb::VID,
                        .pid = common::usb::PID,
                        .create = [eventQueue] (libusb_device_handle *h) { return std::make_unique<LogicLink> (eventQueue, h); }},
 
-              UsbEntry{.name = "logicLinkDummy",
+              UsbEntry{.name = "LogicLinkDummy",
                        .vid = common::usb::VID,
                        .pid = common::usb::PID - 1,
                        .create = [eventQueue] (libusb_device_handle *h) { return std::make_unique<LogicLinkDummy> (eventQueue, h); }},

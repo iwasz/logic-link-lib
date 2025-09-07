@@ -21,7 +21,7 @@ export class LogicLink : public UsbDevice {
 public:
         LogicLink (EventQueue *eventQueue, libusb_device_handle *dev);
 
-        std::string name () const override { return "logicLink"; }
+        std::string name () const override { return "LogicLink"; }
         std::string hwVersion () const override;
         std::string fwVersion () const override;
         std::string deviceSerial () const override;
@@ -46,7 +46,7 @@ public:
 export class LogicLinkDummy : public LogicLink {
 public:
         using LogicLink::LogicLink;
-        constexpr std::string name () const override { return "logicLinkDummy"; }
+        constexpr std::string name () const override { return "LogicLinkDummy"; }
 };
 
 } // namespace logic
