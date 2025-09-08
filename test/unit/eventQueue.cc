@@ -17,7 +17,7 @@ using namespace logic;
 using namespace std::chrono_literals;
 using namespace std::string_literals;
 
-class TestConnectedAlarm : public AbstractAlarm {
+class TestConnectedAlarm : public AbstractAlarm<TestConnectedAlarm> {
 public:
         explicit TestConnectedAlarm (std::string const &name) : name{name} {}
 
@@ -84,7 +84,7 @@ TEST_CASE ("Event queue threads", "[eventQueue]")
 
 /****************************************************************************/
 
-class TestAlarm : public AbstractAlarm {
+class TestAlarm : public AbstractAlarm<TestAlarm> {
 public:
         void execute (std::any const &func) const override
         {

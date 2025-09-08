@@ -78,6 +78,8 @@ void UsbDevice::start (Queue<RawCompressedBlock> *queue)
         if (auto r = libusb_submit_transfer (transfer); r < 0) {
                 throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
         }
+
+        runnig_ = true;
 }
 
 /****************************************************************************/
@@ -105,6 +107,7 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
         }
 
         if (h->stopRequest) {
+                h->runnig_ = false;
                 return;
         }
 

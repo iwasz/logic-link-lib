@@ -63,6 +63,7 @@ export struct IDevice {
          */
         virtual void start (Queue<RawCompressedBlock> *queue) = 0;
         virtual void stop () = 0;
+        virtual bool running () const = 0;
 
         /**
          * Get device statistics - speciffic to the device itself and the USB interface.
