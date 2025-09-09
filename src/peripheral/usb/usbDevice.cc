@@ -57,11 +57,11 @@ void UsbDevice::start (Queue<RawCompressedBlock> *queue)
 {
         this->queue = queue;
 
-        if (transmissionParams_.usbTransfer == 0) {
+        if (transmissionParams_.singleTransferLenB == 0) {
                 throw Exception{"Can't send an USB transfer of length 0."};
         }
 
-        singleTransfer.resize (transmissionParams_.usbTransfer);
+        singleTransfer.resize (transmissionParams_.singleTransferLenB);
         stopRequest = false;
 
         if (transfer = libusb_alloc_transfer (0); transfer == nullptr) {
@@ -95,7 +95,7 @@ void UsbDevice::stop ()
 void UsbDevice::transferCallback (libusb_transfer *transfer)
 {
         auto *h = reinterpret_cast<UsbDevice *> (transfer->user_data);
-        auto transferLen = h->transmissionParams_.usbTransfer;
+        auto transferLen = h->transmissionParams_.singleTransferLenB;
 
         if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
                 /*
@@ -103,6 +103,7 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                  */
                 auto msg = std::format ("USB transfer status error Code: {}", libusb_error_name (transfer->status));
                 h->eventQueue ()->addEvent<ErrorEvent> (msg);
+                h->runnig_ = false;
                 return;
         }
 
