@@ -63,7 +63,13 @@ export struct IDevice {
          */
         virtual void start (Queue<RawCompressedBlock> *queue) = 0;
         virtual void stop () = 0;
+
+        /// Simply if it's running the acquisition or not.
         virtual bool running () const = 0;
+
+        /// Separate method, because we can heve an error while running, or when stoped.
+        enum class State : uint8_t { ok, error };
+        virtual State state () const = 0;
 
         /**
          * Get device statistics - speciffic to the device itself and the USB interface.
@@ -95,7 +101,7 @@ public:
 
         std::size_t hash () const override { return std::hash<std::size_t>{}(size_t (device_.get ())); }
 
-        std::shared_ptr<IDevice> device () const { return device_; };
+        // std::shared_ptr<IDevice> device () const { return device_; };
 
 private:
         /*
@@ -105,4 +111,24 @@ private:
         std::shared_ptr<IDevice> device_;
 };
 
+/**
+ * As name suggestes, gets emitted when status chnages.
+ */
+export class DeviceStatusAlarm : public AbstractAlarm<DeviceStatusAlarm> {
+public:
+        DeviceStatusAlarm (IDevice const *device, bool running, IDevice::State status) : device_{device}, running_{running}, status_{status} {}
+
+        void execute (std::any const &func) const override
+        {
+                auto f = std::any_cast<std::function<void (IDevice const *device, bool running, IDevice::State status)>> (func);
+                f (device_, running_, status_);
+        }
+
+        std::size_t hash () const override { return size_t (device_) ^ (size_t (status_) << 1) ^ (size_t (running_) << 3); }
+
+private:
+        IDevice const *device_;
+        bool running_;
+        IDevice::State status_;
+};
 } // namespace logic

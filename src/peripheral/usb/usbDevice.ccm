@@ -91,7 +91,12 @@ public:
          */
         void start (Queue<RawCompressedBlock> *queue) override;
         void stop () override;
-        bool running () const override { return runnig_; }
+        bool running () const override { return running_; }
+        State state () const override { return state_; }
+
+        // void setState (State s);
+        // void setRunning (bool b);
+        void notify (std::optional<bool> running, std::optional<State> state);
 
 protected:
         libusb_device_handle *deviceHandle () { return deviceHandle_; };
@@ -125,7 +130,8 @@ private:
         /// Used to stop re-issuing the transfer.
         std::atomic_bool stopRequest;
         /// It's sole purpose is to indicate teh status to the outside world.
-        std::atomic_bool runnig_;
+        mutable std::atomic<State> state_;
+        mutable std::atomic_bool running_;
 
         /// Current output, destination of the acquired data.
         Queue<RawCompressedBlock> *queue{};

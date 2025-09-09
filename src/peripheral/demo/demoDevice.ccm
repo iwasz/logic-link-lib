@@ -38,6 +38,7 @@ public:
         void configureTransmission (std::any const &params) override {}
         void start (Queue<RawCompressedBlock> *queue) override;
         void stop () override;
+        State state () const override { return {}; }     // TODO implement
         bool running () const override { return false; } // TODO implement
 
         common::usb::Stats getStats () override { return {}; }

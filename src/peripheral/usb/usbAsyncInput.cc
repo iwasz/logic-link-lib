@@ -142,7 +142,14 @@ void UsbAsyncInput::run ()
                 }
 
                 if (auto r = libusb_handle_events_timeout (nullptr, &tv); r < 0) {
-                        std::println ("libusb error: {}", r);
+                        /*
+                         * After libusb source code analysis I believe that (at least) transfer timeout
+                         * erorrs will be directed to the transfer callback and there I can assing the
+                         * error to a transfer and device. This way I can inform particular device about
+                         * the error.
+                         */
+                        eventQueue ()->addEvent<ErrorEvent> (
+                                std::format ("Error in the main USB loop (libusb_handle_events_timeout): {}", libusb_error_name (r)));
                 }
 
                 startPoint.reset ();

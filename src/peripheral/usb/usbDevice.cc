@@ -34,10 +34,12 @@ void UsbDevice::open (UsbInterface const &info)
         using namespace std::string_literals;
 
         if (auto r = libusb_claim_interface (deviceHandle (), info.claimInterface); r < 0) {
+                notify (false, State::error);
                 throw Exception ("Error claiming interface: "s + std::to_string (info.claimInterface) + ", msg: "s + libusb_error_name (r));
         }
 
         if (auto r = libusb_set_interface_alt_setting (deviceHandle (), info.interfaceNumber, info.alternateSetting); r < 0) {
+                notify (false, State::error);
                 throw Exception ("Error libusb_set_interface_alt_setting: "s + libusb_error_name (r));
         }
 
@@ -46,9 +48,12 @@ void UsbDevice::open (UsbInterface const &info)
          * other argument. Whereas here I get warning in the dmesg, and LIBUSB_ERROR_BUSY in console.
          */
         // if (auto r = libusb_set_configuration (dev, 0); r < 0) {
+        //         setState (State::error);
         //         close();
         //         throw Exception ("Error to libusb_set_configuration: "s + libusb_error_name (r));
         // }
+
+        notify (false, State::ok);
 }
 
 /****************************************************************************/
@@ -58,6 +63,7 @@ void UsbDevice::start (Queue<RawCompressedBlock> *queue)
         this->queue = queue;
 
         if (transmissionParams_.singleTransferLenB == 0) {
+                notify (false, State::error);
                 throw Exception{"Can't send an USB transfer of length 0."};
         }
 
@@ -69,6 +75,7 @@ void UsbDevice::start (Queue<RawCompressedBlock> *queue)
                  * This is called from an user thread (via UsbAsyncInput::start) so we are
                  * safe to throw an exception.
                  */
+                notify (false, State::error);
                 throw Exception{"Libusb could not instantiate a new transfer using `libusb_alloc_transfer`"};
         }
 
@@ -76,10 +83,12 @@ void UsbDevice::start (Queue<RawCompressedBlock> *queue)
                                    &UsbDevice::transferCallback, this, common::usb::TIMEOUT_MS);
 
         if (auto r = libusb_submit_transfer (transfer); r < 0) {
+                notify (false, State::error);
                 throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
         }
 
-        runnig_ = true;
+        // Clear the error state since it seems we started successfuly.
+        notify (true, State::ok);
 }
 
 /****************************************************************************/
@@ -103,25 +112,26 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                  */
                 auto msg = std::format ("USB transfer status error Code: {}", libusb_error_name (transfer->status));
                 h->eventQueue ()->addEvent<ErrorEvent> (msg);
-                h->runnig_ = false;
+                h->notify (false, State::error);
                 return;
         }
 
         if (h->stopRequest) {
-                h->runnig_ = false;
+                h->notify (false, State::ok);
                 return;
         }
 
         if (auto rc = libusb_submit_transfer (transfer); rc < 0) {
                 auto msg = std::format ("libusb_submit_transfer status error Code: {}", libusb_error_name (rc));
+                h->notify (false, State::error);
                 h->eventQueue ()->addEvent<ErrorEvent> (msg);
                 return;
         }
 
-        if (size_t (transfer->actual_length) != transferLen) {
-                // TODO this should be removed
-                std::println ("Short: {}", transfer->actual_length);
-        }
+        // if (size_t (transfer->actual_length) != transferLen) {
+        //         // TODO this should be removed
+        //         std::println ("Short: {}", transfer->actual_length);
+        // }
 
         h->singleTransfer.resize (transfer->actual_length);
         // auto now = high_resolution_clock::now ();
@@ -147,6 +157,8 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
 void UsbDevice::controlOut (std::vector<uint8_t> const &request) const
 {
         if (request.size () > common::usb::MAX_CONTROL_PAYLOAD_SIZE) {
+                // We don't know if it's running or not, so we don't touch the `running` variable.
+                const_cast<UsbDevice *> (this)->notify ({}, State::error);
                 throw Exception{"MAX_CONTROL_PAYLOAD_SIZE exceeded."};
         }
 
@@ -156,6 +168,7 @@ void UsbDevice::controlOut (std::vector<uint8_t> const &request) const
                     common::usb::VENDOR_CLASS_REQUEST, 1, 0, const_cast<uint8_t *> (std::data (request)), request.size (),
                     common::usb::TIMEOUT_MS);
             r < 0) {
+                const_cast<UsbDevice *> (this)->notify ({}, State::error);
                 throw Exception (libusb_error_name (r));
         }
 }
@@ -173,6 +186,7 @@ std::vector<uint8_t> UsbDevice::controlIn (size_t len) const
                     deviceHandle_, uint8_t (LIBUSB_RECIPIENT_ENDPOINT) | uint8_t (LIBUSB_REQUEST_TYPE_VENDOR) | uint8_t (LIBUSB_ENDPOINT_IN),
                     common::usb::VENDOR_CLASS_REQUEST, 1, 0, request.data (), request.size (), common::usb::TIMEOUT_MS);
             r < 0) {
+                const_cast<UsbDevice *> (this)->notify ({}, State::error);
                 throw Exception (libusb_error_name (r));
         }
 
@@ -187,6 +201,21 @@ std::string UsbDevice::getString (uint32_t clazz, uint32_t verb, size_t len) con
         auto data = controlIn (len);
         auto zero = std::ranges::find (data, '\0');
         return std::string (reinterpret_cast<char const *> (data.data ()), std::distance (data.begin (), zero));
+}
+
+/****************************************************************************/
+
+void UsbDevice::notify (std::optional<bool> running, std::optional<State> state)
+{
+        if (running != std::nullopt) {
+                running_ = *running;
+        }
+
+        if (state != std::nullopt) {
+                state_ = *state;
+        }
+
+        eventQueue ()->addEvent<DeviceStatusAlarm> (this, running_, state_);
 }
 
 } // namespace logic
