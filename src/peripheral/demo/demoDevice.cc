@@ -21,10 +21,9 @@ module logic.peripheral;
 
 namespace logic {
 
-common::acq::Params DemoDevice::configureAcquisition (common::acq::Params const &params, bool /* legacy */)
+void DemoDevice::writeAcquisitionParams (common::acq::Params const &params, bool /* legacy */)
 {
         params_ = params;
-        return params;
 }
 
 /****************************************************************************/

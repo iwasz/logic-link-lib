@@ -38,7 +38,7 @@ LogicLink::LogicLink (EventQueue *eventQueue, libusb_device_handle *dev) : UsbDe
 
 /****************************************************************************/
 
-common::acq::Params LogicLink::configureAcquisition (common::acq::Params const &params, bool legacy)
+void LogicLink::writeAcquisitionParams (common::acq::Params const &params, bool legacy)
 {
         using enum common::acq::Mode;
 
@@ -53,20 +53,26 @@ common::acq::Params LogicLink::configureAcquisition (common::acq::Params const &
                  * This one requests data from the control ep. It wants 9B of response from
                  * the previous transfer (configure sample rate and chgannel)
                  */
-                auto request = controlIn (9);
-                return params;
+                auto request = controlIn (LA_VERB_CONFIGURE_MAX_SIZE);
+                // return params;
         }
 
         controlOut (UsbRequest{}
                             .clazz (LOGIC_LINK_CLASS_LA)
-                            .verb (LL_VERB_CONFIGURE)
+                            .verb (LL_VERB_CONFIGURE_WRITE)
                             .sampleRate (params.digitalSampleRate)
                             .channels (params.digitalChannels)
                             .sampleRate (params.analogSampleRate)
                             .channels (params.analogChannels)
                             .integer (uint8_t (params.mode)));
+}
 
-        auto request = controlIn (13);
+/****************************************************************************/
+
+common::acq::Params LogicLink::readAcquisitionParams () const
+{
+        controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_CONFIGURE_READ));
+        auto request = controlIn (LL_CONFIGURE_MAX_SIZE);
 
         common::acq::Params paramsOut{};
         common::serialize (&request)
@@ -79,6 +85,31 @@ common::acq::Params LogicLink::configureAcquisition (common::acq::Params const &
                 .get (&paramsOut.mode);
 
         return paramsOut;
+}
+
+/****************************************************************************/
+
+void LogicLink::writeTransmissionParams (UsbTransmissionParams const &params)
+{
+        UsbDevice::writeTransmissionParams (params);
+        controlOut (UsbRequest{}
+                            .clazz (LOGIC_LINK_CLASS_LA)
+                            .verb (LL_VERB_SET_USB_TRANSFER_PARAMS)
+                            //     .integer (params.usbTransfer)
+                            .integer (params.usbBlock)
+                    /* .integer (dmaBlock) */);
+}
+
+/****************************************************************************/
+
+UsbTransmissionParams LogicLink::readTransmissionParams () const
+{
+        controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_GET_USB_TRANSFER_PARAMS));
+        auto request = controlIn (LL_TRANSFER_PARAMS_MAX_SIZE);
+        UsbTransmissionParams out{};
+        out.singleTransferLenB = singleTransferLenB ();
+        common::serialize (&request) /* .get (&out.usbTransfer) */.get (&out.usbBlock);
+        return out;
 }
 
 /****************************************************************************/
@@ -136,19 +167,6 @@ std::unordered_set<logs::Code> LogicLink::getErrors ()
 /****************************************************************************/
 
 void LogicLink::clearErrors () { controlOut (UsbRequest{}.clazz (LOGIC_LINK_CLASS_LA).verb (LL_VERB_ERRORS)); }
-
-/****************************************************************************/
-
-void LogicLink::configureTransmission (UsbTransmissionParams const &params)
-{
-        UsbDevice::configureTransmission (params);
-        controlOut (UsbRequest{}
-                            .clazz (LOGIC_LINK_CLASS_LA)
-                            .verb (LL_VERB_SET_USB_TRANSFER_PARAMS)
-                            .integer (params.usbTransfer)
-                            .integer (params.usbBlock)
-                    /* .integer (dmaBlock) */);
-}
 
 /****************************************************************************/
 

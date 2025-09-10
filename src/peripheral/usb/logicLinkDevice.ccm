@@ -30,8 +30,11 @@ public:
         void start (Queue<RawCompressedBlock> *queue) override;
         void stop () override;
 
-        common::acq::Params configureAcquisition (common::acq::Params const &params, bool legacy = false) override;
-        void configureTransmission (UsbTransmissionParams const &params) override;
+        void writeAcquisitionParams (common::acq::Params const &params, bool legacy = false)  override;
+        common::acq::Params readAcquisitionParams () const override;
+
+        void writeTransmissionParams (UsbTransmissionParams const &params)  override;
+        virtual UsbTransmissionParams readTransmissionParams () const override;
 
         common::usb::Stats getStats () override;
         std::unordered_set<logs::Code> getErrors () override;

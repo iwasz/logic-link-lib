@@ -54,9 +54,9 @@ private:
  * Parameters speciffic to USB peripherals.
  */
 export struct UsbTransmissionParams {
-        uint32_t usbTransfer{};
-        uint32_t usbBlock{};
-        size_t singleTransferLenB{};
+        // uint32_t usbTransfer{};
+        uint32_t usbBlock{};         // This one's for the UDB device.
+        size_t singleTransferLenB{}; // This one's for the host
         // uint32_t dmaBlock {};
 };
 
@@ -81,8 +81,8 @@ public:
         UsbDevice &operator= (UsbDevice &&) = delete;
         ~UsbDevice ();
 
-        void configureTransmission (std::any const &params) override { configureTransmission (std::any_cast<UsbTransmissionParams> (params)); }
-        virtual void configureTransmission (UsbTransmissionParams const &params) { transmissionParams_ = params; }
+        virtual void writeTransmissionParams (UsbTransmissionParams const &params);
+        virtual UsbTransmissionParams readTransmissionParams () const = 0;
 
         /**
          * Starts the continuous, main bulk transfer. Inits the libusb transfer
@@ -116,9 +116,13 @@ protected:
         virtual std::vector<uint8_t> controlIn (size_t len) const;
         virtual std::string getString (uint32_t clazz, uint32_t verb, size_t len) const;
 
+        size_t singleTransferLenB () const { return singleTransferLenB_; };
+
 private:
         mutable libusb_device_handle *deviceHandle_{};
-        UsbTransmissionParams transmissionParams_;
+
+        /// libusb transfer size.
+        size_t singleTransferLenB_ = DEFAULT_USB_TRANSFER_SIZE_B;
         EventQueue *eventQueue_;
 
         /// USB transfers are sent directly by this class (called by UsbAsyncInput).

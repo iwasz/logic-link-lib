@@ -10,9 +10,11 @@ module;
 #include <algorithm>
 #include <any>
 #include <condition_variable>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <typeindex>
 #include <unordered_map>
 #include <unordered_set>
@@ -35,7 +37,7 @@ concept alarm = requires (T t) {
 export class EventQueue {
 public:
         using Pair = std::pair<std::type_index, std::unique_ptr<IEvent>>;
-        using Events = std::vector<Pair>;
+        using Events = std::deque<Pair>;
         using EventCallbacks = std::unordered_map<std::type_index, std::any>;
 
         struct AlarmHash {
@@ -93,15 +95,36 @@ private:
 
 void EventQueue::run ()
 {
-        Events copy;
+        // Events copy;
 
-        {
+        // {
+        //         std::lock_guard lock{mutex};
+        //         copy = std::move (events);
+        //         events = Events{};
+        // }
+
+        // runImpl (copy);
+
+        auto front = [this] -> std::optional<Pair> {
                 std::lock_guard lock{mutex};
-                copy = std::move (events);
-                events = Events{};
-        }
+                if (events.empty ()) {
+                        return {};
+                }
 
-        runImpl (copy);
+                auto moved = std::move (events.front ());
+                events.pop_front ();
+                return moved;
+        };
+
+        for (auto elem = front (); elem != std::nullopt; elem = front ()) {
+                auto const &name = elem->first;
+                auto &evt = elem->second;
+
+                if (auto i = eventCallbacks.find (name); i != eventCallbacks.cend ()) {
+                        auto &callback = eventCallbacks.at (name);
+                        evt->execute (callback);
+                }
+        }
 }
 
 /****************************************************************************/
@@ -120,6 +143,11 @@ void EventQueue::waitForEvents ()
         Events copy;
 
         {
+                /*
+                 * TODO see EventQueue::run and implement this one in the same manner.
+                 * The method, as it is now, looses events if processing older event
+                 * throws an exceptrion (whole `copy` collection gets destroyed and lost).
+                 */
                 std::unique_lock lock{mutex};
                 eventCv.wait (lock, [this] { return !events.empty (); });
                 copy = std::move (events);

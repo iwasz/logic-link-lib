@@ -13,8 +13,8 @@ module;
 #include "common/stats.hh"
 #include <cstdint>
 #include <cstdlib>
+#include <format>
 #include <libusb.h>
-#include <print>
 #include <string>
 #include <vector>
 module logic.peripheral;
@@ -62,12 +62,12 @@ void UsbDevice::start (Queue<RawCompressedBlock> *queue)
 {
         this->queue = queue;
 
-        if (transmissionParams_.singleTransferLenB == 0) {
+        if (singleTransferLenB_ == 0) {
                 notify (false, State::error);
                 throw Exception{"Can't send an USB transfer of length 0."};
         }
 
-        singleTransfer.resize (transmissionParams_.singleTransferLenB);
+        singleTransfer.resize (singleTransferLenB_);
         stopRequest = false;
 
         if (transfer = libusb_alloc_transfer (0); transfer == nullptr) {
@@ -104,7 +104,7 @@ void UsbDevice::stop ()
 void UsbDevice::transferCallback (libusb_transfer *transfer)
 {
         auto *h = reinterpret_cast<UsbDevice *> (transfer->user_data);
-        auto transferLen = h->transmissionParams_.singleTransferLenB;
+        auto transferLen = h->singleTransferLenB_;
 
         if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
                 /*
@@ -216,6 +216,13 @@ void UsbDevice::notify (std::optional<bool> running, std::optional<State> state)
         }
 
         eventQueue ()->addEvent<DeviceStatusAlarm> (this, running_, state_);
+}
+
+/****************************************************************************/
+
+void UsbDevice::writeTransmissionParams (UsbTransmissionParams const &params)
+{
+        singleTransferLenB_ = params.singleTransferLenB; /* transmissionParams_ = params; */
 }
 
 } // namespace logic
