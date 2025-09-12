@@ -12,9 +12,9 @@ module;
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <future>
 #include <gsl/gsl>
 #include <libusb.h>
-#include <print>
 #include <string>
 module logic.peripheral;
 
@@ -46,12 +46,18 @@ UsbAsyncInput::UsbAsyncInput (EventQueue *eventQueue) : AbstractInput (eventQueu
         if (LIBUSB_SUCCESS != rc) {
                 throw Exception{"Error creating a hotplug callback: " + std::string{libusb_error_name (rc)}};
         }
+
+        // TODO for test. If it works, remove run and kill from the IInput interface - and the interface itself...
+        run ();
 }
 
 /****************************************************************************/
 
-UsbAsyncInput::~UsbAsyncInput ()
+UsbAsyncInput::~UsbAsyncInput () noexcept
 {
+        kill ();
+        analyzeFuture.get (); // Will terminate if exception is thrown from the future.
+        acquireFuture.get ();
         handles.clear ();
         libusb_hotplug_deregister_callback (nullptr, hotplugCallbackHandle);
         libusb_exit (nullptr);
@@ -127,7 +133,7 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
  * Acquires ~~`wholeDataLenB` bytes of~~ data (blocking function) block by block (`singleTransferLenB`).
  * See src/feature/analyzer/flexio.cc in the firmware project for the other side of the connection.
  */
-void UsbAsyncInput::run ()
+void UsbAsyncInput::acquireLoop ()
 {
         static timeval tv = {.tv_sec = 0, .tv_usec = 10000};
         std::optional<high_resolution_clock::time_point> startPoint;
@@ -154,6 +160,68 @@ void UsbAsyncInput::run ()
 
                 startPoint.reset ();
         }
+}
+
+/****************************************************************************/
+
+void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBackend *backend */)
+{
+        while (true) {
+                if (kill_.load ()) {
+                        break;
+                }
+
+                for (auto &h : handles) {
+                        h.second->run ();
+                }
+        }
+}
+
+/****************************************************************************/
+
+void UsbAsyncInput::run (/* Queue<RawCompressedBlock> *rawQueue, IBackend *backend */)
+{
+        // Futures are created for exception handling.
+        analyzeFuture = std::async (std::launch::async, &UsbAsyncInput::analyzeLoop, this /* , rawQueue, backend */);
+        acquireFuture = std::async (std::launch::async, &UsbAsyncInput::acquireLoop, this);
+        // TODO start all inputs.
+        // auto acquireFuture = std::async (std::launch::async, &logic::IInput::run, &factory.demo ());
+
+        // while (true) {
+        //         if (auto now = std::chrono::high_resolution_clock::now ();
+        //             config.app.seconds > 0 && now - start >= std::chrono::seconds{config.app.seconds}) {
+        //                 std::println ("Time limit reached.");
+        //                 break;
+        //         }
+
+        //         //  TODO
+        //         // if (config.app.bytes > 0 && session.receivedB () >= config.app.bytes) {
+        //         //         device->stop ();
+        //         //         break;
+        //         // }
+
+        //         if (cli::sys::isTermRequested ()) {
+        //                 std::println ("Interrupted by user.");
+        //                 break;
+        //         }
+
+        //         // They get ready only on exception.
+        //         if (acquireFuture.wait_for (100ms) == std::future_status::ready) {
+        //                 std::println ("acquireFuture has finished.");
+        //                 break;
+        //         }
+
+        //         if (analyzeFuture.wait_for (100ms) == std::future_status::ready) {
+        //                 std::println ("analyzeFuture has finished.");
+        //                 break;
+        //         }
+
+        //         if (printErrorEvents (eventQueue)) {
+        //                 break;
+        //         }
+
+        //         // std::this_thread::sleep_for (100ms);
+        // }
 }
 
 } // namespace logic

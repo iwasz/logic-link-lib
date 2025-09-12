@@ -21,14 +21,13 @@ module logic.peripheral;
 
 namespace logic {
 
-void DemoDevice::writeAcquisitionParams (common::acq::Params const &params, bool /* legacy */)
-{
-        params_ = params;
-}
+void DemoDevice::writeAcquisitionParams (common::acq::Params const &params, bool /* legacy */) { params_ = params; }
 
 /****************************************************************************/
 
-void DemoDevice::start (Queue<RawCompressedBlock> *queue) { this->queue = queue; }
+void DemoDevice::start (Queue<RawCompressedBlock> *queue, IBackend * /* backend */) { this->queue = queue; }
+
+void DemoDevice::run () {}
 
 /****************************************************************************/
 

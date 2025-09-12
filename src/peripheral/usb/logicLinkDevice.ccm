@@ -27,13 +27,13 @@ public:
         std::string deviceSerial () const override;
         std::string mcuSerial () const override;
 
-        void start (Queue<RawCompressedBlock> *queue) override;
+        void start (Queue<RawCompressedBlock> *queue, IBackend *backend) override;
         void stop () override;
 
-        void writeAcquisitionParams (common::acq::Params const &params, bool legacy = false)  override;
+        void writeAcquisitionParams (common::acq::Params const &params, bool legacy = false) override;
         common::acq::Params readAcquisitionParams () const override;
 
-        void writeTransmissionParams (UsbTransmissionParams const &params)  override;
+        void writeTransmissionParams (UsbTransmissionParams const &params) override;
         virtual UsbTransmissionParams readTransmissionParams () const override;
 
         common::usb::Stats getStats () override;

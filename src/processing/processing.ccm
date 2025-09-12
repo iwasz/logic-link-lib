@@ -38,7 +38,7 @@ private:
         std::atomic_bool running = true;
 };
 
-RawData decompress (RawCompressedBlock const &rcd);
+export RawData decompress (RawCompressedBlock const &rcd);
 
 /**
  * Rearrange the byte and/or bit order from raw device data format to per-channel
@@ -48,7 +48,7 @@ RawData decompress (RawCompressedBlock const &rcd);
  * for some (the fastest transfers) also bits in the input bytes have to be reordered
  * as well.
  */
-std::vector<SampleBlock> rearrange (RawData const &rd, common::acq::Params const &params);
+export std::vector<SampleBlock> rearrange (RawData const &rd, common::acq::Params const &params);
 
 /**
  * A helper function for preparingff an empty batch of digital channelss.

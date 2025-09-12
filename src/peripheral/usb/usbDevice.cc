@@ -15,9 +15,11 @@ module;
 #include <cstdlib>
 #include <format>
 #include <libusb.h>
+#include <memory>
 #include <string>
 #include <vector>
 module logic.peripheral;
+import logic.processing;
 
 namespace logic {
 
@@ -26,6 +28,126 @@ UsbDevice::~UsbDevice ()
         libusb_free_transfer (transfer);
         libusb_close (deviceHandle_);
 }
+
+/****************************************************************************/
+
+void UsbDevice::start (Queue<RawCompressedBlock> *queue, IBackend *backend)
+{
+        if (running_) {
+                throw Exception{"Start called, but the device has been already started."};
+        }
+
+        this->queue = queue;
+        this->backend = backend;
+
+        if (!transmissionParams.discardRaw) {
+                this->queue->start ();
+        }
+
+        if (transmissionParams.singleTransferLenB == 0) {
+                notify (false, State::error);
+                throw Exception{"Can't send an USB transfer of length 0."};
+        }
+
+        singleTransfer.resize (transmissionParams.singleTransferLenB);
+        stopRequest = false;
+
+        if (transfer = libusb_alloc_transfer (0); transfer == nullptr) {
+                /*
+                 * This is called from an user thread (via UsbAsyncInput::start) so we are
+                 * safe to throw an exception.
+                 */
+                notify (false, State::error);
+                throw Exception{"Libusb could not instantiate a new transfer using `libusb_alloc_transfer`"};
+        }
+
+        libusb_fill_bulk_transfer (transfer, deviceHandle (), common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (),
+                                   &UsbDevice::transferCallback, this, common::usb::TIMEOUT_MS);
+
+        if (auto r = libusb_submit_transfer (transfer); r < 0) {
+                notify (false, State::error);
+                throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
+        }
+
+        // Clear the error state since it seems we started successfuly.
+        notify (true, State::ok);
+}
+
+/****************************************************************************/
+
+void UsbDevice::run ()
+{
+        if (!running_) {
+                return;
+        }
+
+        // if (strategy != nullptr) {
+        //         strategy->start ();
+        // }
+
+        /*
+         * Protecting transmissionParams with mutex is not crucial as it
+         * changes only upon a call to writeTransmissionParams. That method
+         * in turn checks for atomic running_ flag and throws if running_ is
+         * true. UsbDevice::run at the other hand runs only when running_ is
+         * true, so they are mutually exclusive.
+         *
+         * queue->start () called in UsbDevice::start
+         */
+        std::unique_ptr<RawCompressedBlock> rcd = (transmissionParams.discardRaw) ? (queue->pop ()) : (queue->next ());
+
+        if (!rcd) {
+                return;
+        }
+
+        RawData rd;
+
+        if (transmissionParams.decompress) {
+                rd = decompress (*rcd);
+                rcd->clear ();
+        }
+        else {
+                rd = std::move (*rcd);
+        }
+
+        // if (strategy != nullptr) {
+        //         strategy->runRaw (rd);
+        // }
+
+        // TODO for now only digital data gets rearranged
+        // TODO agnostic! vector of vector of bytes
+        // std::vector<SampleBlock> digitalChannels = rearrange (rd, params);
+        // ChannelBlock digitalChannels{0, {}};
+        std::vector<Bytes> digitalChannels;
+
+        /*
+         * Consider locking granularity. But even if it is too coarse, the move operation
+         * below is so fast, that we aren't locked for too long.
+         */
+        backend->append (0, std::move (digitalChannels));
+
+        // if (strategy != nullptr) {
+        //         strategy->run (currentBlock->sampleData);
+        // }
+
+        // TODO statictics
+        // double globalBps{};
+        // {
+        //         std::lock_guard lock{session->rawQueueMutex};
+        //         globalBps = double (session->receivedB ())
+        //                 / double (duration_cast<microseconds> (session->globalStop - session->globalStart).count ()) * CHAR_BIT;
+        // }
+
+        // std::println ("Overall: {:.2f} Mbps, ", globalBps);
+
+        // if (strategy != nullptr) {
+        //         strategy->stop ();
+        // }
+}
+
+/****************************************************************************/
+
+void UsbDevice::stop () { stopRequest = true; }
 
 /****************************************************************************/
 
@@ -58,53 +180,11 @@ void UsbDevice::open (UsbInterface const &info)
 
 /****************************************************************************/
 
-void UsbDevice::start (Queue<RawCompressedBlock> *queue)
-{
-        this->queue = queue;
-
-        if (singleTransferLenB_ == 0) {
-                notify (false, State::error);
-                throw Exception{"Can't send an USB transfer of length 0."};
-        }
-
-        singleTransfer.resize (singleTransferLenB_);
-        stopRequest = false;
-
-        if (transfer = libusb_alloc_transfer (0); transfer == nullptr) {
-                /*
-                 * This is called from an user thread (via UsbAsyncInput::start) so we are
-                 * safe to throw an exception.
-                 */
-                notify (false, State::error);
-                throw Exception{"Libusb could not instantiate a new transfer using `libusb_alloc_transfer`"};
-        }
-
-        libusb_fill_bulk_transfer (transfer, deviceHandle (), common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (),
-                                   &UsbDevice::transferCallback, this, common::usb::TIMEOUT_MS);
-
-        if (auto r = libusb_submit_transfer (transfer); r < 0) {
-                notify (false, State::error);
-                throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
-        }
-
-        // Clear the error state since it seems we started successfuly.
-        notify (true, State::ok);
-}
-
-/****************************************************************************/
-
-void UsbDevice::stop ()
-{
-        stopRequest = true;
-        queue = nullptr;
-}
-
-/****************************************************************************/
-
 void UsbDevice::transferCallback (libusb_transfer *transfer)
 {
         auto *h = reinterpret_cast<UsbDevice *> (transfer->user_data);
-        auto transferLen = h->singleTransferLenB_;
+        // We assume transmisionParams are already set.
+        auto transferLen = h->transmissionParams.singleTransferLenB;
 
         if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
                 /*
@@ -118,6 +198,7 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
 
         if (h->stopRequest) {
                 h->notify (false, State::ok);
+                h->queue = nullptr;
                 return;
         }
 
@@ -222,7 +303,11 @@ void UsbDevice::notify (std::optional<bool> running, std::optional<State> state)
 
 void UsbDevice::writeTransmissionParams (UsbTransmissionParams const &params)
 {
-        singleTransferLenB_ = params.singleTransferLenB; /* transmissionParams_ = params; */
+        if (running_) {
+                throw Exception{"UsbDevice::writeTransmissionParams called on a running device."};
+        }
+
+        transmissionParams = params;
 }
 
 } // namespace logic

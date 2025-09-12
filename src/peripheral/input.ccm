@@ -38,12 +38,13 @@ export struct IInput {
 
         /**
          * Blocking acquisition and event listener method, that pushes the data at the
-         * end of the `data` queue and observes the hotplug events.
+         * end of the `data` queue and observes the hotplug events. Should not block.
          */
         virtual void run () = 0;
 
         /**
-         * Breaks the run loop.
+         * Breaks the run loop. Do not confuse with IDevice::stop. Normally
+         * this will be called only on application stop.
          */
         virtual void kill () = 0;
 };

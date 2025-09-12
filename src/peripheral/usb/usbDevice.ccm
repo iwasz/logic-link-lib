@@ -54,10 +54,32 @@ private:
  * Parameters speciffic to USB peripherals.
  */
 export struct UsbTransmissionParams {
-        // uint32_t usbTransfer{};
-        uint32_t usbBlock{};         // This one's for the UDB device.
-        size_t singleTransferLenB{}; // This one's for the host
+
+        /**
+         * This one's for the UDB device.
+         * TODO really, really document that, because I keep forgeting.
+         */
+        uint32_t usbBlock{};
+
+        /**
+         * Eaach bulk request initiated from the host to the device has exactly
+         * this size, and we expect the device to respond with this amount of data.
+         * This one's for the host only (doesn't get sent to the USB device).
+         */
+        size_t singleTransferLenB{}; //
         // uint32_t dmaBlock {};
+
+        /**
+         * Tells if the device should compress the data it is sending, and if the
+         * acompanying host side code should decompress it.
+         */
+        bool decompress{};
+
+        /**
+         * Setting this to false will make the raw data to persist. Is a scenario
+         * where we don't discard raw queue elements even feasible though?
+         */
+        bool discardRaw = true;
 };
 
 export struct UsbInterface {
@@ -89,8 +111,10 @@ public:
          * structure, our internal data buffer, and makest this bulk transfer to
          * be resubmited everytime it finishes (hence continuous).
          */
-        void start (Queue<RawCompressedBlock> *queue) override;
+        void start (Queue<RawCompressedBlock> *queue, IBackend *backend) override;
         void stop () override;
+        void run () override;
+
         bool running () const override { return running_; }
         State state () const override { return state_; }
 
@@ -116,13 +140,16 @@ protected:
         virtual std::vector<uint8_t> controlIn (size_t len) const;
         virtual std::string getString (uint32_t clazz, uint32_t verb, size_t len) const;
 
-        size_t singleTransferLenB () const { return singleTransferLenB_; };
+        size_t singleTransferLenB () const { return transmissionParams.singleTransferLenB; };
 
 private:
         mutable libusb_device_handle *deviceHandle_{};
 
-        /// libusb transfer size.
-        size_t singleTransferLenB_ = DEFAULT_USB_TRANSFER_SIZE_B;
+        /*
+         * We keep some defaults global (like compress == false) and some
+         * speciffic to the device like singleTransferLenB below.
+         */
+        UsbTransmissionParams transmissionParams = {.singleTransferLenB = DEFAULT_USB_TRANSFER_SIZE_B};
         EventQueue *eventQueue_;
 
         /// USB transfers are sent directly by this class (called by UsbAsyncInput).
@@ -133,12 +160,14 @@ private:
 
         /// Used to stop re-issuing the transfer.
         std::atomic_bool stopRequest;
+
         /// It's sole purpose is to indicate teh status to the outside world.
         mutable std::atomic<State> state_;
         mutable std::atomic_bool running_;
 
         /// Current output, destination of the acquired data.
         Queue<RawCompressedBlock> *queue{};
+        IBackend *backend{};
 };
 
 } // namespace logic

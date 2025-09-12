@@ -8,6 +8,7 @@
 
 module;
 #include <atomic>
+#include <future>
 #include <libusb.h>
 #include <memory>
 #include <unordered_map>
@@ -41,14 +42,15 @@ public:
         /**
          * Gracefully de-inits the libusb.
          */
-        ~UsbAsyncInput () override;
-
-        /*--------------------------------------------------------------------------*/
+        ~UsbAsyncInput () noexcept override;
 
         void run () override;
         void kill () override { kill_.store (true); }
 
 private:
+        void acquireLoop ();
+        void analyzeLoop ();
+
         static int hotplugCallback (struct libusb_context * /* ctx */, struct libusb_device *dev, libusb_hotplug_event event, void *userData);
         libusb_hotplug_callback_handle hotplugCallbackHandle{};
         std::atomic_bool kill_;
@@ -56,6 +58,9 @@ private:
         using UsbHandles = std::unordered_map<libusb_device const *, std::shared_ptr<UsbDevice>>;
         UsbHandles handles;
         std::mutex mutex; // Protects the `handles` collection.
+
+        std::future<void> acquireFuture;
+        std::future<void> analyzeFuture;
 
         // TODO.
         /// Number of bytes received so far irrespective of the buffer size.

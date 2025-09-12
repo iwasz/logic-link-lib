@@ -34,11 +34,13 @@ public:
         std::string deviceSerial () const override { return "demod_0001"; }
         std::string mcuSerial () const override { return "12345678"; }
 
-        void writeAcquisitionParams (common::acq::Params const &params, bool /* legacy */ = false)  override;
-        common::acq::Params readAcquisitionParams () const override {return params_;}
+        void writeAcquisitionParams (common::acq::Params const &params, bool /* legacy */ = false) override;
+        common::acq::Params readAcquisitionParams () const override { return params_; }
 
-        void start (Queue<RawCompressedBlock> *queue) override;
+        void start (Queue<RawCompressedBlock> *queue, IBackend *backend) override;
         void stop () override;
+        void run () override;
+
         State state () const override { return {}; }     // TODO implement
         bool running () const override { return false; } // TODO implement
 

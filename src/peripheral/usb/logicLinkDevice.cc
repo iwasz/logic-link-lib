@@ -38,6 +38,30 @@ LogicLink::LogicLink (EventQueue *eventQueue, libusb_device_handle *dev) : UsbDe
 
 /****************************************************************************/
 
+/*
+ * TODO legacy makes little sense doesn't it? Current device as it is implemented now is not able
+ * to provide the data in format digestable for the sigrok library. Consider removing the legacy
+ * param and the implementation.
+ */
+void LogicLink::start (Queue<RawCompressedBlock> *queue, IBackend *backend)
+{
+        // Prepare the transfer and send it.
+        UsbDevice::start (queue, backend);
+
+        // Send the start USB control request.
+        controlOut (UsbRequest{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_START_CAPTURE));
+}
+
+/****************************************************************************/
+
+void LogicLink::stop ()
+{
+        controlOut (UsbRequest{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_STOP_CAPTURE));
+        UsbDevice::stop ();
+}
+
+/****************************************************************************/
+
 void LogicLink::writeAcquisitionParams (common::acq::Params const &params, bool legacy)
 {
         using enum common::acq::Mode;
@@ -110,30 +134,6 @@ UsbTransmissionParams LogicLink::readTransmissionParams () const
         out.singleTransferLenB = singleTransferLenB ();
         common::serialize (&request) /* .get (&out.usbTransfer) */.get (&out.usbBlock);
         return out;
-}
-
-/****************************************************************************/
-
-/*
- * TODO legacy makes little sense doesn't it? Current device as it is implemented now is not able
- * to provide the data in format digestable for the sigrok library. Consider removing the legacy
- * param and the implementation.
- */
-void LogicLink::start (Queue<RawCompressedBlock> *queue)
-{
-        // Prepare the transfer and send it.
-        UsbDevice::start (queue);
-
-        // Send the start USB control request.
-        controlOut (UsbRequest{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_START_CAPTURE));
-}
-
-/****************************************************************************/
-
-void LogicLink::stop ()
-{
-        controlOut (UsbRequest{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_STOP_CAPTURE));
-        UsbDevice::stop ();
 }
 
 /****************************************************************************/
