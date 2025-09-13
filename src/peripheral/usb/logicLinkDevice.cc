@@ -64,6 +64,8 @@ void LogicLink::stop ()
 
 void LogicLink::writeAcquisitionParams (common::acq::Params const &params, bool legacy)
 {
+        UsbDevice::writeAcquisitionParams (params, legacy);
+
         using enum common::acq::Mode;
 
         if (legacy) {

@@ -12,11 +12,31 @@ module;
 #include <climits>
 #include <mutex>
 #include <print>
+#include <atomic>
 module logic.processing;
 
 namespace logic {
 using namespace std::chrono;
 using namespace std::string_literals;
+
+
+/**
+ * @brief Perform the (debug) analysis using a strategy.
+ * TODO consider removing.
+ * @param rawData Data to analyze.
+ * @param strategy Describes what to do.
+ * @param discard Whether to discard the data or sotre it indefinitely in the RAM.
+ */
+ struct Analyze {
+public:
+        void operator() (Queue<RawCompressedBlock> *queue, IBackend *backend, IAnalyzer *strategy, bool discard = false,
+                         bool decompress = false);
+
+        void kill () { running = false; }
+
+private:
+        std::atomic_bool running = true;
+};
 
 void Analyze::operator() (Queue<RawCompressedBlock> *queue, IBackend *backend, IAnalyzer *strategy, bool discard, bool decompress)
 {

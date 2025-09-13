@@ -12,6 +12,7 @@ module;
 #include <libusb.h>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 export module logic.peripheral:input.usb.async;
 import :device.factory.usb;
 

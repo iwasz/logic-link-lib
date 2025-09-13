@@ -52,14 +52,15 @@ namespace {
          *
          *                                                              D C B A
          */
-        std::vector<SampleBlock> rearrangeFlexio1a (RawData const &rd)
+        std::vector<Bytes> rearrangeFlexio1a (RawData const &rd)
         {
                 constexpr size_t CHANNELS_NUM = 1;
                 constexpr size_t SHIFTBUFS_PER_CH_NUM = 4;
                 constexpr size_t BYTES_PER_BATCH = sizeof (uint32_t) * CHANNELS_NUM * SHIFTBUFS_PER_CH_NUM;
 
                 auto digital = prepareDigitalBlocks (rd, CHANNELS_NUM);
-                auto outI = std::get<Bytes> (digital.at (0).buffer).begin ();
+                // auto outI = std::get<Bytes> (digital.at (0).buffer).begin ();
+                auto outI = digital.at (0).begin ();
 
                 for (size_t i = 0; i < rd.buffer.size (); i += BYTES_PER_BATCH) {
                         auto in = std::span{std::next (rd.buffer.begin (), int (i)), BYTES_PER_BATCH};
@@ -106,14 +107,15 @@ namespace {
         /**
          * The same algorithm as the above, but "rolled" to 3 nested loops instead of 2.
          */
-        std::vector<SampleBlock> rearrangeFlexio1b (RawData const &rd)
+        std::vector<Bytes> rearrangeFlexio1b (RawData const &rd)
         {
                 constexpr size_t CHANNELS_NUM = 1;
                 constexpr size_t SHIFTBUFS_PER_CH_NUM = 4;
                 constexpr size_t BYTES_PER_BATCH = sizeof (uint32_t) * CHANNELS_NUM * SHIFTBUFS_PER_CH_NUM;
 
                 auto digital = prepareDigitalBlocks (rd, CHANNELS_NUM);
-                auto outI = std::get<Bytes> (digital.at (0).buffer).begin ();
+                // auto outI = std::get<Bytes> (digital.at (0).buffer).begin ();
+                auto outI = digital.at (0).begin ();
 
                 using Batch = std::array<uint8_t, SHIFTBUFS_PER_CH_NUM>;
 
@@ -150,7 +152,7 @@ namespace {
 
 /****************************************************************************/
 
-inline std::vector<SampleBlock> rearrangeFlexio (RawData const &rd, common::acq::Params const &params)
+inline std::vector<Bytes> rearrangeFlexio (RawData const &rd, common::acq::Params const &params)
 {
         switch (params.digitalChannels) {
         case 1:
@@ -168,12 +170,12 @@ inline std::vector<SampleBlock> rearrangeFlexio (RawData const &rd, common::acq:
         }
 }
 
-std::vector<SampleBlock> rearrangeGpio1_2 (RawData const &rd, common::acq::Params const &params) { return {}; }
+std::vector<Bytes> rearrangeGpio1_2 (RawData const &rd, common::acq::Params const &params) { return {}; }
 
 /**
  * Rearrange the device speciffic data format into SampleData
  */
-std::vector<SampleBlock> rearrange (RawData const &rd, common::acq::Params const &params)
+std::vector<Bytes> rearrange (RawData const &rd, common::acq::Params const &params)
 {
         using enum common::acq::DigitalChannelEncoding;
         using enum common::acq::AnalogChannelEncoding;
@@ -200,20 +202,20 @@ std::vector<SampleBlock> rearrange (RawData const &rd, common::acq::Params const
 
 /****************************************************************************/
 
-std::vector<SampleBlock> prepareDigitalBlocks (RawData const &rd, size_t channelsNum, bool resize)
+std::vector<Bytes> prepareDigitalBlocks (RawData const &rd, size_t channelsNum, bool resize)
 {
-        std::vector<SampleBlock> digital (channelsNum);
+        std::vector<Bytes> digital (channelsNum);
 
-        SampleBlock sb = {.type = StreamType::digital,
-                          .sampleRate = 0,                                     // TODO
-                          .begin = std::chrono::high_resolution_clock::now (), // TODO
-                          .end = std::chrono::high_resolution_clock::now (),   // TODO
-                          .buffer = Bytes{}};
+        // std::vector<SampleBlock> digital (channelsNum);
+        // SampleBlock sb = {.type = StreamType::digital,
+        //                   .sampleRate = 0,
+        //                   .begin = std::chrono::high_resolution_clock::now (),
+        //                   .end = std::chrono::high_resolution_clock::now (),
+        //                   .buffer = Bytes{}};
+        // std::ranges::fill (digital, sb);
 
-        std::ranges::fill (digital, sb);
-
-        for (auto &ss : digital) {
-                auto &bb = std::get<Bytes> (ss.buffer);
+        for (auto &bb : digital) {
+                // auto &bb = std::get<Bytes> (ss.buffer);
                 auto bbsiz = rd.buffer.size () / channelsNum;
 
                 if (resize) {

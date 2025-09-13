@@ -116,9 +116,9 @@ void UsbDevice::run ()
 
         // TODO for now only digital data gets rearranged
         // TODO agnostic! vector of vector of bytes
-        // std::vector<SampleBlock> digitalChannels = rearrange (rd, params);
+        std::vector<Bytes> digitalChannels = rearrange (rd, acquisitionParams);
         // ChannelBlock digitalChannels{0, {}};
-        std::vector<Bytes> digitalChannels;
+        // std::vector<Bytes> digitalChannels;
 
         /*
          * Consider locking granularity. But even if it is too coarse, the move operation
@@ -308,6 +308,16 @@ void UsbDevice::writeTransmissionParams (UsbTransmissionParams const &params)
         }
 
         transmissionParams = params;
+}
+/****************************************************************************/
+
+void UsbDevice::writeAcquisitionParams (common::acq::Params const &params, bool /* legacy */)
+{
+        if (running_) {
+                throw Exception{"UsbDevice::writeAcquisitionParams called on a running device."};
+        }
+
+        acquisitionParams = params;
 }
 
 } // namespace logic

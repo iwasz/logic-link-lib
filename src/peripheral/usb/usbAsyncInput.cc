@@ -56,9 +56,21 @@ UsbAsyncInput::UsbAsyncInput (EventQueue *eventQueue) : AbstractInput (eventQueu
 UsbAsyncInput::~UsbAsyncInput () noexcept
 {
         kill ();
-        analyzeFuture.get (); // Will terminate if exception is thrown from the future.
+
+        /*
+         * Will terminate if exception is thrown from the future.
+         * ... which makes using futures pointless if we don't catch
+         * exceptions at all. Futures were chosen to catch the exceptions
+         * in the first place.
+         */
+        analyzeFuture.get ();
         acquireFuture.get ();
-        handles.clear ();
+
+        {
+                std::lock_guard lock{mutex};
+                handles.clear ();
+        }
+
         libusb_hotplug_deregister_callback (nullptr, hotplugCallbackHandle);
         libusb_exit (nullptr);
 }
@@ -98,20 +110,17 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
                         }
                 }
                 else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
+                        std::lock_guard lock{input->mutex};
                         auto &intDevice = input->handles.at (dev);
                         eventQueue->clearAlarm<DeviceAlarm> (intDevice);
-
-                        {
-                                /*
-                                 * Remove from the `handles` set. This releases (or prepares to release)
-                                 * all the resources. Removes the InternalHandle, deletes the shared_ptr
-                                 * device (if upper layers don't use it), which in turn calls libusb_close.
-                                 * If upper layers till hold a shared_pointer to the device, it gets
-                                 * destroyed when they release it.
-                                 */
-                                std::lock_guard lock{input->mutex};
-                                input->handles.erase (dev);
-                        }
+                        /*
+                         * Remove from the `handles` set. This releases (or prepares to release)
+                         * all the resources. Removes the InternalHandle, deletes the shared_ptr
+                         * device (if upper layers don't use it), which in turn calls libusb_close.
+                         * If upper layers till hold a shared_pointer to the device, it gets
+                         * destroyed when they release it.
+                         */
+                        input->handles.erase (dev);
                 }
         }
         catch (std::exception const &e) {
@@ -171,8 +180,24 @@ void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBacken
                         break;
                 }
 
-                for (auto &h : handles) {
-                        h.second->run ();
+                {
+                        /*
+                         * Locking for the whole time prevents `handles` collection modification,
+                         * specifficaly prevents element removal which can happen when you disconnect
+                         * a device.
+                         *
+                         * TODO But this is inefficient because this would block the whole USB thread
+                         * when a device (possibly other than the currently running one) gets deisconnected.
+                         * And that would result in a timeout, since we are very tight on bandwidth.
+                         *
+                         * TODO Though... I could un-register the hot-plug callback if at least one device
+                         * is acquiring.
+                         */
+                        std::lock_guard lock{mutex};
+
+                        for (auto &h : handles) {
+                                h.second->run ();
+                        }
                 }
         }
 }

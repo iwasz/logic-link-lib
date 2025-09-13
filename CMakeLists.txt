@@ -42,6 +42,8 @@ endif()
 # +--------------------------------------+
 
 add_library(${PROJECT_NAME})
+# add_compile_options("-fsanitize=address")
+# add_link_options("-fsanitize=address")
 
 # This is added only to set the BASE_DIRS once an for all. Without it, the first
 # target_sources instruction that adds to CXX_MODULES fileset would change the

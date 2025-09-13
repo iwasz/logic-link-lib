@@ -103,6 +103,7 @@ public:
         UsbDevice &operator= (UsbDevice &&) = delete;
         ~UsbDevice ();
 
+        void writeAcquisitionParams (common::acq::Params const &params, bool legacy) override;
         virtual void writeTransmissionParams (UsbTransmissionParams const &params);
         virtual UsbTransmissionParams readTransmissionParams () const = 0;
 
@@ -150,6 +151,7 @@ private:
          * speciffic to the device like singleTransferLenB below.
          */
         UsbTransmissionParams transmissionParams = {.singleTransferLenB = DEFAULT_USB_TRANSFER_SIZE_B};
+        common::acq::Params acquisitionParams{};
         EventQueue *eventQueue_;
 
         /// USB transfers are sent directly by this class (called by UsbAsyncInput).

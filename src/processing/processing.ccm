@@ -9,34 +9,14 @@
 module;
 #include "common/params.hh"
 #include <algorithm>
-#include <atomic>
 #include <climits>
 #include <span>
-#include <variant>
 #include <vector>
 export module logic.processing;
 import logic.data;
 import logic.analysis;
 
 namespace logic {
-
-/**
- * @brief Perform the (debug) analysis using a strategy.
- *
- * @param rawData Data to analyze.
- * @param strategy Describes what to do.
- * @param discard Whether to discard the data or sotre it indefinitely in the RAM.
- */
-export struct Analyze {
-public:
-        void operator() (Queue<RawCompressedBlock> *queue, IBackend *backend, IAnalyzer *strategy, bool discard = false,
-                         bool decompress = false);
-
-        void kill () { running = false; }
-
-private:
-        std::atomic_bool running = true;
-};
 
 export RawData decompress (RawCompressedBlock const &rcd);
 
@@ -48,12 +28,12 @@ export RawData decompress (RawCompressedBlock const &rcd);
  * for some (the fastest transfers) also bits in the input bytes have to be reordered
  * as well.
  */
-export std::vector<SampleBlock> rearrange (RawData const &rd, common::acq::Params const &params);
+export std::vector<Bytes> rearrange (RawData const &rd, common::acq::Params const &params);
 
 /**
  * A helper function for preparingff an empty batch of digital channelss.
  */
-std::vector<SampleBlock> prepareDigitalBlocks (RawData const &rd, size_t channelsNum, bool resize = true);
+std::vector<Bytes> prepareDigitalBlocks (RawData const &rd, size_t channelsNum, bool resize = true);
 
 /**
  * Configurable rearrange algorithm. Moved to a header file to simplify unit testing.
@@ -81,14 +61,15 @@ std::vector<SampleBlock> prepareDigitalBlocks (RawData const &rd, size_t channel
  * ...
  * b0[30] b1[30] b2[30] b3[30] b0[31] b1[31] b2[31] b3[31]
  */
-template <size_t CHANNELS_NUM, size_t SHIFTBUFS_PER_CH_NUM> std::vector<SampleBlock> rearrangeFlexio (RawData const &rd)
+template <size_t CHANNELS_NUM, size_t SHIFTBUFS_PER_CH_NUM> std::vector<Bytes> rearrangeFlexio (RawData const &rd)
 {
         auto digital = prepareDigitalBlocks (rd, CHANNELS_NUM);
         std::array<Bytes::iterator, CHANNELS_NUM> outI;
 
         size_t i{};
         for (auto &d : digital) {
-                outI[i++] = std::get<Bytes> (d.buffer).begin ();
+                // outI[i++] = std::get<Bytes> (d.buffer).begin ();
+                outI[i++] = d.begin ();
         }
 
         auto inI = rd.buffer.begin ();
@@ -132,14 +113,15 @@ template <size_t CHANNELS_NUM, size_t SHIFTBUFS_PER_CH_NUM> std::vector<SampleBl
  * respective channel collections (one vector per channel). Input data looks like this:
  * CH0 4B, CH1 4B, ..., CH7 4B.
  */
-template <size_t CHANNELS_NUM> std::vector<SampleBlock> rearrangeFlexio (RawData const &rd)
+template <size_t CHANNELS_NUM> std::vector<Bytes> rearrangeFlexio (RawData const &rd)
 {
         auto digital = prepareDigitalBlocks (rd, CHANNELS_NUM, false);
         size_t byteCounter{};
         size_t channelCounter{};
 
         for (uint8_t b : rd.buffer) {
-                auto &buf = std::get<Bytes> (digital[channelCounter].buffer);
+                // auto &buf = std::get<Bytes> (digital[channelCounter].buffer);
+                auto &buf = digital[channelCounter];
 
                 buf.push_back (b);
 
