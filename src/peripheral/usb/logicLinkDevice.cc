@@ -43,10 +43,10 @@ LogicLink::LogicLink (EventQueue *eventQueue, libusb_device_handle *dev) : UsbDe
  * to provide the data in format digestable for the sigrok library. Consider removing the legacy
  * param and the implementation.
  */
-void LogicLink::start (Queue<RawCompressedBlock> *queue, IBackend *backend)
+void LogicLink::start (IBackend *backend)
 {
         // Prepare the transfer and send it.
-        UsbDevice::start (queue, backend);
+        UsbDevice::start (backend);
 
         // Send the start USB control request.
         controlOut (UsbRequest{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_START_CAPTURE));

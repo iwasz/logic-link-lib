@@ -62,7 +62,7 @@ export struct IDevice {
          * Sets the session and informs an IInput object assigned to this device
          * that the start was requested. Real request gets sent from onStart.
          */
-        virtual void start (Queue<RawCompressedBlock> *queue, IBackend *backend) = 0;
+        virtual void start (IBackend *backend) = 0;
         virtual void stop () = 0;
         virtual void run () = 0;
 

@@ -37,7 +37,7 @@ public:
         void writeAcquisitionParams (common::acq::Params const &params, bool /* legacy */ = false) override;
         common::acq::Params readAcquisitionParams () const override { return params_; }
 
-        void start (Queue<RawCompressedBlock> *queue, IBackend *backend) override;
+        void start (IBackend *backend) override;
         void stop () override;
         void run () override;
 
@@ -59,7 +59,7 @@ private:
         std::atomic_bool stopRequest;
 
         /// Current output, destination of the acquired data.
-        Queue<RawCompressedBlock> *queue{};
+        Queue<RawCompressedBlock> queue{};
 };
 
 /**

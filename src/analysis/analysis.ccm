@@ -8,5 +8,5 @@
 
 export module logic.analysis;
 export import :analyzer;
-export import :lowLevel.uart;
-export import :debug.clockSignal;
+// export import :lowLevel.uart;
+// export import :debug.clockSignal;

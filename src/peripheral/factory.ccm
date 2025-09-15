@@ -14,7 +14,7 @@ module;
 export module logic.peripheral:device.factory;
 import :device;
 import :input.usb.async;
-import :input.demo;
+export import :input.demo;
 import logic.core;
 
 namespace logic {

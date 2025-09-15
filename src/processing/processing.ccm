@@ -14,7 +14,7 @@ module;
 #include <vector>
 export module logic.processing;
 import logic.data;
-import logic.analysis;
+// import logic.analysis;
 
 namespace logic {
 

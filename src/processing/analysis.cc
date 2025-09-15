@@ -8,17 +8,17 @@
 
 module;
 #include "common/params.hh"
+#include <atomic>
 #include <chrono>
 #include <climits>
 #include <mutex>
 #include <print>
-#include <atomic>
 module logic.processing;
+import logic.analysis;
 
 namespace logic {
 using namespace std::chrono;
 using namespace std::string_literals;
-
 
 /**
  * @brief Perform the (debug) analysis using a strategy.
@@ -27,7 +27,7 @@ using namespace std::string_literals;
  * @param strategy Describes what to do.
  * @param discard Whether to discard the data or sotre it indefinitely in the RAM.
  */
- struct Analyze {
+struct Analyze {
 public:
         void operator() (Queue<RawCompressedBlock> *queue, IBackend *backend, IAnalyzer *strategy, bool discard = false,
                          bool decompress = false);

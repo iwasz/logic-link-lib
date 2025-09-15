@@ -112,7 +112,7 @@ public:
          * structure, our internal data buffer, and makest this bulk transfer to
          * be resubmited everytime it finishes (hence continuous).
          */
-        void start (Queue<RawCompressedBlock> *queue, IBackend *backend) override;
+        void start (IBackend *backend) override;
         void stop () override;
         void run () override;
 
@@ -146,6 +146,9 @@ protected:
 private:
         mutable libusb_device_handle *deviceHandle_{};
 
+        /// USB transfers are sent directly by this class (called by UsbAsyncInput).
+        libusb_transfer *transfer{};
+
         /*
          * We keep some defaults global (like compress == false) and some
          * speciffic to the device like singleTransferLenB below.
@@ -154,11 +157,14 @@ private:
         common::acq::Params acquisitionParams{};
         EventQueue *eventQueue_;
 
-        /// USB transfers are sent directly by this class (called by UsbAsyncInput).
-        libusb_transfer *transfer{};
-
         /// Data received during the last transfer.
         Bytes singleTransfer;
+
+        /// Current output, destination of the acquired data.
+        Queue<RawCompressedBlock> queue{};
+        IBackend *backend{};
+
+        std::mutex mutex; // Protects all of the above (except libusb)
 
         /// Used to stop re-issuing the transfer.
         std::atomic_bool stopRequest;
@@ -166,10 +172,6 @@ private:
         /// It's sole purpose is to indicate teh status to the outside world.
         mutable std::atomic<State> state_;
         mutable std::atomic_bool running_;
-
-        /// Current output, destination of the acquired data.
-        Queue<RawCompressedBlock> *queue{};
-        IBackend *backend{};
 };
 
 } // namespace logic

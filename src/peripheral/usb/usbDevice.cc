@@ -31,25 +31,28 @@ UsbDevice::~UsbDevice ()
 
 /****************************************************************************/
 
-void UsbDevice::start (Queue<RawCompressedBlock> *queue, IBackend *backend)
+void UsbDevice::start (IBackend *backend)
 {
         if (running_) {
                 throw Exception{"Start called, but the device has been already started."};
         }
 
-        this->queue = queue;
-        this->backend = backend;
+        {
+                // std::lock_guard lock{mutex};
+                this->backend = backend;
 
-        if (!transmissionParams.discardRaw) {
-                this->queue->start ();
+                if (!transmissionParams.discardRaw) {
+                        queue.start ();
+                }
+
+                if (transmissionParams.singleTransferLenB == 0) {
+                        notify (false, State::error);
+                        throw Exception{"Can't send an USB transfer of length 0."};
+                }
+
+                singleTransfer.resize (transmissionParams.singleTransferLenB);
         }
 
-        if (transmissionParams.singleTransferLenB == 0) {
-                notify (false, State::error);
-                throw Exception{"Can't send an USB transfer of length 0."};
-        }
-
-        singleTransfer.resize (transmissionParams.singleTransferLenB);
         stopRequest = false;
 
         if (transfer = libusb_alloc_transfer (0); transfer == nullptr) {
@@ -94,7 +97,14 @@ void UsbDevice::run ()
          *
          * queue->start () called in UsbDevice::start
          */
-        std::unique_ptr<RawCompressedBlock> rcd = (transmissionParams.discardRaw) ? (queue->pop ()) : (queue->next ());
+        std::unique_ptr<RawCompressedBlock> rcd;
+        bool compressed = false;
+
+        {
+                // std::lock_guard lock{mutex};
+                rcd = (transmissionParams.discardRaw) ? (queue.pop ()) : (queue.next ());
+                compressed = transmissionParams.decompress;
+        }
 
         if (!rcd) {
                 return;
@@ -102,7 +112,7 @@ void UsbDevice::run ()
 
         RawData rd;
 
-        if (transmissionParams.decompress) {
+        if (compressed) {
                 rd = decompress (*rcd);
                 rcd->clear ();
         }
@@ -198,7 +208,6 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
 
         if (h->stopRequest) {
                 h->notify (false, State::ok);
-                h->queue = nullptr;
                 return;
         }
 
@@ -227,7 +236,7 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                 // auto mbps = (double (benchmarkB) / double (duration_cast<microseconds> (now - *startPoint).count ())) * 8;
                 double mbps = 0;
                 RawCompressedBlock rcd{mbps, 0, std::move (h->singleTransfer)}; // TODO resize blocks (if needed)
-                h->queue->push (std::move (rcd));                               // Lock protected
+                h->queue.push (std::move (rcd));                                // Lock protected
                 h->singleTransfer = Bytes (transferLen);
                 // std::println (".");
         }
@@ -307,6 +316,7 @@ void UsbDevice::writeTransmissionParams (UsbTransmissionParams const &params)
                 throw Exception{"UsbDevice::writeTransmissionParams called on a running device."};
         }
 
+        // std::lock_guard lock{mutex};
         transmissionParams = params;
 }
 /****************************************************************************/
@@ -317,6 +327,7 @@ void UsbDevice::writeAcquisitionParams (common::acq::Params const &params, bool 
                 throw Exception{"UsbDevice::writeAcquisitionParams called on a running device."};
         }
 
+        // std::lock_guard lock{mutex};
         acquisitionParams = params;
 }
 

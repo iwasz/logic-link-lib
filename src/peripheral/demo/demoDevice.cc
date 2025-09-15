@@ -25,7 +25,7 @@ void DemoDevice::writeAcquisitionParams (common::acq::Params const &params, bool
 
 /****************************************************************************/
 
-void DemoDevice::start (Queue<RawCompressedBlock> *queue, IBackend * /* backend */) { this->queue = queue; }
+void DemoDevice::start (IBackend * /* backend */) { /* this->queue = queue; */ }
 
 void DemoDevice::run () {}
 
@@ -34,7 +34,7 @@ void DemoDevice::run () {}
 void DemoDevice::stop ()
 {
         stopRequest = true;
-        queue = nullptr;
+        // queue = nullptr;
 }
 
 } // namespace logic
