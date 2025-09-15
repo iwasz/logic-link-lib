@@ -84,27 +84,16 @@ void UsbDevice::run ()
                 return;
         }
 
-        // if (strategy != nullptr) {
-        //         strategy->start ();
-        // }
-
         /*
          * Protecting transmissionParams with mutex is not crucial as it
          * changes only upon a call to writeTransmissionParams. That method
          * in turn checks for atomic running_ flag and throws if running_ is
-         * true. UsbDevice::run at the other hand runs only when running_ is
+         * true. UsbDevice::run at the other hand, runs only when running_ is
          * true, so they are mutually exclusive.
          *
          * queue->start () called in UsbDevice::start
          */
-        std::unique_ptr<RawCompressedBlock> rcd;
-        bool compressed = false;
-
-        {
-                // std::lock_guard lock{mutex};
-                rcd = (transmissionParams.discardRaw) ? (queue.pop ()) : (queue.next ());
-                compressed = transmissionParams.decompress;
-        }
+        auto rcd = (transmissionParams.discardRaw) ? (queue.pop ()) : (queue.next ());
 
         if (!rcd) {
                 return;
@@ -112,7 +101,7 @@ void UsbDevice::run ()
 
         RawData rd;
 
-        if (compressed) {
+        if (transmissionParams.decompress) {
                 rd = decompress (*rcd);
                 rcd->clear ();
         }
@@ -200,8 +189,8 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                 /*
                  * We're in the interal lubusb thread now, we can't throw, thus I
                  */
-                auto msg = std::format ("USB transfer status error Code: {}", libusb_error_name (transfer->status));
-                h->eventQueue ()->addEvent<ErrorEvent> (msg);
+                h->eventQueue ()->addEvent<ErrorEvent> (
+                        std::format ("USB transfer status error Code: {}", libusb_error_name (transfer->status)));
                 h->notify (false, State::error);
                 return;
         }
@@ -211,19 +200,17 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                 return;
         }
 
-        if (auto rc = libusb_submit_transfer (transfer); rc < 0) {
-                auto msg = std::format ("libusb_submit_transfer status error Code: {}", libusb_error_name (rc));
+        if (size_t (transfer->actual_length) < transferLen) {
+                // Shrink. Standard guarantees, there's no re-allocation here.
+                h->singleTransfer.resize (transfer->actual_length);
+        }
+        else if (size_t (transfer->actual_length) > transferLen) {
+                // This should never happen I think.
+                h->eventQueue ()->addEvent<ErrorEvent> ("There's more data received than requested.");
                 h->notify (false, State::error);
-                h->eventQueue ()->addEvent<ErrorEvent> (msg);
                 return;
         }
 
-        // if (size_t (transfer->actual_length) != transferLen) {
-        //         // TODO this should be removed
-        //         std::println ("Short: {}", transfer->actual_length);
-        // }
-
-        h->singleTransfer.resize (transfer->actual_length);
         // auto now = high_resolution_clock::now ();
         // benchmarkB += singleTransfer.size ();
 
@@ -235,10 +222,39 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
         if (!h->singleTransfer.empty ()) {
                 // auto mbps = (double (benchmarkB) / double (duration_cast<microseconds> (now - *startPoint).count ())) * 8;
                 double mbps = 0;
-                RawCompressedBlock rcd{mbps, 0, std::move (h->singleTransfer)}; // TODO resize blocks (if needed)
-                h->queue.push (std::move (rcd));                                // Lock protected
-                h->singleTransfer = Bytes (transferLen);
-                // std::println (".");
+
+                /*
+                 * Warning! I made a terible mistake here, the one which takes
+                 * hours to debug and drives you crazy. In my case it took me 12
+                 * hours over 4 days to figure it out. The lines you see below
+                 * originally read:
+                 *
+                 * RawCompressedBlock rcd{mbps, 0, std::move (h->singleTransfer)};
+                 * ...
+                 * h->singleTransfer = Bytes (transferLen);
+                 *
+                 * Which first destroyed the h->singleTransfer and then immediately
+                 * re-created it. But I ignored the fact that in the start method the
+                 * libusb_fill_bulk_transfer is given the original h->singleTransfer
+                 * memory address and stores it indefinitely. So the next time the
+                 * libusb_submit_transfer was called it tried to fill that original,
+                 * not existing memory buffer.
+                 *
+                 * Another problem here, was that libusb_submit_transfer was called
+                 * BEFORE the h->singleTransfer was copied (actually moved) to the
+                 * final queue.
+                 */
+                RawCompressedBlock rcd{mbps, 0, h->singleTransfer}; // TODO resize blocks (if needed)
+                h->queue.push (std::move (rcd));                    // Lock protected
+                h->singleTransfer.resize (transferLen);
+        }
+
+        // Only after finishing the data gathering may we re-start the transfer.
+        if (auto rc = libusb_submit_transfer (transfer); rc < 0) {
+                auto msg = std::format ("libusb_submit_transfer status error Code: {}", libusb_error_name (rc));
+                h->notify (false, State::error);
+                h->eventQueue ()->addEvent<ErrorEvent> (msg);
+                return;
         }
 }
 

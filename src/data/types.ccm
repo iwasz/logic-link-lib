@@ -95,7 +95,7 @@ public:
                         return {};
                 }
 
-                auto p = std::make_unique<Elem> (data.front ());
+                auto p = std::make_unique<Elem> (data.front ()); // TODO Why not to move?
                 data.pop_front ();
                 return p;
         }
