@@ -10,4 +10,5 @@ target_sources(${PROJECT_NAME}
     data.ccm
     frontend.ccm
     types.ccm
+    queue.ccm
 )

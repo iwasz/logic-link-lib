@@ -1,0 +1,109 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <optional>
+export module logic.data:queue;
+
+export namespace logic {
+
+template <typename Elem> class Queue {
+public:
+        template <typename... T> void push (T &&...t);
+        std::unique_ptr<Elem> pop ();
+
+        /*--------------------------------------------------------------------------*/
+
+        void start ();
+        std::unique_ptr<Elem> next () const;
+
+        /*--------------------------------------------------------------------------*/
+
+        void close ();
+
+private:
+        std::deque<Elem> data;
+        mutable std::mutex mutex;
+        mutable std::condition_variable cVar;
+        mutable std::optional<size_t> index;
+        bool started_{}; // Tells if iteration has been started and is in proces
+        bool closed_{};  // Additional
+};
+
+/****************************************************************************/
+
+template <typename Elem> template <typename... T> void Queue<Elem>::push (T &&...t)
+{
+        {
+                std::lock_guard lock{mutex};
+                data.emplace_back (std::forward<T> (t)...);
+                closed_ = false;
+        }
+
+        cVar.notify_all ();
+}
+
+/****************************************************************************/
+
+template <typename Elem> std::unique_ptr<Elem> Queue<Elem>::pop ()
+{
+        std::unique_lock lock{mutex};
+        cVar.wait (lock, [this] { return !data.empty () || closed_; });
+
+        if (closed_) {
+                return {};
+        }
+
+        auto p = std::make_unique<Elem> (data.front ()); // TODO Why not to move?
+        data.pop_front ();
+        return p;
+}
+
+/****************************************************************************/
+
+template <typename Elem> void Queue<Elem>::start ()
+{
+        std::lock_guard lock{mutex};
+        started_ = false;
+}
+
+/****************************************************************************/
+
+template <typename Elem> std::unique_ptr<Elem> Queue<Elem>::next () const
+{
+        std::unique_lock lock{mutex};
+
+        if (!index) {
+                index = 0;
+        }
+
+        cVar.wait (lock, [this] { return data.size () > *index || closed_; });
+
+        if (closed_) {
+                return {};
+        }
+
+        auto p = std::make_unique<Elem> (data.at ((*index)++));
+        return p;
+}
+
+/****************************************************************************/
+
+template <typename Elem> void Queue<Elem>::close ()
+{
+        {
+                std::lock_guard lock{mutex};
+                closed_ = true;
+        }
+
+        cVar.notify_all ();
+}
+} // namespace logic

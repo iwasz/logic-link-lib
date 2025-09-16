@@ -19,37 +19,42 @@ namespace logic {
 class ChannelBlock {
 public:
         ChannelBlock () = default;
+        ChannelBlock (size_t channels, size_t numberOfSamples);
         ChannelBlock (SampleIdx const &firstSampleNo, std::vector<Bytes> &&d) : firstSampleNo_{firstSampleNo}, data{std::move (d)} {}
         // ChannelBlock (SampleIdx const &firstSampleNo, std::vector<Bytes> const &d) : firstSampleNo_{firstSampleNo}, data{d} {}
 
         SampleIdx const &firstSampleNo () const { return firstSampleNo_; }
         SampleIdx lastSampleNo () const
         {
-                auto s = firstSampleNo_ + size ();
+                auto s = firstSampleNo_ + channelSize ();
                 return (s > 0) ? (s - 1) : (0);
         }
 
         /// Number of channels in the block.
-        size_t channelsNo () const { return data.size (); }
+        size_t channelsNumber () const { return data.size (); }
 
         /// Length of the block. Assumes that all channels are the same length.
-        size_t size () const { return (data.empty ()) ? (0U) : (data.front ().size ()); }
+        size_t channelSize () const { return (data.empty ()) ? (0U) : (data.front ().size ()); }
 
         // private:
-        SampleIdx firstSampleNo_;
+        SampleIdx firstSampleNo_{};
 
         // For now only Bytes are supported.
         std::vector<Bytes> data;
 };
 
 /**
+ * Like block, but should be regarded as a continuous and presumable longer
+ * buffer than the single bloc. Generally multiple blocks will get joined
+ * together to form a stream, even though the C++ data type is the same.
+ */
+using ChannelStream = ChannelBlock;
+
+/**
  *
  */
 class ChannelBlockStream {
 public:
-        StreamType type;
-        SampleRate sampleRate;
-
         using Container = std::deque<ChannelBlock>;
         using SubRange = std::ranges::subrange<Container::const_iterator>;
 
@@ -59,15 +64,30 @@ public:
          * Returns block range that includes sample numbers passed (inclusive).
          */
         SubRange range (SampleIdx const &begin, SampleIdx const &end);
+        // static ChannelStream subrangeToChannelStream (SubRange const &subRangeBlocks);
 
         Container const &data () const { return data_; }
 
+        StreamType type () const { return type_; }
+        void setType (StreamType type) { type_ = type; }
+
+        SampleRate sampleRate () const { return sampleRate_; }
+        void setSampleRate (SampleRate sr) { sampleRate_ = sr; }
+
+        size_t channelsNumber () const { return (data_.empty ()) ? (0) : (data_.front ().channelsNumber ()); }
+
 private:
-        SampleIdx currentSampleNo;
+        StreamType type_{};
+        SampleRate sampleRate_{};
+        SampleIdx currentSampleNo{};
         Container data_;
 };
 
+/// Groups
 using ChannelBlockStreams = std::vector<ChannelBlockStream>;
+
+/// Groups
+using ChannelStreams = std::vector<ChannelStream>;
 
 /**
  * A database for string (sample) data.
@@ -80,11 +100,11 @@ export struct IBackend {
         IBackend &operator= (IBackend &&) noexcept = default;
         virtual ~IBackend () = default;
 
-        using SubRange = ChannelBlockStream::SubRange;
+        // using SubRange = ChannelBlockStream::SubRange;
 
         /// Adds s[0] to stream[0], s[1] to stream[1] etc
         virtual void append (size_t groupIdx, std::vector<Bytes> &&s) = 0;
-        virtual SubRange range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) = 0;
+        virtual ChannelStream range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) = 0;
         virtual size_t groupsNo () const = 0;
 };
 
@@ -116,23 +136,17 @@ export struct IBackend {
 // using Groups = std::vector<Group>;
 
 /**
- * Simple backend for unit testing, and CLI app development.
- * TODO locking
- * TODO implementation
+ *
+ *
  */
 export class BlockBackend : public IBackend {
 public:
         BlockBackend () : groups (16) {}
 
-        void append (size_t groupIdx, std::vector<Bytes> &&s) override
-        {
-                // std::lock_guard lock{mutex};
-                // groups.at (groupIdx).append (std::move (s));
-        }
+        void append (size_t groupIdx, std::vector<Bytes> &&s) override;
+        ChannelStream range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
 
-        SubRange range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
         void configureGroup (size_t groupIdx, SampleRate sampleRate);
-
         size_t groupsNo () const override { return groups.size (); }
 
 private:

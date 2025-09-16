@@ -1,4 +1,4 @@
-# add_subdirectory(debug)
+add_subdirectory(debug)
 # add_subdirectory(lowLevel)
 
 target_sources(${PROJECT_NAME}

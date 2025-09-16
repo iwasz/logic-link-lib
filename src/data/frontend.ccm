@@ -18,11 +18,6 @@ import logic.util;
 
 export namespace logic {
 
-/// Single group
-using ChannelStream = ChannelBlock;
-/// Groups
-using ChannelStreams = std::vector<ChannelStream>;
-
 /**
  * Range of all available data. Returned by the frontend.
  */
@@ -80,7 +75,7 @@ class /*RandomAccess*/ Frontend : public IFrontend {
 public:
         explicit Frontend (IBackend *backend);
 
-        SampleNum size (size_t groupIdx) const override { return current.at (groupIdx).size () * CHAR_BIT; }
+        SampleNum size (size_t groupIdx) const override { return current.at (groupIdx).channelSize () * CHAR_BIT; }
 
         // ChannelStreams next () override { return {}; }
 

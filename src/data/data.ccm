@@ -7,7 +7,8 @@
  ****************************************************************************/
 
 export module logic.data;
-export import :types;
-export import :frontend;
-export import :backend;
 export import :acqParams;
+export import :backend;
+export import :frontend;
+export import :queue;
+export import :types;

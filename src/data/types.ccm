@@ -8,7 +8,6 @@
 
 module;
 #include "common/constants.hh"
-#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <deque>
@@ -50,6 +49,12 @@ enum class StreamType : uint8_t { digital, analog };
 using SampleIdx = uint64_t;
 using SampleNum = uint64_t;
 
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+
 /**
  * Buffer of sample data. Typically this data will come from a logic analyzer device,
  * can be 8-32 bit wide, but it can also come from other sources like a file, etc.
@@ -71,82 +76,6 @@ struct RawCompressedBlock {
         Bytes buffer;        /// Binary data.
 
         void clear () { buffer.clear (); }
-};
-
-template <typename Elem> class Queue {
-public:
-        template <typename... T> void push (T &&...t)
-        {
-                {
-                        std::lock_guard lock{mutex};
-                        data.emplace_back (std::forward<T> (t)...);
-                        closed_ = false;
-                }
-
-                cVar.notify_all ();
-        }
-
-        std::unique_ptr<Elem> pop ()
-        {
-                std::unique_lock lock{mutex};
-                cVar.wait (lock, [this] { return !data.empty () || closed_; });
-
-                if (closed_) {
-                        return {};
-                }
-
-                auto p = std::make_unique<Elem> (data.front ()); // TODO Why not to move?
-                data.pop_front ();
-                return p;
-        }
-
-        /*--------------------------------------------------------------------------*/
-
-        void start ()
-        {
-                std::lock_guard lock{mutex};
-                started_ = false;
-        }
-
-        std::unique_ptr<Elem> next ()
-        {
-                std::unique_lock lock{mutex};
-
-                if (!index) {
-                        index = 0;
-                }
-
-                cVar.wait (lock, [this] { return data.size () > *index || closed_; });
-
-                if (closed_) {
-                        return {};
-                }
-
-                auto p = std::make_unique<Elem> (data.at ((*index)++));
-                return p;
-        }
-
-        /*--------------------------------------------------------------------------*/
-
-        void close ()
-        {
-                {
-                        std::lock_guard lock{mutex};
-                        closed_ = true;
-                }
-
-                cVar.notify_all ();
-        }
-
-private:
-        std::deque<Elem> data;
-        std::mutex mutex;
-        std::condition_variable cVar;
-
-        // using Iterator = std::deque<Elem>::iterator;
-        std::optional<size_t> index;
-        bool started_{}; // Tells if iteration has been started and is in proces
-        bool closed_{};  // Additional
 };
 
 /**
