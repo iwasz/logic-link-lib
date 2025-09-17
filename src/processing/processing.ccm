@@ -13,6 +13,7 @@ module;
 #include <span>
 #include <vector>
 export module logic.processing;
+export import :generate;
 import logic.data;
 // import logic.analysis;
 

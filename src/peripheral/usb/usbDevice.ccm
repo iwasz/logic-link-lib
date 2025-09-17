@@ -94,7 +94,7 @@ export struct UsbInterface {
  * - Can configure USb class / interface and app-logic stuff (using USB requests).
  * TODO In the future it will also decode received data.
  */
-export class UsbDevice : public IDevice {
+export class UsbDevice : public AbstractDevice {
 public:
         UsbDevice (EventQueue *eventQueue, libusb_device_handle *dev) : deviceHandle_{dev}, eventQueue_{eventQueue} {}
         UsbDevice (UsbDevice const &) = delete;
@@ -103,7 +103,6 @@ public:
         UsbDevice &operator= (UsbDevice &&) = delete;
         ~UsbDevice ();
 
-        void writeAcquisitionParams (common::acq::Params const &params, bool legacy) override;
         virtual void writeTransmissionParams (UsbTransmissionParams const &params);
         virtual UsbTransmissionParams readTransmissionParams () const = 0;
 
@@ -116,16 +115,9 @@ public:
         void stop () override;
         void run () override;
 
-        bool running () const override { return running_; }
-        State state () const override { return state_; }
-
-        // void setState (State s);
-        // void setRunning (bool b);
-        void notify (std::optional<bool> running, std::optional<State> state);
-
 protected:
         libusb_device_handle *deviceHandle () { return deviceHandle_; };
-        EventQueue *eventQueue () { return eventQueue_; }
+        EventQueue *eventQueue () override { return eventQueue_; }
 
         /**
          * Basic USB bookeeping like opening thge device, claiming the interface
@@ -154,7 +146,6 @@ private:
          * speciffic to the device like singleTransferLenB below.
          */
         UsbTransmissionParams transmissionParams = {.singleTransferLenB = DEFAULT_USB_TRANSFER_SIZE_B};
-        common::acq::Params acquisitionParams{};
         EventQueue *eventQueue_;
 
         /// Data received during the last transfer.
@@ -168,10 +159,6 @@ private:
 
         /// Used to stop re-issuing the transfer.
         std::atomic_bool stopRequest;
-
-        /// It's sole purpose is to indicate teh status to the outside world.
-        mutable std::atomic<State> state_;
-        mutable std::atomic_bool running_;
 };
 
 } // namespace logic

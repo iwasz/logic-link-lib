@@ -11,9 +11,10 @@ module;
 #include "common/params.hh"
 #include "common/stats.hh"
 #include <any>
+#include <atomic>
 #include <functional>
-#include <libusb.h>
 #include <memory>
+#include <optional>
 #include <unordered_set>
 export module logic.peripheral:device;
 import logic.core;
@@ -85,6 +86,30 @@ export struct IDevice {
          */
         virtual std::unordered_set<logs::Code> getErrors () = 0;
         virtual void clearErrors () = 0;
+};
+
+/**
+ * Some common stuff.
+ */
+export class AbstractDevice : public IDevice {
+public:
+        bool running () const override { return running_; }
+        State state () const override { return state_; }
+
+        void notify (std::optional<bool> running, std::optional<State> state);
+
+        /*--------------------------------------------------------------------------*/
+
+        void writeAcquisitionParams (common::acq::Params const &params, bool legacy) override;
+
+protected:
+        virtual EventQueue *eventQueue () = 0;
+        common::acq::Params acquisitionParams{};
+
+private:
+        /// It's sole purpose is to indicate the status to the outside world.
+        mutable std::atomic<State> state_;
+        mutable std::atomic_bool running_;
 };
 
 /**

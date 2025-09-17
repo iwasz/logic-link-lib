@@ -33,7 +33,7 @@ UsbDevice::~UsbDevice ()
 
 void UsbDevice::start (IBackend *backend)
 {
-        if (running_) {
+        if (running ()) {
                 throw Exception{"Start called, but the device has been already started."};
         }
 
@@ -80,7 +80,7 @@ void UsbDevice::start (IBackend *backend)
 
 void UsbDevice::run ()
 {
-        if (!running_) {
+        if (!running ()) {
                 return;
         }
 
@@ -311,40 +311,14 @@ std::string UsbDevice::getString (uint32_t clazz, uint32_t verb, size_t len) con
 
 /****************************************************************************/
 
-void UsbDevice::notify (std::optional<bool> running, std::optional<State> state)
-{
-        if (running != std::nullopt) {
-                running_ = *running;
-        }
-
-        if (state != std::nullopt) {
-                state_ = *state;
-        }
-
-        eventQueue ()->addEvent<DeviceStatusAlarm> (this, running_, state_);
-}
-
-/****************************************************************************/
-
 void UsbDevice::writeTransmissionParams (UsbTransmissionParams const &params)
 {
-        if (running_) {
+        if (running ()) {
                 throw Exception{"UsbDevice::writeTransmissionParams called on a running device."};
         }
 
         // std::lock_guard lock{mutex};
         transmissionParams = params;
-}
-/****************************************************************************/
-
-void UsbDevice::writeAcquisitionParams (common::acq::Params const &params, bool /* legacy */)
-{
-        if (running_) {
-                throw Exception{"UsbDevice::writeAcquisitionParams called on a running device."};
-        }
-
-        // std::lock_guard lock{mutex};
-        acquisitionParams = params;
 }
 
 } // namespace logic

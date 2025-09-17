@@ -53,7 +53,7 @@ TEST_CASE ("flexio", "[rearrange]")
                 REQUIRE (sd.at (7) == Bytes{0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77});
         }
 
-        SECTION ("8 channels 1 shifter per channel")
+        SECTION ("4 channels 1 shifter per channel")
         {
                 RawData raw;
                 raw.buffer = {

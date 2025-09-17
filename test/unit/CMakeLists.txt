@@ -49,14 +49,15 @@ add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME}
   PRIVATE
-    queue.cc
-    debugIntegrity.cc
-    rearrange.cc
-    uart.cc
-    frontend.cc
     backend.cc
     bitSpan.cc
+    debugIntegrity.cc
     eventQueue.cc
+    frontend.cc
+    generate.cc
+    queue.cc
+    rearrange.cc
+    uart.cc
 
   PUBLIC FILE_SET CXX_MODULES FILES
     utils.ccm

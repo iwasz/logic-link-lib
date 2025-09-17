@@ -7,15 +7,17 @@
  ****************************************************************************/
 
 module;
-#include <memory>
-module logic.peripheral;
-import :input.demo;
+#include <cstdlib>
+export module logic.processing:generate;
+import logic.data;
 
 namespace logic {
 
-DemoInput::DemoInput (EventQueue *eventQueue) : AbstractInput{eventQueue}
-{
-        eventQueue->setAlarm<DemoDeviceAlarm> (std::make_shared<DemoDevice> (eventQueue));
-}
+/**
+ * Generate a square signal. bitsTotal gets rounded to nearest number
+ * divisible by 8. By default signal strarts from HIGH state, but you
+ * can change that by using the state argument.
+ */
+export Bytes square (size_t hiBits, size_t loBits, size_t bitsTotal, bool state = true);
 
 } // namespace logic

@@ -8,33 +8,63 @@
 
 module;
 #include "common/constants.hh"
-#include "common/error.hh"
-#include "common/params.hh"
-#include "common/stats.hh"
-#include <cstdint>
-#include <cstdlib>
-#include <libusb.h>
-#include <print>
-#include <string>
-#include <vector>
+#include <thread>
 module logic.peripheral;
+import logic.processing;
 
 namespace logic {
+using namespace std::chrono_literals;
 
-void DemoDevice::writeAcquisitionParams (common::acq::Params const &params, bool /* legacy */) { params_ = params; }
+DemoDevice::DemoDevice (EventQueue *eventQueue) : eventQueue_{eventQueue}
+{
+        // We have to have valid defaults.
+        acquisitionParams.digitalChannels = 16;
+        acquisitionParams.digitalSampleRate = 3000'000;
+}
 
 /****************************************************************************/
 
-void DemoDevice::start (IBackend * /* backend */) { /* this->queue = queue; */ }
+void DemoDevice::start (IBackend *backend)
+{
+        notify (true, State::ok);
 
-void DemoDevice::run () {}
+        thread = std::thread{[backend, this] {
+                while (running ()) {
+                        auto now = std::chrono::steady_clock::now ();
+
+                        auto dc = acquisitionParams.digitalChannels;
+                        std::vector<Bytes> channels;
+                        channels.reserve (dc);
+
+                        for (auto i = 0U; i < dc; ++i) {
+                                /*
+                                 * Square wave which frequency increases proportionally with the
+                                 * channel number and length (number of bits) decreases.
+                                 */
+                                channels.push_back (square (i + 1, i + 1, transferSize * CHAR_BIT / dc));
+                        }
+
+                        backend->append (0, std::move (channels));
+
+                        auto timeSpent = std::chrono::seconds (transferSize / acquisitionParams.digitalSampleRate);
+                        std::this_thread::sleep_until (now + timeSpent);
+                }
+        }};
+}
 
 /****************************************************************************/
 
 void DemoDevice::stop ()
 {
-        stopRequest = true;
-        // queue = nullptr;
+        try {
+                notify (false, State::ok);
+                if (thread.joinable ()) {
+                        thread.join ();
+                }
+        }
+        catch (std::exception const &e) {
+                eventQueue ()->addEvent<ErrorEvent> (std::format ("DemoDevice stop exception: {}", e.what ()));
+        }
 }
 
 } // namespace logic
