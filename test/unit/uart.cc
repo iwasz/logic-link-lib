@@ -34,7 +34,7 @@ class RealBackend : public IBacked {}; // for testingf
 
 TEST_CASE ("Valid", "[uart]")
 {
-        SampleBlockStream in;
+        ChannelBlockStream in;
         // in.digital.push_back (Bytes{1, 2, 3});
 
         UartAnalyzer a{0};

@@ -40,7 +40,7 @@ public:
         void stop () override {}
 
         // void runRaw (RawData const & /* rd */) override {} // TODO this produces errors in UTs when is removed.
-        AugumentedData run (SampleBlockStream const &samples) override;
+        AugumentedData run (BlockArray const &samples) override;
 
         /// Analyze only `mod`-th 32 bit word out of every `div` words in the stream.
         void setDecimation (int div, int mod)
@@ -74,7 +74,7 @@ using namespace std::string_literals;
 
 /****************************************************************************/
 
-AugumentedData ClockSignalCheck::run (SampleBlockStream const & /* samples */)
+AugumentedData ClockSignalCheck::run (BlockArray const & /* samples */)
 {
         // auto const &bytes = std::get<Bytes> (samples.at (channel ()).buffer);
         // auto dmaBlocksNum = bytes.size () / dmaBlockLenB (); // We assume % is 0.

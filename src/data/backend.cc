@@ -17,7 +17,7 @@ import logic.core;
 
 namespace logic {
 
-ChannelBlock::ChannelBlock (size_t channels, size_t numberOfSampl) : data (channels)
+Block::Block (size_t channels, size_t numberOfSampl) : data (channels)
 {
         for (auto &ch : data) {
                 ch.resize (numberOfSampl);
@@ -26,26 +26,25 @@ ChannelBlock::ChannelBlock (size_t channels, size_t numberOfSampl) : data (chann
 
 /****************************************************************************/
 
-void ChannelBlockStream::append (std::vector<Bytes> &&channels)
+void BlockArray::append (std::vector<Bytes> &&channels)
 {
-        auto cb = ChannelBlock{currentSampleNo, std::move (channels)};
+        auto cb = Block{currentSampleNo, std::move (channels)};
         currentSampleNo = currentSampleNo + cb.channelSize ();
         data_.push_back (std::move (cb));
 }
 
 /*--------------------------------------------------------------------------*/
 
-ChannelBlockStream::SubRange ChannelBlockStream::range (SampleIdx const &begin, SampleIdx const &end)
+BlockArray::SubRange BlockArray::range (SampleIdx const &begin, SampleIdx const &end)
 {
         if (begin == end) {
                 return {};
         }
 
         auto b = std::find_if (data_.cbegin (), data_.cend (),
-                               [&begin] (ChannelBlock const &b) { return b.firstSampleNo () <= begin && b.lastSampleNo () >= begin; });
+                               [&begin] (Block const &b) { return b.firstSampleNo () <= begin && b.lastSampleNo () >= begin; });
 
-        auto e = std::find_if (b, data_.cend (),
-                               [&end] (ChannelBlock const &b) { return b.firstSampleNo () <= end && b.lastSampleNo () >= end; });
+        auto e = std::find_if (b, data_.cend (), [&end] (Block const &b) { return b.firstSampleNo () <= end && b.lastSampleNo () >= end; });
 
         if (e != data_.cend ()) {
                 std::advance (e, 1);
@@ -56,7 +55,7 @@ ChannelBlockStream::SubRange ChannelBlockStream::range (SampleIdx const &begin, 
 
 /****************************************************************************/
 
-void BlockBackend::append (size_t groupIdx, std::vector<Bytes> &&s)
+void Backend::append (size_t groupIdx, std::vector<Bytes> &&s)
 {
         std::lock_guard lock{mutex};
         groups.at (groupIdx).append (std::move (s));
@@ -64,7 +63,7 @@ void BlockBackend::append (size_t groupIdx, std::vector<Bytes> &&s)
 
 /*--------------------------------------------------------------------------*/
 
-ChannelStream BlockBackend::range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end)
+Stream Backend::range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end)
 {
         std::lock_guard lock{mutex};
         auto &group = groups.at (groupIdx);
@@ -75,7 +74,7 @@ ChannelStream BlockBackend::range (size_t groupIdx, SampleIdx const &begin, Samp
         }
 
         SampleNum totalLenToCopy = std::min<SampleNum> (end, subRangeBlocks.back ().lastSampleNo () + 1) - begin;
-        ChannelStream trimmedSubrange{group.channelsNumber (), size_t (totalLenToCopy)};
+        Stream trimmedSubrange{group.channelsNumber (), size_t (totalLenToCopy)};
 
         size_t cnt{};
         SampleNum outputStartOffset{};
@@ -106,7 +105,7 @@ ChannelStream BlockBackend::range (size_t groupIdx, SampleIdx const &begin, Samp
 
 /*--------------------------------------------------------------------------*/
 
-void BlockBackend::configureGroup (size_t groupIdx, SampleRate sampleRate)
+void Backend::configureGroup (size_t groupIdx, SampleRate sampleRate)
 {
 
         if (groups.size () <= groupIdx) {

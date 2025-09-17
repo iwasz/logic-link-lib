@@ -14,13 +14,16 @@ module;
 export module logic.data:backend;
 import :types;
 
-namespace logic {
+export namespace logic {
 
-class ChannelBlock {
+/**
+ * A group of channels.
+ */
+class Block {
 public:
-        ChannelBlock () = default;
-        ChannelBlock (size_t channels, size_t numberOfSamples);
-        ChannelBlock (SampleIdx const &firstSampleNo, std::vector<Bytes> &&d) : firstSampleNo_{firstSampleNo}, data{std::move (d)} {}
+        Block () = default;
+        Block (size_t channels, size_t numberOfSamples);
+        Block (SampleIdx const &firstSampleNo, std::vector<Bytes> &&d) : firstSampleNo_{firstSampleNo}, data{std::move (d)} {}
         // ChannelBlock (SampleIdx const &firstSampleNo, std::vector<Bytes> const &d) : firstSampleNo_{firstSampleNo}, data{d} {}
 
         SampleIdx const &firstSampleNo () const { return firstSampleNo_; }
@@ -40,7 +43,7 @@ public:
         SampleIdx firstSampleNo_{};
 
         // For now only Bytes are supported.
-        std::vector<Bytes> data;
+        std::vector<Bytes> data; // Horizontal
 };
 
 /**
@@ -48,14 +51,14 @@ public:
  * buffer than the single bloc. Generally multiple blocks will get joined
  * together to form a stream, even though the C++ data type is the same.
  */
-using ChannelStream = ChannelBlock;
+using Stream = Block;
 
 /**
- *
+ * Multiple blocks one after another.
  */
-class ChannelBlockStream {
+class BlockArray {
 public:
-        using Container = std::deque<ChannelBlock>;
+        using Container = std::deque<Block>;
         using SubRange = std::ranges::subrange<Container::const_iterator>;
 
         void append (std::vector<Bytes> &&cb);
@@ -80,19 +83,17 @@ private:
         StreamType type_{};
         SampleRate sampleRate_{};
         SampleIdx currentSampleNo{};
-        Container data_;
+        Container data_; // Horizontal
 };
 
-/// Groups
-using ChannelBlockStreams = std::vector<ChannelBlockStream>;
-
-/// Groups
-using ChannelStreams = std::vector<ChannelStream>;
+// Multiple BlockArray-s, each represeinging one channel-group
+using BlockArrays = std::vector<BlockArray>;
+using Streams = std::vector<Stream>;
 
 /**
  * A database for string (sample) data.
  */
-export struct IBackend {
+struct IBackend {
         IBackend () = default;
         IBackend (IBackend const &) = default;
         IBackend &operator= (IBackend const &) = default;
@@ -104,53 +105,25 @@ export struct IBackend {
 
         /// Adds s[0] to stream[0], s[1] to stream[1] etc
         virtual void append (size_t groupIdx, std::vector<Bytes> &&s) = 0;
-        virtual ChannelStream range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) = 0;
+        virtual Stream range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) = 0;
         virtual size_t groupsNo () const = 0;
 };
 
-// /**
-//  * Like digital or analog channles.
-//  */
-// class Group {
-// public:
-//         /// Adds s[0] to stream[0], s[1] to stream[1] etc
-//         void append (std::vector<SampleBlock> &&s);
-
-// private:
-//         std::vector<SampleBlockStream> channels;
-// };
-
-// /****************************************************************************/
-
-// void Group::append (std::vector<SampleBlock> &&s)
-// {
-//         for (size_t i = 0; i < s.size (); ++i) {
-//                 channels.at (i).stream.push_back (std::move (s.at (i)));
-//         }
-// }
-
-// /**
-//  * @brief
-//  *
-//  */
-// using Groups = std::vector<Group>;
-
 /**
  *
- *
  */
-export class BlockBackend : public IBackend {
+class Backend : public IBackend {
 public:
-        BlockBackend () : groups (16) {}
+        Backend () : groups (1) {} // TODO configurable number of groups.
 
         void append (size_t groupIdx, std::vector<Bytes> &&s) override;
-        ChannelStream range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
+        Stream range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
 
         void configureGroup (size_t groupIdx, SampleRate sampleRate);
         size_t groupsNo () const override { return groups.size (); }
 
 private:
-        ChannelBlockStreams groups;
+        BlockArrays groups;
         std::mutex mutex;
 };
 

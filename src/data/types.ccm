@@ -27,45 +27,8 @@ using Buffer = std::variant<Bytes, Words, Numbers>;
 
 enum class StreamType : uint8_t { digital, analog };
 
-/**
- * Sample number with corresponding sample rate.
- */
-// class SampleNo {
-// public:
-//         SampleNo () = default;
-//         /* no explicit */ SampleNo (uint64_t s) : sampleNumber_{s} {}
-//         operator uint64_t () const { return sampleNumber_; }
-
-//         SampleRate &sampleRate () { return sampleRate_; }
-//         SampleRate const &sampleRate () const { return sampleRate_; }
-
-//         // operators =, >, < will take sample rate into account.
-
-// private:
-//         SampleRate sampleRate_{};
-//         uint64_t sampleNumber_{};
-// };
-
-using SampleIdx = uint64_t;
-using SampleNum = uint64_t;
-
-/****************************************************************************/
-/****************************************************************************/
-/****************************************************************************/
-/****************************************************************************/
-/****************************************************************************/
-
-/**
- * Buffer of sample data. Typically this data will come from a logic analyzer device,
- * can be 8-32 bit wide, but it can also come from other sources like a file, etc.
- */
-struct SampleBlock {
-        StreamType type;
-        SampleRate sampleRate;
-        TimePoint begin;
-        TimePoint end;
-        Buffer buffer;
-};
+using SampleIdx = int64_t;
+using SampleNum = int64_t;
 
 /**
  * The data as received from the device. Possibly compressed with LZ4.
@@ -83,19 +46,6 @@ struct RawCompressedBlock {
  * both RawCompressedData and RawData will contain the same data.
  */
 using RawData = RawCompressedBlock;
-
-/**
- * Sample data for multiple channels numbered by integer numbers. Some channels
- * may be missing for a block, so I
- * Data decoded from the RawData to the sample data organized by channels
- * (both digital and analog). This is the data that can be finally displayed
- * or consumed by the analyzers.
- */
-struct SampleBlockStream {
-        /// Single or multiple blocks.
-        std::deque<SampleBlock> stream;
-        std::vector<SampleBlockStream> children; // TODO may be optional or unique_ptr
-};
 
 /*--------------------------------------------------------------------------*/
 
@@ -151,13 +101,5 @@ struct AugumentedData {
         // Additional information about the analyzed data.
         DisplayHints hints;
 };
-
-// struct Block {
-//         // Block could have a sampleNumber and time_point
-//         RawCompressedBlock rawCompressedData;
-//         SampleBlockStream sampleData;
-//         std::vector<std::unique_ptr<AugumentedData>> augumentedData;
-//         // std::mutex mutex; // sizeof == ~40B Do I really need this?
-// };
 
 } // namespace logic

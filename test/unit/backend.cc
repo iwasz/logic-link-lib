@@ -18,7 +18,7 @@ using namespace logic;
  */
 TEST_CASE ("one block", "[backend]")
 {
-        ChannelBlockStream cbs;
+        BlockArray cbs;
         cbs.append (getChannelBlockData (0));
 
         SECTION ("0..4")
@@ -62,7 +62,7 @@ TEST_CASE ("one block", "[backend]")
  */
 TEST_CASE ("many blocks", "[backend]")
 {
-        ChannelBlockStream cbs;
+        BlockArray cbs;
         cbs.append (getChannelBlockData (0));
         cbs.append (getChannelBlockData (1));
         cbs.append (getChannelBlockData (2));
@@ -114,7 +114,7 @@ TEST_CASE ("many blocks", "[backend]")
  */
 TEST_CASE ("data", "[backend]")
 {
-        BlockBackend backend;
+        Backend backend;
         backend.configureGroup (0, 240'000'000);
         backend.append (0, getChannelBlockData (0));
         backend.append (0, getChannelBlockData (1));

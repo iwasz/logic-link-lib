@@ -28,7 +28,7 @@ struct IAnalyzer {
         virtual void start () = 0;
         /// For every block
         virtual AugumentedData runRaw (RawData const &rd) = 0;
-        virtual AugumentedData run (SampleBlockStream const &bmd) = 0;
+        virtual AugumentedData run (BlockArray const &bmd) = 0;
         /// Post analysis
         virtual void stop () = 0;
 };

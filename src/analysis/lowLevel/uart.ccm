@@ -21,7 +21,7 @@ public:
         using AbstractAnalyzer::AbstractAnalyzer;
 
         void start () override {}
-        AugumentedData run (SampleBlockStream const &samples) override;
+        AugumentedData run (ChannelBlockStream const &samples) override;
         void stop () override {}
 
 private:
@@ -29,7 +29,7 @@ private:
 
 /****************************************************************************/
 
-AugumentedData UartAnalyzer::run (SampleBlockStream const & /* samples */)
+AugumentedData UartAnalyzer::run (ChannelBlockStream const & /* samples */)
 {
         AugumentedData ret;
         return ret;

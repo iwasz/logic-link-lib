@@ -14,7 +14,7 @@ using namespace logic;
 
 TEST_CASE ("empty range", "[frontend]")
 {
-        BlockBackend backend;
+        Backend backend;
         backend.configureGroup (0, 240'000'000); // Digital channels
         backend.append (0, getChannelBlockData (0));
         backend.append (0, getChannelBlockData (1));

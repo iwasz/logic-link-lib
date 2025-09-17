@@ -9,7 +9,6 @@
 module;
 #include "common/constants.hh"
 #include <climits>
-#include <vector>
 
 export module logic.data:frontend;
 import :types;
@@ -62,9 +61,10 @@ struct IFrontend {
         // virtual ChannelStreams const &range (TimePoint const &begin, TimePoint const &end) = 0;
 
         // virtual ChannelStream const &group (size_t groupIdx, TimePoint const &begin, TimePoint const &end) = 0;
-        virtual ChannelStream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) = 0;
+        virtual Stream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) = 0;
 
         // virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, TimePoint const &begin, TimePoint const &end) = 0;
+        // TODO following interface works only for the binary data
         virtual util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, SampleIdx offset, SampleNum length) = 0;
 };
 
@@ -75,13 +75,12 @@ class /*RandomAccess*/ Frontend : public IFrontend {
 public:
         explicit Frontend (IBackend *backend);
 
-        SampleNum size (size_t groupIdx) const override { return current.at (groupIdx).channelSize () * CHAR_BIT; }
+        SampleNum size (size_t groupIdx) const override { return cache.at (groupIdx).channelSize () * CHAR_BIT; }
+        Stream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
+        util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length) override;
 
         // ChannelStreams next () override { return {}; }
-
         // ChannelStreams const &range (TimePoint const &begin, TimePoint const &end) override { return current; }
-
-        ChannelStream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override { return current.at (groupIdx); }
 
         // ChannelStream const &group (size_t groupIdx, TimePoint const &begin, TimePoint const &end) override
         // {
@@ -115,29 +114,11 @@ public:
         //         return {std::next (currentData.cbegin (), offset), size};
         // }
 
-        util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length) override
-        {
-                (void)backend;
-                Bytes const &currentData = group (groupIdx, begin, begin + length).data.at (channelIdx);
-                auto beginByteOffset = begin / CHAR_BIT;
-
-                // Basic validation
-                if (length == 0 || beginByteOffset >= currentData.size ()) {
-                        return {};
-                }
-
-                if (auto byteOffset = (begin + length - 1) / CHAR_BIT; byteOffset >= currentData.size ()) {
-                        return {currentData.data (), begin, SampleNum ((currentData.size () - beginByteOffset) * CHAR_BIT)};
-                }
-
-                return {currentData.data (), begin, length};
-        }
-
 private:
         IBackend *backend;
-
-        // Cache.
-        ChannelStreams current;
+        Streams cache;
+        SampleIdx cachedBegin{};
+        SampleIdx cachedEnd{};
 };
 
 /**
