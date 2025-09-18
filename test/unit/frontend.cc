@@ -7,7 +7,6 @@
  ****************************************************************************/
 
 #include <catch2/catch_test_macros.hpp>
-#include <print>
 #include <ranges>
 #include <vector>
 import logic;
@@ -52,6 +51,10 @@ TEST_CASE ("square wave integration test usecase", "[frontend]")
         auto tileAData = frontend.channel (0, 15, 0, 750);
         auto tileBData = frontend.channel (0, 15, 750, 750);
         auto tileCData = frontend.channel (0, 15, 1500, 750);
+
+        /// TODO! cross the blocks! i.e. past 8192 like:
+        // auto tileCData = frontend.channel (0, 15, 8000, 750);
+        // There was a problem with that. Fixed wo. UT.
 
         auto expectedData = std::views::repeat (std::vector<int>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                                                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})

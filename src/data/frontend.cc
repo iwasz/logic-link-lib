@@ -11,6 +11,8 @@ module;
 #include <climits>
 module logic.data;
 
+import logic.core;
+
 namespace logic {
 
 // auto binaryToGray (auto num) { return num ^ (num >> 1); };
@@ -46,18 +48,14 @@ util::BitSpan<uint8_t const> Frontend::channel (size_t groupIdx, size_t channelI
         }
 
         Bytes const &currentData = grp.channel (channelIdx);
-        auto beginByteOffset = begin / CHAR_BIT;
+        auto grpStart = grp.firstSampleNo ();
+        auto off = begin - grpStart;
 
-        // Basic validation
-        if (length == 0 || beginByteOffset >= currentData.size ()) {
-                return {};
+        if (off < 0) {
+                throw Exception{"Frontend internal error. Offset < 0."};
         }
 
-        if (auto byteOffset = (begin + length - 1) / CHAR_BIT; byteOffset >= currentData.size ()) {
-                return {currentData.data (), size_t (begin), (currentData.size () - beginByteOffset) * CHAR_BIT};
-        }
-
-        return {currentData.data (), size_t (begin), size_t (length)};
+        return {currentData.data (), size_t (off), size_t (length)};
 }
 
 } // namespace logic
