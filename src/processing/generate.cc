@@ -15,13 +15,11 @@ module logic.processing;
 
 namespace logic {
 
-Bytes square (size_t hiBits, size_t loBits, size_t bitsTotal, bool state)
+Bytes Square::operator() (size_t hiBits, size_t loBits, size_t bitsTotal)
 {
         auto bytesTotal = size_t (std::round (bitsTotal / CHAR_BIT));
         Bytes buf (bytesTotal);
         std::ranges::fill (buf, 0);
-
-        size_t scnt{};
 
         for (uint8_t &b : buf) {
                 for (int i = CHAR_BIT - 1; i >= 0; --i) {

@@ -8,38 +8,25 @@
 
 module;
 #include "common/constants.hh"
-#include <algorithm>
 #include <climits>
-#include <vector>
 module logic.data;
 
 namespace logic {
 
-auto binaryToGray (auto num) { return num ^ (num >> 1); };
+// auto binaryToGray (auto num) { return num ^ (num >> 1); };
 
-Frontend::Frontend (IBackend *backend) : backend{backend}, cache (1)
-{
-        // Stream group;
-        // group.data.resize (16);
-
-        // for (auto &channel : group.data) {
-        //         channel.resize (256); // 2048 bits
-        //         std::ranges::generate (channel, [] { return uint8_t (std::rand () % 256); });
-        //         // std::ranges::copy (std::views::iota (0, 4192), bytes.begin ());
-        //         // std::ranges::fill (channel, 0xe0);
-        //         // std::ranges::fill (channel, 0xaa);
-        //         // uint8_t i = 0;
-        //         // std::ranges::generate (bytes, [&i] { return binaryToGray (i++); });
-        // }
-
-        // current.push_back (std::move (group));
-}
+Frontend::Frontend (IBackend *backend) : backend{backend}, cache (1) {}
 
 Stream const &Frontend::group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end)
 {
         /*
          * TODO Better caching mechanism would be beneficial here. It would get more data
          * from the backend that was requested, and would return only a subrange / span.
+         * - retrieve more (like 3x more than end-begin), store in cache
+         * - remove cachedBegin and cachedEnd
+         * - add a query method to teh `Stream` class that would check if provided range is
+         *   covered by this stream.
+         * - and resize cache automatically (if multiple groups per frontend is possible).
          */
         if (cachedBegin != begin || cachedEnd != end) {
                 cache.at (groupIdx) = backend->range (groupIdx, begin, end);
@@ -58,7 +45,7 @@ util::BitSpan<uint8_t const> Frontend::channel (size_t groupIdx, size_t channelI
                 return {};
         }
 
-        Bytes const &currentData = grp.data.at (channelIdx);
+        Bytes const &currentData = grp.channel (channelIdx);
         auto beginByteOffset = begin / CHAR_BIT;
 
         // Basic validation

@@ -8,6 +8,7 @@
 
 module;
 #include "common/constants.hh"
+#include "common/params.hh"
 #include <thread>
 module logic.peripheral;
 import logic.processing;
@@ -41,10 +42,12 @@ void DemoDevice::start (IBackend *backend)
                                  * Square wave which frequency increases proportionally with the
                                  * channel number and length (number of bits) decreases.
                                  */
-                                channels.push_back (square (i + 1, i + 1, transferSize * CHAR_BIT / dc));
+                                channels.push_back (generators.at (i) (i + 1, i + 1, transferSize * CHAR_BIT / dc));
                         }
 
-                        backend->append (0, std::move (channels));
+                        static constexpr auto BITS_PER_SAMPLE = 1U;
+                        static constexpr auto GROUP = 0U;
+                        backend->append (GROUP, BITS_PER_SAMPLE, std::move (channels));
 
                         auto timeSpent = std::chrono::seconds (transferSize / acquisitionParams.digitalSampleRate);
                         std::this_thread::sleep_until (now + timeSpent);
@@ -65,6 +68,14 @@ void DemoDevice::stop ()
         catch (std::exception const &e) {
                 eventQueue ()->addEvent<ErrorEvent> (std::format ("DemoDevice stop exception: {}", e.what ()));
         }
+}
+
+/****************************************************************************/
+
+void DemoDevice::writeAcquisitionParams (common::acq::Params const &params, bool legacy)
+{
+        AbstractDevice::writeAcquisitionParams (params, legacy);
+        generators.resize (params.digitalChannels);
 }
 
 } // namespace logic

@@ -10,12 +10,13 @@ module;
 #include "common/error.hh"
 #include "common/params.hh"
 #include "common/stats.hh"
-#include <atomic>
 #include <thread>
 #include <unordered_set>
+#include <vector>
 export module logic.peripheral:device.demo;
 
 import logic.core;
+import logic.processing;
 import :input;
 import :device;
 
@@ -39,6 +40,7 @@ public:
         std::string deviceSerial () const override { return "demod_0001"; }
         std::string mcuSerial () const override { return "12345678"; }
 
+        void writeAcquisitionParams (common::acq::Params const &params, bool legacy) override;
         common::acq::Params readAcquisitionParams () const override { return acquisitionParams; }
 
         void start (IBackend *backend) override;
@@ -59,6 +61,7 @@ private:
         std::thread thread;
         /// Simulated USB transfer size (amount of data generated at once).
         size_t transferSize = DEFAULT_USB_TRANSFER_SIZE_B;
+        std::vector<Square> generators;
 };
 
 /**

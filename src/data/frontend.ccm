@@ -18,24 +18,8 @@ import logic.util;
 export namespace logic {
 
 /**
- * Range of all available data. Returned by the frontend.
- */
-// class Range {
-// public:
-//         bool empty () const { return true; }
-//         // group[0, 1, 2];
-//         //  Block Attahced block Attached hints (by reference)
-//         //                 Attached blocks by value ;
-//         //                 Attached hints by value;
-//         //         < -all of this is copied form the "database"
-
-//         ChannelStreams groups;
-// };
-
-/**
- * Outdated:
- * Note: Front end API uses time-points, not sample numbers, because various groups (digital, analog)
- * can have separate sample rates.
+ * Frontend implements a way of accessing the byte data that backend provides.
+ * Frontend knows about the sample size.
  */
 struct IFrontend {
         IFrontend () = default;

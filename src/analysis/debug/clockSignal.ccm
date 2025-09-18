@@ -22,9 +22,8 @@ namespace logic {
  * Returns number of errors detected. It looks for a pattern of 0es and the 1s
  * (or other way around) and determines its period. Then looks for another
  * stream of 0s and then 1s (or vice versa) and again calculates the period. If
- * these periods do not match an error counter is increased. So any square signal
- * will work provided that has steady (down to a single sample) frequency.
- * @arg size bytes
+ * these periods do not match an error counter is increased. Any square signal
+ * will work provided that it has steady (down to a single sample) frequency.
  */
 export class ClockSignalCheck : public SingleChannelAnalyzer {
 public:
@@ -137,8 +136,8 @@ void ClockSignalCheck::analyzeDataIntegrity (uint32_t w)
                                         if (prevPeriod != std::nullopt && *prevPeriod != period) {
                                                 if (!lastPeriodWasError) {
                                                         ++errorNum_;
-                                                        std::println ("{}:{}. {:032b} {:032b} {}:{}", devBlockNo, wordInBlockNo, w, prevWord,
-                                                                      *prevPeriod, period);
+                                                        // std::println ("{}:{}. {:032b} {:032b} {}:{}", devBlockNo, wordInBlockNo, w, prevWord,
+                                                        //               *prevPeriod, period);
                                                         lastPeriodWasError = true;
                                                 }
                                         }

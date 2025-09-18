@@ -29,6 +29,8 @@ enum class StreamType : uint8_t { digital, analog };
 
 using SampleIdx = int64_t;
 using SampleNum = int64_t;
+using ByteIdx = int64_t;
+using ByteNum = int64_t;
 
 /**
  * The data as received from the device. Possibly compressed with LZ4.

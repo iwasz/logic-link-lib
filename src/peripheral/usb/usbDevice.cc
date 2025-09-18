@@ -123,7 +123,9 @@ void UsbDevice::run ()
          * Consider locking granularity. But even if it is too coarse, the move operation
          * below is so fast, that we aren't locked for too long.
          */
-        backend->append (0, std::move (digitalChannels));
+        static constexpr auto BITS_PER_SAMPLE = 1U;
+        static constexpr auto GROUP = 0U;
+        backend->append (GROUP, BITS_PER_SAMPLE, std::move (digitalChannels));
 
         // if (strategy != nullptr) {
         //         strategy->run (currentBlock->sampleData);

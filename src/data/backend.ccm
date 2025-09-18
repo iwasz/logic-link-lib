@@ -8,25 +8,38 @@
 
 module;
 #include "common/constants.hh"
+#include <algorithm>
+#include <climits>
 #include <deque>
 #include <mutex>
+#include <ranges>
 #include <vector>
 export module logic.data:backend;
 import :types;
 
 export namespace logic {
+class BlockArray;
 
 /**
- * A group of channels.
+ * Byte oriented data for a group of channels.
  */
 class Block {
 public:
         Block () = default;
-        Block (size_t channels, size_t numberOfSamples);
-        Block (SampleIdx const &firstSampleNo, std::vector<Bytes> &&d) : firstSampleNo_{firstSampleNo}, data{std::move (d)} {}
-        // ChannelBlock (SampleIdx const &firstSampleNo, std::vector<Bytes> const &d) : firstSampleNo_{firstSampleNo}, data{d} {}
+        Block (uint8_t bitsPerSample, size_t channels, size_t numberOfSamples);
 
-        SampleIdx const &firstSampleNo () const { return firstSampleNo_; }
+        template <typename Range> explicit Block (Range const &range);
+
+        Block (uint8_t bitsPerSample, /* SampleIdx firstSampleNo, */ std::vector<Bytes> &&d)
+            : bitsPerSample_{bitsPerSample}, /* firstSampleNo_{firstSampleNo}, */ data_{std::move (d)}
+        {
+        }
+
+        /// First valid sample index that can be referenced.
+        SampleIdx firstSampleNo () const { return firstSampleNo_; }
+        SampleIdx &firstSampleNo () { return firstSampleNo_; }
+
+        /// Last valid sample index that can be referenced (do not confuse with "past-the-end" semantics).
         SampleIdx lastSampleNo () const
         {
                 auto s = firstSampleNo_ + channelSize ();
@@ -34,17 +47,58 @@ public:
         }
 
         /// Number of channels in the block.
-        size_t channelsNumber () const { return data.size (); }
+        size_t channelsNumber () const { return data_.size (); }
 
-        /// Length of the block. Assumes that all channels are the same length.
-        size_t channelSize () const { return (data.empty ()) ? (0U) : (data.front ().size ()); }
+        /// Length of the block in samples. Assumes that all channels are the same length.
+        SampleNum channelSize () const;
 
-        // private:
+        uint8_t bitsPerSample () const { return bitsPerSample_; }
+
+        Bytes const &channel (size_t idx) const { return data_.at (idx); }
+        std::vector<Bytes> const &data () const { return data_; }
+
+        // Only for BlockArray::clipBytes which is not used anywhere, so....
+        friend class BlockArray;
+
+private:
+        uint8_t bitsPerSample_{};
         SampleIdx firstSampleNo_{};
-
         // For now only Bytes are supported.
-        std::vector<Bytes> data; // Horizontal
+        std::vector<Bytes> data_; // Horizontal
 };
+
+/*--------------------------------------------------------------------------*/
+
+template <typename Range> Block::Block (Range const &range)
+{
+        if (range.empty ()) {
+                return;
+        }
+
+        size_t byteSizeOfRange{};
+
+        for (auto const &block : range) {
+                // TODO works only (and tested only) for bitsPerSample == 1 or 8.
+                byteSizeOfRange += block.channelSize () / (CHAR_BIT / block.bitsPerSample ());
+        }
+
+        Block const &front = range.front ();
+        firstSampleNo_ = front.firstSampleNo ();
+        bitsPerSample_ = front.bitsPerSample ();
+
+        data_.resize (front.channelsNumber ());
+
+        int chNo{};
+        for (auto &ch : data_) {
+                ch.reserve (byteSizeOfRange);
+
+                for (auto const &sourceBlock : range) {
+                        std::ranges::copy (sourceBlock.data_.at (chNo), std::back_inserter (ch));
+                }
+
+                ++chNo;
+        }
+}
 
 /**
  * Like block, but should be regarded as a continuous and presumable longer
@@ -61,19 +115,25 @@ public:
         using Container = std::deque<Block>;
         using SubRange = std::ranges::subrange<Container::const_iterator>;
 
-        void append (std::vector<Bytes> &&cb);
+        void append (uint8_t bitsPerSample, std::vector<Bytes> &&cb);
 
         /**
          * Returns block range that includes sample numbers passed (inclusive).
          */
-        SubRange range (SampleIdx const &begin, SampleIdx const &end);
-        // static ChannelStream subrangeToChannelStream (SubRange const &subRangeBlocks);
+        SubRange range (SampleIdx begin, SampleIdx end);
+
+        /**
+         * Returns a Stream cut precisely down to the byte.
+         */
+        Stream clipBytes (ByteIdx begin, ByteIdx end);
 
         Container const &data () const { return data_; }
 
+        // TODO Make it agnostic? Move to a frontend?
         StreamType type () const { return type_; }
         void setType (StreamType type) { type_ = type; }
 
+        // TODO Make it agnostic? Move to a frontend?
         SampleRate sampleRate () const { return sampleRate_; }
         void setSampleRate (SampleRate sr) { sampleRate_ = sr; }
 
@@ -91,7 +151,9 @@ using BlockArrays = std::vector<BlockArray>;
 using Streams = std::vector<Stream>;
 
 /**
- * A database for string (sample) data.
+ * A database for string (sample) data in uniform format. It let's you retrieve
+ * apropriate byte blocks of data, but doesn't / shouldn't have access per sample.
+ * To access individual samples (whatever their size might be) use a frontend.
  */
 struct IBackend {
         IBackend () = default;
@@ -104,8 +166,15 @@ struct IBackend {
         // using SubRange = ChannelBlockStream::SubRange;
 
         /// Adds s[0] to stream[0], s[1] to stream[1] etc
-        virtual void append (size_t groupIdx, std::vector<Bytes> &&s) = 0;
-        virtual Stream range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) = 0;
+        virtual void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) = 0;
+
+        /**
+         * Returns a stream made of concatenated blocks containing the
+         * begin and end samples. Returned stream may start long before
+         * the `begin` sample and finish after the `end` sample, so you
+         * have to trim it yourself (use std::span / BitSpan).
+         */
+        virtual Stream range (size_t groupIdx, SampleIdx begin, SampleIdx end) = 0;
         virtual size_t groupsNo () const = 0;
 };
 
@@ -116,10 +185,10 @@ class Backend : public IBackend {
 public:
         Backend () : groups (1) {} // TODO configurable number of groups.
 
-        void append (size_t groupIdx, std::vector<Bytes> &&s) override;
-        Stream range (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
+        void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) override;
+        Stream range (size_t groupIdx, SampleIdx begin, SampleIdx end) override;
 
-        void configureGroup (size_t groupIdx, SampleRate sampleRate);
+        void configureGroup (size_t groupIdx, SampleRate sampleRate); // TODO not used. Remove the CTOr and use this somewhere.
         size_t groupsNo () const override { return groups.size (); }
 
 private:

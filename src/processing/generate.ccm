@@ -18,6 +18,14 @@ namespace logic {
  * divisible by 8. By default signal strarts from HIGH state, but you
  * can change that by using the state argument.
  */
-export Bytes square (size_t hiBits, size_t loBits, size_t bitsTotal, bool state = true);
+export class Square {
+public:
+        Square (bool initialState = true) : state{initialState} {}
+        Bytes operator() (size_t hiBits, size_t loBits, size_t bitsTotal);
+
+private:
+        size_t scnt{};
+        bool state{};
+};
 
 } // namespace logic
