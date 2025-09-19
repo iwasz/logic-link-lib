@@ -13,6 +13,41 @@ import utils;
 
 using namespace logic;
 
+TEST_CASE ("Block size", "[backend]")
+{
+        static constexpr auto BITS_PER_SAMPLE = 1U;
+
+        Block block{BITS_PER_SAMPLE, generateDemoDeviceBlock ()};
+        REQUIRE (block.channelLength () == 8192);
+        REQUIRE (block.channelsNumber () == 16);
+
+        block.clear ();
+        REQUIRE (block.channelLength () == 0);
+        REQUIRE (block.channelsNumber () == 16);
+}
+
+TEST_CASE ("BlockArray size", "[backend]")
+{
+        static constexpr auto BITS_PER_SAMPLE = 1U;
+
+        BlockArray cbs;
+        cbs.append (BITS_PER_SAMPLE, generateDemoDeviceBlock ());
+        REQUIRE (cbs.channelLength () == 8192);
+        REQUIRE (cbs.channelsNumber () == 16);
+
+        cbs.append (BITS_PER_SAMPLE, generateDemoDeviceBlock ());
+        REQUIRE (cbs.channelLength () == 2 * 8192);
+        REQUIRE (cbs.channelsNumber () == 16);
+
+        cbs.append (BITS_PER_SAMPLE, generateDemoDeviceBlock ());
+        REQUIRE (cbs.channelLength () == 3 * 8192);
+        REQUIRE (cbs.channelsNumber () == 16);
+
+        cbs.clear ();
+        REQUIRE (cbs.channelLength () == 0);
+        REQUIRE (cbs.channelsNumber () == 16);
+}
+
 TEST_CASE ("Block from range", "[backend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
@@ -282,22 +317,22 @@ TEST_CASE ("clipBytes", "[backend]")
         {
                 BlockArray empty;
                 auto stream = empty.clipBytes (0, 0);
-                REQUIRE (stream.channelSize () == 0);
+                REQUIRE (stream.channelLength () == 0);
 
                 stream = empty.clipBytes (0, 1000);
-                REQUIRE (stream.channelSize () == 0);
+                REQUIRE (stream.channelLength () == 0);
         }
 
         SECTION ("empty range")
         {
                 auto stream = blockArray.clipBytes (0, 0);
-                REQUIRE (stream.channelSize () == 0);
+                REQUIRE (stream.channelLength () == 0);
         }
 
         SECTION ("first single byte")
         {
                 auto stream = blockArray.clipBytes (0, 1);
-                REQUIRE (stream.channelSize () == 1);
+                REQUIRE (stream.channelLength () == 1);
                 auto const &ch0 = stream.channel (0);
                 REQUIRE (ch0.size () == 1);
                 REQUIRE (ch0.front () == 0x0);
@@ -315,63 +350,63 @@ TEST_CASE ("clipBytes", "[backend]")
         SECTION ("second single byte")
         {
                 auto stream = blockArray.clipBytes (1, 2);
-                REQUIRE (stream.channelSize () == 1);
-                REQUIRE (stream.data() == std::vector<Bytes>{{0x1}, {0x2}, {0x3}, {0x4}});
+                REQUIRE (stream.channelLength () == 1);
+                REQUIRE (stream.data () == std::vector<Bytes>{{0x1}, {0x2}, {0x3}, {0x4}});
         }
 
         SECTION ("single byte from second block")
         {
                 auto stream = blockArray.clipBytes (5, 6);
-                REQUIRE (stream.channelSize () == 1);
-                REQUIRE (stream.data() == std::vector<Bytes>{{0x5}, {0x6}, {0x7}, {0x8}});
+                REQUIRE (stream.channelLength () == 1);
+                REQUIRE (stream.data () == std::vector<Bytes>{{0x5}, {0x6}, {0x7}, {0x8}});
         }
 
         SECTION ("last single byte")
         {
                 auto stream = blockArray.clipBytes (11, 12);
-                REQUIRE (stream.channelSize () == 1);
-                REQUIRE (stream.data() == std::vector<Bytes>{{0xb}, {0xc}, {0xd}, {0xe}});
+                REQUIRE (stream.channelLength () == 1);
+                REQUIRE (stream.data () == std::vector<Bytes>{{0xb}, {0xc}, {0xd}, {0xe}});
         }
 
         SECTION ("outside range")
         {
                 auto stream = blockArray.clipBytes (12, 13);
-                REQUIRE (stream.channelSize () == 0);
+                REQUIRE (stream.channelLength () == 0);
         }
 
         SECTION ("two bytes at the front")
         {
                 auto stream = blockArray.clipBytes (0, 2);
-                REQUIRE (stream.channelSize () == 2);
-                REQUIRE (stream.data() == std::vector<Bytes>{{0x0, 0x1}, {0x1, 0x2}, {0x2, 0x3}, {0x3, 0x4}});
+                REQUIRE (stream.channelLength () == 2);
+                REQUIRE (stream.data () == std::vector<Bytes>{{0x0, 0x1}, {0x1, 0x2}, {0x2, 0x3}, {0x3, 0x4}});
         }
 
         SECTION ("two bytes spanning two blocks")
         {
                 auto stream = blockArray.clipBytes (3, 5);
-                REQUIRE (stream.channelSize () == 2);
-                REQUIRE (stream.data() == std::vector<Bytes>{{0x3, 0x4}, {0x4, 0x5}, {0x5, 0x6}, {0x6, 0x7}});
+                REQUIRE (stream.channelLength () == 2);
+                REQUIRE (stream.data () == std::vector<Bytes>{{0x3, 0x4}, {0x4, 0x5}, {0x5, 0x6}, {0x6, 0x7}});
         }
 
         SECTION ("last two bytes")
         {
                 auto stream = blockArray.clipBytes (10, 12);
-                REQUIRE (stream.channelSize () == 2);
-                REQUIRE (stream.data() == std::vector<Bytes>{{0xa, 0xb}, {0xb, 0xc}, {0xc, 0xd}, {0xd, 0xe}});
+                REQUIRE (stream.channelLength () == 2);
+                REQUIRE (stream.data () == std::vector<Bytes>{{0xa, 0xb}, {0xb, 0xc}, {0xc, 0xd}, {0xd, 0xe}});
         }
 
         SECTION ("two bytes requested, only one returned from the back")
         {
                 auto stream = blockArray.clipBytes (11, 13);
-                REQUIRE (stream.channelSize () == 1);
-                REQUIRE (stream.data() == std::vector<Bytes>{{0xb}, {0xc}, {0xd}, {0xe}});
+                REQUIRE (stream.channelLength () == 1);
+                REQUIRE (stream.data () == std::vector<Bytes>{{0xb}, {0xc}, {0xd}, {0xe}});
         }
 
         SECTION ("more than a block")
         {
                 auto stream = blockArray.clipBytes (0, 6);
-                REQUIRE (stream.channelSize () == 6);
-                REQUIRE (stream.data()
+                REQUIRE (stream.channelLength () == 6);
+                REQUIRE (stream.data ()
                          == std::vector<Bytes>{{0x0, 0x1, 0x2, 0x3, 0x4, 0x5},
                                                {0x1, 0x2, 0x3, 0x4, 0x5, 0x6},
                                                {0x2, 0x3, 0x4, 0x5, 0x6, 0x7},
@@ -381,8 +416,8 @@ TEST_CASE ("clipBytes", "[backend]")
         SECTION ("more than a block")
         {
                 auto stream = blockArray.clipBytes (6, 12);
-                REQUIRE (stream.channelSize () == 6);
-                REQUIRE (stream.data()
+                REQUIRE (stream.channelLength () == 6);
+                REQUIRE (stream.data ()
                          == std::vector<Bytes>{{0x6, 0x7, 0x8, 0x9, 0xa, 0xb},
                                                {0x7, 0x8, 0x9, 0xa, 0xb, 0xc},
                                                {0x8, 0x9, 0xa, 0xb, 0xc, 0xd},
@@ -392,11 +427,27 @@ TEST_CASE ("clipBytes", "[backend]")
         SECTION ("full range")
         {
                 auto stream = blockArray.clipBytes (0, 100);
-                REQUIRE (stream.channelSize () == 12);
-                REQUIRE (stream.data()
+                REQUIRE (stream.channelLength () == 12);
+                REQUIRE (stream.data ()
                          == std::vector<Bytes>{{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb},
                                                {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc},
                                                {0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd},
                                                {0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe}});
         }
+}
+
+TEST_CASE ("size", "[backend]")
+{
+        static constexpr auto BITS_PER_SAMPLE = 1U;
+        static constexpr auto GROUP = 0U;
+
+        Backend backend;
+        backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (0));
+        REQUIRE (backend.channelLength (0) == 32);
+
+        backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (1));
+        REQUIRE (backend.channelLength (0) == 64);
+
+        backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (2));
+        REQUIRE (backend.channelLength (0) == 96);
 }

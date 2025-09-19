@@ -42,3 +42,19 @@ export std::vector<std::vector<Bytes>> channelBlocksData = {
 };
 
 export auto getChannelBlockData (size_t idx) { return channelBlocksData.at (idx); }
+
+// Prepare generators suitable for continuous work. DemoDevice does the same.
+std::vector<Square> generators (16);
+
+// Simulate a block from DemoDevice (16 channels square signals).
+export auto generateDemoDeviceBlock ()
+{
+        std::vector<Bytes> channels (16);
+
+        size_t cnt{};
+        for (auto &gen : generators) {
+                channels.at (cnt++) = gen (cnt + 1, cnt + 1, 8192);
+        }
+
+        return channels;
+};

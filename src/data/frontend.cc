@@ -17,9 +17,15 @@ namespace logic {
 
 // auto binaryToGray (auto num) { return num ^ (num >> 1); };
 
-Frontend::Frontend (IBackend *backend) : backend{backend}, cache (1) {}
+DigitalFrontend::DigitalFrontend (IBackend *backend) : backend{backend}, cache (1) { backend->addObserver (this); }
 
-Stream const &Frontend::group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end)
+/****************************************************************************/
+
+DigitalFrontend::~DigitalFrontend () { backend->removeObserver (this); }
+
+/****************************************************************************/
+
+Stream const &DigitalFrontend::group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end)
 {
         /*
          * TODO Better caching mechanism would be beneficial here. It would get more data
@@ -39,7 +45,7 @@ Stream const &Frontend::group (size_t groupIdx, SampleIdx const &begin, SampleId
 
 /****************************************************************************/
 
-util::BitSpan<uint8_t const> Frontend::channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length)
+util::BitSpan<uint8_t const> DigitalFrontend::channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length)
 {
         Stream const &grp = group (groupIdx, begin, begin + length);
 
@@ -56,6 +62,18 @@ util::BitSpan<uint8_t const> Frontend::channel (size_t groupIdx, size_t channelI
         }
 
         return {currentData.data (), size_t (off), size_t (length)};
+}
+
+/****************************************************************************/
+
+bool DigitalFrontend::isNewData ()
+{
+        if (newData) {
+                newData = false;
+                return true;
+        }
+
+        return false;
 }
 
 } // namespace logic

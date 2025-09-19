@@ -27,7 +27,7 @@ Block::Block (uint8_t bitsPerSample, size_t channels, size_t numberOfSampl) : bi
 
 /*--------------------------------------------------------------------------*/
 
-SampleNum Block::channelSize () const
+SampleNum Block::channelLength () const
 {
         if (data_.empty ()) {
                 return 0;
@@ -37,13 +37,22 @@ SampleNum Block::channelSize () const
         return SampleNum (data_.front ().size ()) * SAMPLES_PER_BYTE;
 }
 
+/*--------------------------------------------------------------------------*/
+
+void Block::clear ()
+{
+        for (auto &ch : data_) {
+                ch.clear ();
+        }
+}
+
 /****************************************************************************/
 
 void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 {
         auto cb = Block{bitsPerSample, std::move (channels)};
         cb.firstSampleNo () = currentSampleNo;
-        currentSampleNo = currentSampleNo + cb.channelSize ();
+        currentSampleNo = currentSampleNo + cb.channelLength ();
         data_.push_back (std::move (cb));
 }
 
@@ -56,11 +65,11 @@ BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end)
         }
 
         auto b = std::find_if (data_.cbegin (), data_.cend (), [&begin] (Block const &b) {
-                return b.channelSize () > 0 && b.firstSampleNo () <= begin && b.lastSampleNo () >= begin;
+                return b.channelLength () > 0 && b.firstSampleNo () <= begin && b.lastSampleNo () >= begin;
         });
 
         auto e = std::find_if (b, data_.cend (), [&end] (Block const &b) {
-                return b.channelSize () > 0 && b.firstSampleNo () <= end && b.lastSampleNo () >= end;
+                return b.channelLength () > 0 && b.firstSampleNo () <= end && b.lastSampleNo () >= end;
         });
 
         if (e != data_.cend ()) {
@@ -95,13 +104,13 @@ Stream BlockArray::clipBytes (ByteIdx begin, ByteIdx end)
                 // If first block, then offset != 0. For every other block offset == 0.
                 auto inputStartOffset = (cnt++ == 0) ? (begin - subRangeBlock.firstSampleNo ()) : (0);
 
-                auto inputLenToCopy = std::min<SampleNum> (totalLenToCopy, subRangeBlock.data().front ().size () - inputStartOffset);
+                auto inputLenToCopy = std::min<SampleNum> (totalLenToCopy, subRangeBlock.data ().front ().size () - inputStartOffset);
                 totalLenToCopy -= inputLenToCopy;
 
-                for (auto const &channelInBlock : subRangeBlock.data()) {
+                for (auto const &channelInBlock : subRangeBlock.data ()) {
                         auto begin = std::next (channelInBlock.cbegin (), inputStartOffset);
                         auto end = std::next (begin, inputLenToCopy);
-                        std::copy (begin, end, std::next (trimmedSubrange.data_.at (channelNo++).begin(), outputStartOffset));
+                        std::copy (begin, end, std::next (trimmedSubrange.data_.at (channelNo++).begin (), outputStartOffset));
                 }
 
                 outputStartOffset += inputLenToCopy;
@@ -114,12 +123,52 @@ Stream BlockArray::clipBytes (ByteIdx begin, ByteIdx end)
         return trimmedSubrange;
 }
 
+/*--------------------------------------------------------------------------*/
+
+SampleNum BlockArray::channelLength () const
+{
+        SampleNum sum{};
+
+        for (auto const &blck : data_) {
+                sum += blck.channelLength ();
+        }
+
+        return sum;
+}
+
+/*--------------------------------------------------------------------------*/
+
+void BlockArray::clear ()
+{
+        for (auto &blck : data_) {
+                blck.clear ();
+        }
+}
+
 /****************************************************************************/
 
 void Backend::append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s)
 {
-        std::lock_guard lock{mutex};
-        groups.at (groupIdx).append (bitsPerSample, std::move (s));
+        {
+                std::lock_guard lock{mutex};
+                groups.at (groupIdx).append (bitsPerSample, std::move (s));
+        }
+
+        notifyObservers ();
+}
+/*--------------------------------------------------------------------------*/
+
+void Backend::clear ()
+{
+        {
+                std::lock_guard lock{mutex};
+
+                for (auto &g : groups) {
+                        g.clear ();
+                }
+        }
+
+        notifyObservers ();
 }
 
 /*--------------------------------------------------------------------------*/
@@ -135,11 +184,31 @@ Stream Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx end)
 
 void Backend::configureGroup (size_t groupIdx, SampleRate sampleRate)
 {
+        std::lock_guard lock{mutex};
+
         if (groups.size () <= groupIdx) {
                 groups.resize (groupIdx + 1);
         }
 
         groups.at (groupIdx).setSampleRate (sampleRate);
+}
+
+/*--------------------------------------------------------------------------*/
+
+// TODO implement and use in the Frontend
+SampleNum Backend::channelLength (size_t groupIdx) const
+{
+        std::lock_guard lock{mutex};
+        return groups.at (groupIdx).channelLength ();
+}
+
+/*--------------------------------------------------------------------------*/
+
+void Backend::notifyObservers ()
+{
+        for (auto *o : observers) {
+                o->onNewData ();
+        }
 }
 
 } // namespace logic

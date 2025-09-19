@@ -15,6 +15,34 @@ import utils;
 
 using namespace logic;
 
+TEST_CASE ("new data", "[frontend]")
+{
+        Backend backend;
+        backend.configureGroup (0, 240'000'000); // Digital channels
+        DigitalFrontend frontend1{&backend};
+        DigitalFrontend frontend2{&backend};
+
+        REQUIRE (frontend1.isNewData () == false);
+        REQUIRE (frontend2.isNewData () == false);
+
+        backend.append (0, 1, generateDemoDeviceBlock ());
+
+        REQUIRE (frontend1.isNewData () == true);
+        REQUIRE (frontend1.isNewData () == false);
+        REQUIRE (frontend2.isNewData () == true);
+        REQUIRE (frontend2.isNewData () == false);
+
+        backend.append (0, 1, generateDemoDeviceBlock ());
+
+        REQUIRE (frontend1.isNewData () == true);
+        REQUIRE (frontend1.isNewData () == false);
+        REQUIRE (frontend2.isNewData () == true);
+        REQUIRE (frontend2.isNewData () == false);
+}
+
+/**
+ *
+ */
 TEST_CASE ("square wave integration test usecase", "[frontend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 8U;
@@ -23,29 +51,12 @@ TEST_CASE ("square wave integration test usecase", "[frontend]")
         Backend backend;
         backend.configureGroup (0, 240'000'000); // Digital channels
 
-        // Prepare generators suitable for continuous work. DemoDevice does the same.
-        // auto generators = std::views::iota (0, 16) | std::views::transform ([] (int i) { return Square (i); }) | std::ranges::to<std::vector>
-        // ();
-        std::vector<Square> generators (16);
-
-        // Simulate a block from DemoDevice (16 channels square signals).
-        auto generateDemoDeviceBlock = [&generators] {
-                std::vector<Bytes> channels (16);
-
-                size_t cnt{};
-                for (auto &gen : generators) {
-                        channels.at (cnt++) = gen (cnt + 1, cnt + 1, 8192);
-                }
-
-                return channels;
-        };
-
         // Add some of these blocks.
         for (int i = 0; i < 10; ++i) {
                 backend.append (GROUP, BITS_PER_SAMPLE, generateDemoDeviceBlock ());
         }
 
-        Frontend frontend{&backend};
+        DigitalFrontend frontend{&backend};
 
         // Simulate how the GUI gets the data to render first 3 tiles of channel 15
         // Offsets and lengths taken from the GUI app itself

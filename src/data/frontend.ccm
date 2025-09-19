@@ -8,6 +8,7 @@
 
 module;
 #include "common/constants.hh"
+#include <atomic>
 #include <climits>
 
 export module logic.data:frontend;
@@ -20,6 +21,11 @@ export namespace logic {
 /**
  * Frontend implements a way of accessing the byte data that backend provides.
  * Frontend knows about the sample size.
+ *
+ * TODO I think there should be 1 frontend per group (for easier API design).
+ * Some groups may be digital (1 bit interafces) and some analog (8bit, or more).
+ * How am I supposed to invent an API general enough to facilitate all thsese
+ * bit sizes?
  */
 struct IFrontend {
         IFrontend () = default;
@@ -50,16 +56,24 @@ struct IFrontend {
         // virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, TimePoint const &begin, TimePoint const &end) = 0;
         // TODO following interface works only for the binary data
         virtual util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, SampleIdx offset, SampleNum length) = 0;
+
+        /// Says if there's new data since last called. Warning! Clears on read!
+        virtual bool isNewData () = 0;
 };
 
 /**
  * @brief
  */
-class /*RandomAccess*/ Frontend : public IFrontend {
+class /*RandomAccess*/ DigitalFrontend : public IFrontend, public IBackendObserver {
 public:
-        explicit Frontend (IBackend *backend);
+        explicit DigitalFrontend (IBackend *backend);
+        DigitalFrontend (const DigitalFrontend &) = delete;
+        DigitalFrontend &operator= (const DigitalFrontend &) = delete;
+        DigitalFrontend (DigitalFrontend &&) noexcept = delete;
+        DigitalFrontend &operator= (DigitalFrontend &&) noexcept = delete;
+        ~DigitalFrontend ();
 
-        SampleNum size (size_t groupIdx) const override { return cache.at (groupIdx).channelSize () * CHAR_BIT; }
+        SampleNum size (size_t groupIdx) const override { return cache.at (groupIdx).channelLength () * CHAR_BIT; }
         Stream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
         util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length) override;
 
@@ -98,11 +112,17 @@ public:
         //         return {std::next (currentData.cbegin (), offset), size};
         // }
 
+        void onNewData () override { newData.store (true); };
+
+        /// Warning! Clears on read!
+        bool isNewData () override;
+
 private:
         IBackend *backend;
         Streams cache;
         SampleIdx cachedBegin{};
         SampleIdx cachedEnd{};
+        std::atomic_bool newData;
 };
 
 /**
