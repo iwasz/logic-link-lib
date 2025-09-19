@@ -30,6 +30,7 @@ include(../../cmake/tools.cmake)
 CPMAddPackage("gh:microsoft/GSL@4.1.0")
 CPMAddPackage("gh:catchorg/Catch2@3.5.2")
 CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
+
 if(LOCAL_DEPENDENCIES)
   message("+---------------------------------------------------+")
   message("| ${PROJECT_NAME}\tis using local library versions |")
@@ -72,8 +73,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${common_SOURCE_DIR}
 )
 
-# target_link_libraries(${PROJECT_NAME} Catch2::Catch2WithMain LogicLink::LogicLink)
-target_link_libraries(${PROJECT_NAME} Catch2::Catch2WithMain LogicLink)
+target_link_libraries(${PROJECT_NAME} Catch2::Catch2WithMain LogicLink fmt)
 # target_compile_definitions(${PROJECT_NAME} PRIVATE "-DUNIT_TEST=1")
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
