@@ -35,6 +35,7 @@ struct IFrontend {
         IFrontend &operator= (IFrontend &&) noexcept = default;
         virtual ~IFrontend () = default;
 
+        // TODO rename channelLength
         /// Number of samples so far.
         virtual SampleNum size (size_t groupIdx) const = 0;
 
@@ -73,7 +74,7 @@ public:
         DigitalFrontend &operator= (DigitalFrontend &&) noexcept = delete;
         ~DigitalFrontend ();
 
-        SampleNum size (size_t groupIdx) const override { return cache.at (groupIdx).channelLength () * CHAR_BIT; }
+        SampleNum size (size_t groupIdx) const override { return backend->channelLength (groupIdx); }
         Stream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
         util::BitSpan<uint8_t const> channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length) override;
 

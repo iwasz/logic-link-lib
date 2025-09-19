@@ -180,6 +180,8 @@ void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBacken
                         break;
                 }
 
+                // TODO ad contidtional_variable for handles and wait if handles collection is empty (100% of 1 core usage).
+
                 {
                         /*
                          * Locking for the whole time prevents `handles` collection modification,

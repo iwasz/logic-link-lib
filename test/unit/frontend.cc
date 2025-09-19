@@ -40,6 +40,27 @@ TEST_CASE ("new data", "[frontend]")
         REQUIRE (frontend2.isNewData () == false);
 }
 
+TEST_CASE ("size", "[frontend]")
+{
+        Backend backend;
+        backend.configureGroup (0, 240'000'000); // Digital channels
+        DigitalFrontend frontend{&backend};
+
+        REQUIRE (frontend.size (0) == 0);
+
+        backend.append (0, 1, generateDemoDeviceBlock ());
+        REQUIRE (frontend.size (0) == 8192);
+
+        backend.append (0, 1, generateDemoDeviceBlock ());
+        REQUIRE (frontend.size (0) == 2 * 8192);
+
+        backend.append (0, 1, generateDemoDeviceBlock ());
+        REQUIRE (frontend.size (0) == 3 * 8192);
+
+        backend.clear ();
+        REQUIRE (frontend.size (0) == 0);
+}
+
 /**
  *
  */
