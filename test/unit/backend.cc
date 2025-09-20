@@ -302,6 +302,35 @@ TEST_CASE ("many blocks 1bit", "[backend]")
 }
 
 /**
+ * Simulates what logicLink does.
+ */
+TEST_CASE ("huge blocks 1bit", "[backend]")
+{
+        static constexpr auto BITS_PER_SAMPLE = 1U;
+        static constexpr auto SAMPLES_PER_BLOCK = 16384;
+        BlockArray cbs;
+
+        // Simulate hardware logic-link when set to 1 channel.
+        for (int i = 0; i < 100; ++i) {
+                cbs.append (BITS_PER_SAMPLE, generateDemoDeviceBlock (1, SAMPLES_PER_BLOCK));
+                auto const &lastAdded = cbs.data ().back ();
+                REQUIRE (lastAdded.channelLength () == SAMPLES_PER_BLOCK);
+                REQUIRE (lastAdded.firstSampleNo () == SAMPLES_PER_BLOCK * i);
+                REQUIRE (lastAdded.lastSampleNo () == SAMPLES_PER_BLOCK * i + SAMPLES_PER_BLOCK - 1);
+        }
+
+        // Get me a block with last 100 samples.
+        auto r = cbs.range (cbs.channelLength () - 100, cbs.channelLength () - 1);
+
+        // This should be the last block right?
+        REQUIRE (r.size () == 1);
+        REQUIRE (r.cbegin () == std::next (cbs.data ().cbegin (), 99));
+        REQUIRE (r.cbegin () == std::next (cbs.data ().cend (), -1));
+        REQUIRE (r.front ().firstSampleNo () == SAMPLES_PER_BLOCK * 99);
+        REQUIRE (r.front ().lastSampleNo () == SAMPLES_PER_BLOCK * 100 - 1);
+}
+
+/**
  *
  */
 TEST_CASE ("clipBytes", "[backend]")

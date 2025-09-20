@@ -7,6 +7,8 @@
  ****************************************************************************/
 
 module;
+#include <cstdint>
+#include <cstdlib>
 #include <vector>
 export module utils;
 import logic;
@@ -47,13 +49,14 @@ export auto getChannelBlockData (size_t idx) { return channelBlocksData.at (idx)
 std::vector<Square> generators (16);
 
 // Simulate a block from DemoDevice (16 channels square signals).
-export auto generateDemoDeviceBlock ()
+export auto generateDemoDeviceBlock (uint8_t channelsNumber = 16, size_t samplesPerChannel = 8192)
 {
-        std::vector<Bytes> channels (16);
+        std::vector<Bytes> channels (channelsNumber);
 
         size_t cnt{};
-        for (auto &gen : generators) {
-                channels.at (cnt++) = gen (cnt + 1, cnt + 1, 8192);
+        for (auto &chan : channels) {
+                chan = generators.at (cnt) (cnt + 1, cnt + 1, samplesPerChannel);
+                ++cnt;
         }
 
         return channels;

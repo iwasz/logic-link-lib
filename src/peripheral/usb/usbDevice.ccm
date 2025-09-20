@@ -155,8 +155,6 @@ private:
         Queue<RawCompressedBlock> queue{};
         IBackend *backend{};
 
-        // std::mutex mutex; // Protects all of the above (except libusb)
-
         /// Used to stop re-issuing the transfer.
         std::atomic_bool stopRequest;
 };
