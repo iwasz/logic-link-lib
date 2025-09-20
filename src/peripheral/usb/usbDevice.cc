@@ -11,6 +11,7 @@ module;
 #include "common/error.hh"
 #include "common/params.hh"
 #include "common/stats.hh"
+#include <Tracy.hpp>
 #include <cstdint>
 #include <cstdlib>
 #include <format>
@@ -84,6 +85,8 @@ void UsbDevice::run ()
                 return;
         }
 
+        ZoneScopedN ("anaysis");
+
         /*
          * Protecting transmissionParams with mutex is not crucial as it
          * changes only upon a call to writeTransmissionParams. That method
@@ -93,6 +96,7 @@ void UsbDevice::run ()
          *
          * queue->start () called in UsbDevice::start
          */
+        TracyPlot ("rawQueueSize", int64_t (queue.size ()));
         auto rcd = (transmissionParams.discardRaw) ? (queue.pop ()) : (queue.next ());
 
         if (!rcd) {
@@ -114,8 +118,12 @@ void UsbDevice::run ()
         // }
 
         // TODO for now only digital data gets rearranged
-        // TODO agnostic! vector of vector of bytes
-        std::vector<Bytes> digitalChannels = rearrange (rd, acquisitionParams);
+        std::vector<Bytes> digitalChannels;
+
+        {
+                ZoneScopedN ("rearrange");
+                digitalChannels = rearrange (rd, acquisitionParams);
+        }
         // ChannelBlock digitalChannels{0, {}};
         // std::vector<Bytes> digitalChannels;
 
@@ -123,9 +131,12 @@ void UsbDevice::run ()
          * Consider locking granularity. But even if it is too coarse, the move operation
          * below is so fast, that we aren't locked for too long.
          */
-        static constexpr auto BITS_PER_SAMPLE = 1U;
-        static constexpr auto GROUP = 0U;
-        backend->append (GROUP, BITS_PER_SAMPLE, std::move (digitalChannels));
+        {
+                ZoneScopedN ("append");
+                static constexpr auto BITS_PER_SAMPLE = 1U;
+                static constexpr auto GROUP = 0U;
+                backend->append (GROUP, BITS_PER_SAMPLE, std::move (digitalChannels));
+        }
 
         // if (strategy != nullptr) {
         //         strategy->run (currentBlock->sampleData);

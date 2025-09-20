@@ -28,6 +28,8 @@ include(cmake/CPM.cmake)
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
 CPMAddPackage("gh:microsoft/GSL@4.1.0")
 CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
+CPMAddPackage("gh:wolfpld/tracy@0.12.2")
+
 if(LOCAL_DEPENDENCIES)
   message("+-----------------------------------------------+")
   message("| ${PROJECT_NAME}\t\tis using local library versions |")
@@ -54,11 +56,20 @@ target_sources(${PROJECT_NAME}
     src/session.ccm
 )
 
+# Some algoithms simply can't keep up when compiled with -O0. Will have to optimize them.
+set_source_files_properties(
+    src/processing/rearrange.cc
+    src/processing/processing.ccm
+    PROPERTIES
+    COMPILE_OPTIONS "-O3"
+)
+
 add_subdirectory(src)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME} PRIVATE
-  "${GSL_SOURCE_DIR}/include"
-  "${common_SOURCE_DIR}"
+  ${GSL_SOURCE_DIR}/include
+  ${common_SOURCE_DIR}
+  ${tracy_SOURCE_DIR}/public/tracy
 )
 
 target_include_directories(
