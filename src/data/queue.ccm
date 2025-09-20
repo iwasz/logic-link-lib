@@ -28,6 +28,7 @@ public:
         /*--------------------------------------------------------------------------*/
 
         void close ();
+        size_t size () const;
 
 private:
         std::deque<Elem> data;
@@ -62,7 +63,7 @@ template <typename Elem> std::unique_ptr<Elem> Queue<Elem>::pop ()
                 return {};
         }
 
-        auto p = std::make_unique<Elem> (data.front ()); // TODO Why not to move?
+        auto p = std::make_unique<Elem> (std::move (data.front ())); // TODO Why not to move?
         data.pop_front ();
         return p;
 }
@@ -81,6 +82,7 @@ template <typename Elem> std::unique_ptr<Elem> Queue<Elem>::next () const
 {
         std::unique_lock lock{mutex};
 
+        // TODO move thit to the start method, and remove start_ field.
         if (!index) {
                 index = 0;
         }
@@ -106,4 +108,13 @@ template <typename Elem> void Queue<Elem>::close ()
 
         cVar.notify_all ();
 }
+
+/****************************************************************************/
+
+template <typename Elem> size_t Queue<Elem>::size () const
+{
+        std::lock_guard lock{mutex};
+        return data.size ();
+}
+
 } // namespace logic
