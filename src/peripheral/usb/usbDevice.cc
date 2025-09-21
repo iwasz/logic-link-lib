@@ -194,6 +194,8 @@ void UsbDevice::open (UsbInterface const &info)
 
 void UsbDevice::transferCallback (libusb_transfer *transfer)
 {
+        ZoneScopedN ("transferCallback");
+
         auto *h = reinterpret_cast<UsbDevice *> (transfer->user_data);
         // We assume transmisionParams are already set.
         auto transferLen = h->transmissionParams.singleTransferLenB;
