@@ -53,30 +53,46 @@ void Block::clear ()
 void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 {
         auto cb = Block{bitsPerSample, std::move (channels)};
+
+        if (cb.channelLength () == 0) {
+                return;
+        }
+
         cb.firstSampleNo () = currentSampleNo;
         currentSampleNo = currentSampleNo + cb.channelLength ();
         channelLength_ += cb.channelLength ();
+        auto lsnTmp = cb.lastSampleNo ();
         data_.push_back (std::move (cb));
+        auto p = BlockIndex::value_type{lsnTmp, std::next (data_.cend (), -1)};
+        index_.insert (p);
 }
 
 /*--------------------------------------------------------------------------*/
 
 BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end)
 {
-        ZoneScoped;
-
         if (begin == end) {
                 return {};
         }
 
-        auto b = std::find_if (data_.cbegin (), data_.cend (), [&begin] (Block const &b) {
-                return b.channelLength () > 0 && b.firstSampleNo () <= begin && b.lastSampleNo () >= begin;
-        });
+        ZoneScoped;
+        auto bi = index_.lower_bound (begin);
 
-        auto e = std::find_if (b, data_.cend (), [&end] (Block const &b) {
-                return b.channelLength () > 0 && b.firstSampleNo () <= end && b.lastSampleNo () >= end;
-        });
+        if (bi == index_.cend ()) {
+                return {};
+        }
 
+        ZoneNamedN (z1, "end", true);
+        auto ei = index_.lower_bound (end);
+
+        if (ei == index_.cend ()) {
+                std::advance (ei, -1);
+        }
+
+        auto b = bi->second;
+        auto e = ei->second;
+
+        // Maintain "past-the-end" semantics.
         if (e != data_.cend ()) {
                 std::advance (e, 1);
         }

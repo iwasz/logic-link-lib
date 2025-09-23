@@ -83,6 +83,22 @@ TEST_CASE ("Block from range", "[backend]")
                 REQUIRE (copy.lastSampleNo () == 95);
                 REQUIRE (copy.channel (0) == Bytes{0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb});
         }
+
+        SECTION ("empty block added")
+        {
+                static constexpr auto BITS_PER_SAMPLE = 1U;
+                BlockArray cbs;
+                cbs.append (BITS_PER_SAMPLE, std::vector<Bytes>{{}, {}});
+
+                auto r = cbs.range (32, 96);
+                REQUIRE (r.empty ());
+
+                r = cbs.range (0, 0);
+                REQUIRE (r.empty ());
+
+                r = cbs.range (0, 1);
+                REQUIRE (r.empty ());
+        }
 }
 
 /**

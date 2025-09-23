@@ -12,6 +12,7 @@ module;
 #include <algorithm>
 #include <climits>
 #include <deque>
+#include <map>
 #include <mutex>
 #include <ranges>
 #include <unordered_set>
@@ -150,7 +151,9 @@ private:
         StreamType type_{};
         SampleRate sampleRate_{};
         SampleIdx currentSampleNo{};
-        Container data_;            // Horizontal
+        Container data_; // Grows horizontally.
+        using BlockIndex = std::map<SampleIdx, Container::const_iterator>;
+        BlockIndex index_;          // Like DB index SampleIndex -> block.
         SampleNum channelLength_{}; // Assuming all channels have equal length.
 };
 
