@@ -189,7 +189,9 @@ void Backend::clear ()
 
 Stream Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx end)
 {
+        ZoneScopedN ("BackendRange");
         std::lock_guard lock{mutex};
+        // TODO This copy takes ~90% of the frame time.
         Block copy{groups.at (groupIdx).range (begin, end)};
         return copy;
 }

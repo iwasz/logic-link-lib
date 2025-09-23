@@ -200,6 +200,7 @@ struct IBackend {
         virtual Stream range (size_t groupIdx, SampleIdx begin, SampleIdx end) = 0;
         virtual size_t groupsNo () const = 0;
 
+        virtual size_t channelsNumber (size_t groupIdx) const = 0;
         virtual SampleNum channelLength (size_t groupIdx) const = 0;
 
         virtual void addObserver (IBackendObserver *observer) = 0;
@@ -221,6 +222,7 @@ public:
         void configureGroup (size_t groupIdx, SampleRate sampleRate); // TODO not used. Remove the CTOr and use this somewhere.
         size_t groupsNo () const override { return groups.size (); }
 
+        size_t channelsNumber (size_t groupIdx) const override { return groups.at (groupIdx).channelsNumber (); }
         SampleNum channelLength (size_t groupIdx) const override;
 
         void addObserver (IBackendObserver *observer) override { observers.insert (observer); }

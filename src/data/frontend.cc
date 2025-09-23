@@ -27,6 +27,8 @@ DigitalFrontend::~DigitalFrontend () { backend->removeObserver (this); }
 
 Stream const &DigitalFrontend::group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end)
 {
+        ZoneScoped;
+
         /*
          * TODO Better caching mechanism would be beneficial here. It would get more data
          * from the backend that was requested, and would return only a subrange / span.
@@ -48,12 +50,13 @@ Stream const &DigitalFrontend::group (size_t groupIdx, SampleIdx const &begin, S
 util::BitSpan<uint8_t const> DigitalFrontend::channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length)
 {
         ZoneScoped;
-        Stream const &grp = group (groupIdx, begin, begin + length);
-
-        if (int (channelIdx) > int (grp.channelsNumber ()) - 1) {
+        if (int (channelIdx) > int (backend->channelsNumber (groupIdx)) - 1) {
                 return {};
         }
 
+        Stream const &grp = group (groupIdx, begin, begin + length);
+
+        ZoneNamedN (z1, "bitSpanPrepare", true);
         Bytes const &currentData = grp.channel (channelIdx);
         auto grpStart = grp.firstSampleNo ();
         auto off = begin - grpStart;
