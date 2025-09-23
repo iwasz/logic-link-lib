@@ -9,10 +9,13 @@
 module;
 #include "common/constants.hh"
 #include "common/params.hh"
+#include <Tracy.hpp>
 #include <spdlog/spdlog.h>
 #include <thread>
+
 module logic.peripheral;
 import logic.processing;
+import logic.util;
 
 namespace logic {
 using namespace std::chrono_literals;
@@ -34,8 +37,11 @@ void DemoDevice::start (IBackend *backend)
         thread = std::thread{[backend, this] {
                 double delay = double (transferSize) * CHAR_BIT / acquisitionParams.digitalSampleRate;
                 auto chDelay = std::chrono::round<std::chrono::microseconds> (std::chrono::duration<double> (delay));
+                tracy::SetThreadName ("DemoDev");
 
                 while (running ()) {
+                        ZoneNamedN (demoDev, "demoDev", true);
+
                         auto now = std::chrono::steady_clock::now ();
 
                         auto dc = acquisitionParams.digitalChannels;
@@ -45,6 +51,7 @@ void DemoDevice::start (IBackend *backend)
                         auto sizePerChan = transferSize * CHAR_BIT / dc;
                         totalSizePerChan += sizePerChan;
 
+                        ZoneNamedN (pushBack, "generate", false);
                         for (auto i = 0U; i < dc; ++i) {
                                 /*
                                  * Square wave which frequency increases proportionally with the
@@ -55,8 +62,10 @@ void DemoDevice::start (IBackend *backend)
 
                         static constexpr auto BITS_PER_SAMPLE = 1U;
                         static constexpr auto GROUP = 0U;
+                        ZoneNamedN (append, "append", false);
                         backend->append (GROUP, BITS_PER_SAMPLE, std::move (channels));
 
+                        ZoneNamedN (sleep, "sleep", false);
                         std::this_thread::sleep_until (now + chDelay);
                 }
         }};

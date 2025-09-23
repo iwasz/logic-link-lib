@@ -8,7 +8,7 @@
 
 module;
 #include "common/constants.hh"
-#include <climits>
+#include <Tracy.hpp>
 module logic.data;
 
 import logic.core;
@@ -47,6 +47,7 @@ Stream const &DigitalFrontend::group (size_t groupIdx, SampleIdx const &begin, S
 
 util::BitSpan<uint8_t const> DigitalFrontend::channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length)
 {
+        ZoneScoped;
         Stream const &grp = group (groupIdx, begin, begin + length);
 
         if (int (channelIdx) > int (grp.channelsNumber ()) - 1) {

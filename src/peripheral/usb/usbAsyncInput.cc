@@ -9,6 +9,7 @@
 module;
 #include "common/constants.hh"
 #include "common/params.hh"
+#include <Tracy.hpp>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -146,6 +147,7 @@ void UsbAsyncInput::acquireLoop ()
 {
         static timeval tv = {.tv_sec = 0, .tv_usec = 10000};
         std::optional<high_resolution_clock::time_point> startPoint;
+        tracy::SetThreadName ("Acquire");
 
         while (true) {
                 if (kill_.load ()) {
@@ -175,6 +177,8 @@ void UsbAsyncInput::acquireLoop ()
 
 void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBackend *backend */)
 {
+        tracy::SetThreadName ("Analyze");
+
         while (true) {
                 if (kill_.load ()) {
                         break;

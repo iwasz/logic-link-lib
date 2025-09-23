@@ -73,7 +73,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${common_SOURCE_DIR}
 )
 
-target_link_libraries(${PROJECT_NAME} Catch2::Catch2WithMain LogicLink fmt)
+target_link_libraries(${PROJECT_NAME} Catch2::Catch2WithMain LogicLink fmt Tracy::TracyClient)
 # target_compile_definitions(${PROJECT_NAME} PRIVATE "-DUNIT_TEST=1")
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)

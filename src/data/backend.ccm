@@ -8,6 +8,7 @@
 
 module;
 #include "common/constants.hh"
+#include <Tracy.hpp>
 #include <algorithm>
 #include <climits>
 #include <deque>
@@ -149,7 +150,8 @@ private:
         StreamType type_{};
         SampleRate sampleRate_{};
         SampleIdx currentSampleNo{};
-        Container data_; // Horizontal
+        Container data_;            // Horizontal
+        SampleNum channelLength_{}; // Assuming all channels have equal length.
 };
 
 // Multiple BlockArray-s, each represeinging one channel-group
@@ -225,7 +227,7 @@ private:
         void notifyObservers ();
 
         BlockArrays groups;
-        mutable std::mutex mutex;
+        mutable TracyLockable (std::mutex, mutex);
         std::unordered_set<IBackendObserver *> observers;
 };
 

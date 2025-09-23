@@ -6,7 +6,8 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-export module logic.util;
-export import :poly;
-export import :thread;
-export import :span;
+module;
+#include <string>
+export module logic.util:thread;
+
+export void setThreadName (std::string const &name);

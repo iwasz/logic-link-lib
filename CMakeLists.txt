@@ -64,7 +64,7 @@ set_source_files_properties(
 
 add_subdirectory(src)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
-target_include_directories(${PROJECT_NAME} PRIVATE
+target_include_directories(${PROJECT_NAME} PUBLIC
   ${GSL_SOURCE_DIR}/include
   ${common_SOURCE_DIR}
   ${tracy_SOURCE_DIR}/public/tracy

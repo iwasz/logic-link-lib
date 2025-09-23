@@ -8,11 +8,13 @@
 
 module;
 #include "common/constants.hh"
+#include <Tracy.hpp>
 #include <algorithm>
 #include <climits>
 #include <mutex>
 #include <ranges>
 #include <vector>
+
 module logic.data;
 import logic.core;
 
@@ -53,6 +55,7 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
         auto cb = Block{bitsPerSample, std::move (channels)};
         cb.firstSampleNo () = currentSampleNo;
         currentSampleNo = currentSampleNo + cb.channelLength ();
+        channelLength_ += cb.channelLength ();
         data_.push_back (std::move (cb));
 }
 
@@ -60,6 +63,8 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 
 BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end)
 {
+        ZoneScoped;
+
         if (begin == end) {
                 return {};
         }
@@ -125,16 +130,7 @@ Stream BlockArray::clipBytes (ByteIdx begin, ByteIdx end)
 
 /*--------------------------------------------------------------------------*/
 
-SampleNum BlockArray::channelLength () const
-{
-        SampleNum sum{};
-
-        for (auto const &blck : data_) {
-                sum += blck.channelLength ();
-        }
-
-        return sum;
-}
+SampleNum BlockArray::channelLength () const { return channelLength_; }
 
 /*--------------------------------------------------------------------------*/
 
@@ -143,6 +139,8 @@ void BlockArray::clear ()
         for (auto &blck : data_) {
                 blck.clear ();
         }
+
+        channelLength_ = 0;
 }
 
 /****************************************************************************/
@@ -195,7 +193,6 @@ void Backend::configureGroup (size_t groupIdx, SampleRate sampleRate)
 
 /*--------------------------------------------------------------------------*/
 
-// TODO implement and use in the Frontend
 SampleNum Backend::channelLength (size_t groupIdx) const
 {
         std::lock_guard lock{mutex};
