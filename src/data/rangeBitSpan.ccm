@@ -16,10 +16,9 @@ export module logic.data:range.span;
 namespace logic {
 
 /**
- * TODO do not export
  * TODO let the name express dependency on Block and BlockArray
  */
-export template <std::unsigned_integral T, typename Container> class RangeIterator {
+template <std::unsigned_integral T, typename Container> class RangeIterator {
 public:
         using BlockIterator = Container::const_iterator;
         using SubRange = std::ranges::subrange<BlockIterator>;                                // Block by block iteration.
@@ -28,10 +27,7 @@ public:
         using value_type = bool;
 
         RangeIterator () = default;
-        RangeIterator (BlockIterator block, size_t channelIndex, size_t bitOffset)
-            : blockBegin{block},
-              block{block},
-              channelIndex{channelIndex} /* ,element{channel ().cbegin ()}, */ /* currentBitOffset{bitOffset % S} */
+        RangeIterator (SubRange data, size_t channelIndex, size_t bitOffset) : data{data}, block{data.cbegin ()}, channelIndex{channelIndex}
         {
                 advance (bitOffset);
         }
@@ -54,8 +50,8 @@ private:
         /// Current block's channelIndex-th channel. The channel we want to iterate.
         auto const &channel () const { return block->channel (channelIndex); }
 
-        // SubRange data{};                                                      // For example subrange<deque<Block>::const_iterator>;
-        BlockIterator blockBegin;
+        SubRange data{}; // For example subrange<deque<Block>::const_iterator>;
+        // BlockIterator blockBegin;
         BlockIterator block; // For example deque<Block>::const_iterator -> Block
         size_t channelIndex{};
         ElementIterator element; // For example std::vector<Bytes>::const_iterator
@@ -77,26 +73,6 @@ template <std::unsigned_integral T, typename Container> bool RangeIterator<T, Co
 
 /****************************************************************************/
 
-// template <std::unsigned_integral T, typename Container> void RangeIterator<T, Container>::advance (size_t bitsNumber)
-// {
-//         currentBitOffset += bitsNumber % S;
-//         auto byteOffset = bitsNumber / S; // That much bytes
-
-//         if (currentBitOffset >= S) {
-//                 currentBitOffset %= S;
-//                 ++byteOffset;
-//         }
-
-//         auto const channelLengthB = block->channelLength () / S;
-
-//         // auto currentByteOffset = std::distance (element, begin!?!?!?)
-//         auto const blockOffset = byteOffset / channelLengthB;
-
-//         auto const channelOffset = byteOffset % channelLengthB;
-//         std::advance (block, blockOffset);
-//         std::advance (element, channelOffset);
-// }
-
 template <std::unsigned_integral T, typename Container> void RangeIterator<T, Container>::advance (size_t bitsNumber)
 {
         currentBitOffset += bitsNumber % S;
@@ -117,11 +93,19 @@ template <std::unsigned_integral T, typename Container> void RangeIterator<T, Co
 
         currentBlockOffset += byteOffset / channelLengthB;
 
-        block = blockBegin;
-        std::advance (block, currentBlockOffset);
+        block = data.cbegin ();
 
-        element = channel ().cbegin ();
-        std::advance (element, currentByteOffset);
+        if (currentBlockOffset >= data.size ()) {
+                currentBlockOffset = data.size () - 1;
+                block = data.cend ();
+                currentBitOffset = 0;
+                currentByteOffset = 0;
+        }
+        else {
+                std::advance (block, currentBlockOffset);
+                element = channel ().cbegin ();
+                std::advance (element, currentByteOffset);
+        }
 }
 
 /****************************************************************************/
@@ -135,9 +119,12 @@ template <std::unsigned_integral T, typename Container> RangeIterator<T, Contain
 
                 if (element == channel ().cend ()) {
                         std::advance (block, 1);
-                        element = channel ().cbegin (); // TODO but whati  if block == cend? UB here.
-                        currentByteOffset = 0;
                         ++currentBlockOffset;
+                        currentByteOffset = 0;
+
+                        if (block != data.cend ()) {
+                                element = channel ().cbegin (); // TODO but whati  if block == cend? UB here.
+                        }
                 }
         }
 
@@ -182,15 +169,14 @@ template <std::unsigned_integral T, typename Container> RangeIterator<T, Contain
 
 template <std::unsigned_integral T, typename Container> bool RangeIterator<T, Container>::operator== (const RangeIterator &a) const
 {
-        return block == a.block && element == a.element && channelIndex == a.channelIndex && currentBitOffset == a.currentBitOffset;
+        return (block == a.block && block == data.cend ()) // If block iterator is at the end, there is no valid element iterator
+                || (block == a.block && element == a.element && channelIndex == a.channelIndex && currentBitOffset == a.currentBitOffset);
 }
 
 /**
  * Semantics like std::span, but iteration happens bit by bit instead of
  * T element after T element. Bits are iterated over in the big endian manner
  * meaning from left to right.
- *
- * TODO this belongs to the
  */
 export template <std::unsigned_integral T, typename Container>
 // requires std::same_as<typename Container::value_type, Block>
@@ -207,13 +193,13 @@ public:
         {
         }
 
-        iterator begin () { return {data.cbegin (), channelIndex, offsetInBits}; }
-        const_iterator begin () const { return {data.cbegin (), channelIndex, offsetInBits}; }
-        const_iterator cbegin () const { return {data.cbegin (), channelIndex, offsetInBits}; }
+        iterator begin () { return {data, channelIndex, offsetInBits}; }
+        const_iterator begin () const { return {data, channelIndex, offsetInBits}; }
+        const_iterator cbegin () const { return {data, channelIndex, offsetInBits}; }
 
-        iterator end () { return {data.cbegin (), channelIndex, offsetInBits + sizeInBits}; }
-        const_iterator end () const { return {data.cbegin (), channelIndex, offsetInBits + sizeInBits}; }
-        const_iterator cend () const { return {data.cbegin (), channelIndex, offsetInBits + sizeInBits}; }
+        iterator end () { return {data, channelIndex, offsetInBits + sizeInBits}; }
+        const_iterator end () const { return {data, channelIndex, offsetInBits + sizeInBits}; }
+        const_iterator cend () const { return {data, channelIndex, offsetInBits + sizeInBits}; }
 
         size_t size () const { return sizeInBits; }
         bool empty () const { return sizeInBits == 0; }

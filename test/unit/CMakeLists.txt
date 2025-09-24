@@ -7,6 +7,8 @@ set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
 project(LogicLinkTests VERSION 1.0 LANGUAGES CXX)
 option(ENABLE_TEST_COVERAGE "Enable test coverage" OFF)
+# add_compile_options("-fsanitize=address")
+# add_link_options("-fsanitize=address")
 
 # +--------------------------------------+
 # | Include guard                        |

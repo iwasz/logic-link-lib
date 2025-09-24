@@ -363,7 +363,12 @@ TEST_CASE ("Increment++ 3 blocks", "[rangeBitSpan]")
 
                 iter++;
                 iter++;
-                iter++;
+                iter++; // End of the block 0
+
+                for (int i = 0; i < 64; ++i) {
+                        iter++;
+                }
+
                 REQUIRE (iter == rbs.end ());
         }
 }
