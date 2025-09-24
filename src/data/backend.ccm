@@ -28,12 +28,14 @@ class BlockArray;
  */
 class Block {
 public:
+        using Container = std::vector<Bytes>;
+
         Block () = default;
         Block (uint8_t bitsPerSample, size_t channels, size_t numberOfSamples);
 
         template <typename Range> explicit Block (Range const &range);
 
-        Block (uint8_t bitsPerSample, /* SampleIdx firstSampleNo, */ std::vector<Bytes> &&d)
+        Block (uint8_t bitsPerSample, /* SampleIdx firstSampleNo, */ Container &&d)
             : bitsPerSample_{bitsPerSample}, /* firstSampleNo_{firstSampleNo}, */ data_{std::move (d)}
         {
         }
@@ -58,7 +60,7 @@ public:
         uint8_t bitsPerSample () const { return bitsPerSample_; }
 
         Bytes const &channel (size_t idx) const { return data_.at (idx); }
-        std::vector<Bytes> const &data () const { return data_; }
+        Container const &data () const { return data_; }
 
         // Truncates all the channels to 0.
         void clear ();
@@ -70,7 +72,7 @@ private:
         uint8_t bitsPerSample_{};
         SampleIdx firstSampleNo_{};
         // For now only Bytes are supported.
-        std::vector<Bytes> data_; // Horizontal
+        Container data_; // Horizontal
 };
 
 /*--------------------------------------------------------------------------*/
@@ -127,7 +129,7 @@ public:
         /**
          * Returns block range that includes sample numbers passed (inclusive).
          */
-        SubRange range (SampleIdx begin, SampleIdx end);
+        SubRange range (SampleIdx begin, SampleIdx end) const;
 
         /**
          * Returns a Stream cut precisely down to the byte.
@@ -178,6 +180,8 @@ struct IBackendObserver {
  * To access individual samples (whatever their size might be) use a frontend.
  */
 struct IBackend {
+        using SubRange = BlockArray::SubRange;
+
         IBackend () = default;
         IBackend (IBackend const &) = default;
         IBackend &operator= (IBackend const &) = default;
@@ -197,7 +201,7 @@ struct IBackend {
          * the `begin` sample and finish after the `end` sample, so you
          * have to trim it yourself (use std::span / BitSpan).
          */
-        virtual Stream range (size_t groupIdx, SampleIdx begin, SampleIdx end) = 0;
+        virtual SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end) const = 0;
         virtual size_t groupsNo () const = 0;
 
         virtual size_t channelsNumber (size_t groupIdx) const = 0;
@@ -217,7 +221,7 @@ public:
         void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) override;
         void clear () override;
 
-        Stream range (size_t groupIdx, SampleIdx begin, SampleIdx end) override;
+        SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end) const override;
 
         void configureGroup (size_t groupIdx, SampleRate sampleRate); // TODO not used. Remove the CTOr and use this somewhere.
         size_t groupsNo () const override { return groups.size (); }

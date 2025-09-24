@@ -11,4 +11,6 @@ target_sources(${PROJECT_NAME}
     frontend.ccm
     types.ccm
     queue.ccm
+    bitSpan.ccm
+    rangeBitSpan.ccm
 )

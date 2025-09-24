@@ -61,3 +61,13 @@ export auto generateDemoDeviceBlock (uint8_t channelsNumber = 16, size_t samples
 
         return channels;
 };
+
+/// Yes.
+export auto vectorize = [] (auto const &sp) {
+        std::vector<bool> dreadedVector;
+
+        for (bool b : sp) {
+                dreadedVector.push_back (b);
+        }
+        return dreadedVector;
+};

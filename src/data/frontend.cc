@@ -25,47 +25,53 @@ DigitalFrontend::~DigitalFrontend () { backend->removeObserver (this); }
 
 /****************************************************************************/
 
-Stream const &DigitalFrontend::group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end)
-{
-        ZoneScoped;
+// Stream const &DigitalFrontend::group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end)
+// {
+//         ZoneScoped;
 
-        /*
-         * TODO Better caching mechanism would be beneficial here. It would get more data
-         * from the backend that was requested, and would return only a subrange / span.
-         * - retrieve more (like 3x more than end-begin), store in cache
-         * - remove cachedBegin and cachedEnd
-         * - add a query method to teh `Stream` class that would check if provided range is
-         *   covered by this stream.
-         * - and resize cache automatically (if multiple groups per frontend is possible).
-         */
-        if (cachedBegin != begin || cachedEnd != end) {
-                cache.at (groupIdx) = backend->range (groupIdx, begin, end);
-        }
+//         /*
+//          * TODO Better caching mechanism would be beneficial here. It would get more data
+//          * from the backend that was requested, and would return only a subrange / span.
+//          * - retrieve more (like 3x more than end-begin), store in cache
+//          * - remove cachedBegin and cachedEnd
+//          * - add a query method to teh `Stream` class that would check if provided range is
+//          *   covered by this stream.
+//          * - and resize cache automatically (if multiple groups per frontend is possible).
+//          */
+//         if (cachedBegin != begin || cachedEnd != end) {
+//                 cache.at (groupIdx) = backend->range (groupIdx, begin, end);
+//         }
 
-        return cache.at (groupIdx);
-}
+//         return cache.at (groupIdx);
+// }
 
 /****************************************************************************/
 
-util::BitSpan<uint8_t const> DigitalFrontend::channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length)
+BitSpan<uint8_t const> DigitalFrontend::channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length)
 {
         ZoneScoped;
         if (int (channelIdx) > int (backend->channelsNumber (groupIdx)) - 1) {
                 return {};
         }
 
-        Stream const &grp = group (groupIdx, begin, begin + length);
+        // Stream const &grp = group (groupIdx, begin, begin + length);
+        auto grp = backend->range (groupIdx, begin, begin + length);
 
-        ZoneNamedN (z1, "bitSpanPrepare", true);
-        Bytes const &currentData = grp.channel (channelIdx);
-        auto grpStart = grp.firstSampleNo ();
-        auto off = begin - grpStart;
-
-        if (off < 0) {
-                throw Exception{"Frontend internal error. Offset < 0."};
+        if (grp.empty ()) {
+                return {};
         }
 
-        return {currentData.data (), size_t (off), size_t (length)};
+        // ZoneNamedN (z1, "bitSpanPrepare", true);
+        // Bytes const &currentData = grp.channel (channelIdx);
+        // auto grpStart = grp.front ().firstSampleNo ();
+        // auto off = begin - grpStart;
+
+        // if (off < 0) {
+        //         throw Exception{"Frontend internal error. Offset < 0."};
+        // }
+
+        // return {currentData.data (), size_t (off), size_t (length)};
+        return {};
 }
 
 /****************************************************************************/

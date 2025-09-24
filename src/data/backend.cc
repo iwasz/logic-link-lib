@@ -69,7 +69,7 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 
 /*--------------------------------------------------------------------------*/
 
-BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end)
+BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end) const
 {
         if (begin == end) {
                 return {};
@@ -187,13 +187,22 @@ void Backend::clear ()
 
 /*--------------------------------------------------------------------------*/
 
-Stream Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx end)
+Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx end) const
 {
         ZoneScopedN ("BackendRange");
+        /*
+         * Only groups and a paricular group (BlockArray) is protected. But
+         * the blocks thselves are not. They are returned by const_iterators
+         * though, so won't get modified by this thread. Any othe thread
+         * won't modify them as well, because once tha data is read from a
+         * device, there's no need to modifu it.
+         */
         std::lock_guard lock{mutex};
-        // TODO This copy takes ~90% of the frame time.
-        Block copy{groups.at (groupIdx).range (begin, end)};
-        return copy;
+
+        // // TODO This copy takes ~90% of the frame time.
+        // Block copy{groups.at (groupIdx).range (begin, end)};
+        // return copy;
+        return groups.at (groupIdx).range (begin, end);
 }
 
 /*--------------------------------------------------------------------------*/

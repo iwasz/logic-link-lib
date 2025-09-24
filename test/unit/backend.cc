@@ -8,6 +8,7 @@
 
 module;
 #include <catch2/catch_test_macros.hpp>
+#include <deque>
 module logic.data;
 import utils;
 

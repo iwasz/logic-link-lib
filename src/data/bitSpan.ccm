@@ -10,10 +10,10 @@ module;
 #include <climits>
 #include <cstdint>
 #include <iterator>
-export module logic.util:span;
+export module logic.data:span;
 // import :data;
 
-namespace logic::util {
+namespace logic {
 
 /**
  * Based on https://en.cppreference.com/w/cpp/iterator/forward_iterator.html

@@ -11,6 +11,7 @@
 
 import logic.util;
 import logic.data;
+import utils;
 
 using namespace logic;
 using namespace logic::util;
@@ -22,15 +23,6 @@ TEST_CASE ("Basic", "[bitSpan]")
                 0b0101'1010,
                 0b1100'1100,
                 0b1110'0011,
-        };
-
-        auto vectorize = [] (auto const &sp) {
-                std::vector<bool> dreadedVector;
-
-                for (bool b : sp) {
-                        dreadedVector.push_back (b);
-                }
-                return dreadedVector;
         };
 
         SECTION ("Span")
