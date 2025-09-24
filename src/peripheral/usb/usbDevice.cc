@@ -215,13 +215,9 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                 return;
         }
 
-        if (size_t (transfer->actual_length) < transferLen) {
-                // Shrink. Standard guarantees, there's no re-allocation here.
-                h->singleTransfer.resize (transfer->actual_length);
-        }
-        else if (size_t (transfer->actual_length) > transferLen) {
-                // This should never happen I think.
-                h->eventQueue ()->addEvent<ErrorEvent> ("There's more data received than requested.");
+        if (size_t (transfer->actual_length) != transferLen) {
+                // Lotys of code in upper layers depend on blocks of equal length.
+                h->eventQueue ()->addEvent<ErrorEvent> ("Received data size != requested data size.");
                 h->notify (false, State::error);
                 return;
         }

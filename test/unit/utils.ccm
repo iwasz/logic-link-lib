@@ -41,6 +41,12 @@ export std::vector<std::vector<Bytes>> channelBlocksData = {
                 {0xa, 0xb, 0xc, 0xd}, // CH2
                 {0xb, 0xc, 0xd, 0xe}, // CH3
         },
+        {
+                {0xaa, 0xef, 0xdf, 0xcf}, // CH0
+                {0xbf, 0xaf, 0x9f, 0x8f}, // CH1
+                {0x7f, 0x6f, 0x5f, 0x4f}, // CH2
+                {0x3f, 0x2f, 0x1f, 0x0f}, // CH3
+        },
 };
 
 export auto getChannelBlockData (size_t idx) { return channelBlocksData.at (idx); }

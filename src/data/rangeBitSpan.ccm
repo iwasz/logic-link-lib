@@ -21,21 +21,19 @@ namespace logic {
  */
 export template <std::unsigned_integral T, typename Container> class RangeIterator {
 public:
-        using SubRange = std::ranges::subrange<typename Container::const_iterator>;
-
+        using BlockIterator = Container::const_iterator;
+        using SubRange = std::ranges::subrange<BlockIterator>;                                // Block by block iteration.
+        using ElementIterator = Container::value_type::Container::value_type::const_iterator; // T by T element iteration (usually byte by byte).
         using difference_type = std::ptrdiff_t;
         using value_type = bool;
 
         RangeIterator () = default;
-        RangeIterator (SubRange data, size_t channelIndex, size_t bitOffset)
-            : data{data}, channelIndex{channelIndex}, /* currentElemOffset{bitOffset / S}, */ currentBitOffset{bitOffset % S}
+        RangeIterator (BlockIterator block, size_t channelIndex, size_t bitOffset)
+            : blockBegin{block},
+              block{block},
+              channelIndex{channelIndex} /* ,element{channel ().cbegin ()}, */ /* currentBitOffset{bitOffset % S} */
         {
-                if (data.empty ()) {
-                        return;
-                }
-
-                block = data.cbegin ();
-                element = channel ().cbegin ();
+                advance (bitOffset);
         }
 
         bool operator* () const;
@@ -47,19 +45,24 @@ public:
 
         bool operator== (const RangeIterator &a) const;
 
+        /// Advance by bitsNumber bits.  Only forward. Public for UTs.
+        void advance (size_t bitsNumber);
+
 private:
         static constexpr auto S = sizeof (T) * CHAR_BIT;
 
         /// Current block's channelIndex-th channel. The channel we want to iterate.
         auto const &channel () const { return block->channel (channelIndex); }
 
-        SubRange data{};                                                      // For example subrange<deque<Block>::const_iterator>;
-        Container::const_iterator block;                                      // For example deque<Block>::const_iterator -> Block
-        Container::value_type::Container::value_type::const_iterator element; // For example std::vector<Bytes>::const_iterator
-
+        // SubRange data{};                                                      // For example subrange<deque<Block>::const_iterator>;
+        BlockIterator blockBegin;
+        BlockIterator block; // For example deque<Block>::const_iterator -> Block
         size_t channelIndex{};
-        // size_t currentElemOffset{}; // TODO remove
+        ElementIterator element; // For example std::vector<Bytes>::const_iterator
+
         size_t currentBitOffset{};
+        size_t currentByteOffset{};
+        size_t currentBlockOffset{};
 };
 
 // Move to BlockArray
@@ -74,14 +77,67 @@ template <std::unsigned_integral T, typename Container> bool RangeIterator<T, Co
 
 /****************************************************************************/
 
+// template <std::unsigned_integral T, typename Container> void RangeIterator<T, Container>::advance (size_t bitsNumber)
+// {
+//         currentBitOffset += bitsNumber % S;
+//         auto byteOffset = bitsNumber / S; // That much bytes
+
+//         if (currentBitOffset >= S) {
+//                 currentBitOffset %= S;
+//                 ++byteOffset;
+//         }
+
+//         auto const channelLengthB = block->channelLength () / S;
+
+//         // auto currentByteOffset = std::distance (element, begin!?!?!?)
+//         auto const blockOffset = byteOffset / channelLengthB;
+
+//         auto const channelOffset = byteOffset % channelLengthB;
+//         std::advance (block, blockOffset);
+//         std::advance (element, channelOffset);
+// }
+
+template <std::unsigned_integral T, typename Container> void RangeIterator<T, Container>::advance (size_t bitsNumber)
+{
+        currentBitOffset += bitsNumber % S;
+        auto byteOffset = bitsNumber / S; // That much bytes
+
+        if (currentBitOffset >= S) {
+                currentBitOffset %= S;
+                ++byteOffset;
+        }
+
+        auto const channelLengthB = block->channelLength () / S;
+
+        currentByteOffset += byteOffset % channelLengthB;
+        if (currentByteOffset >= channelLengthB) {
+                currentByteOffset %= channelLengthB;
+                ++currentBlockOffset;
+        }
+
+        currentBlockOffset += byteOffset / channelLengthB;
+
+        block = blockBegin;
+        std::advance (block, currentBlockOffset);
+
+        element = channel ().cbegin ();
+        std::advance (element, currentByteOffset);
+}
+
+/****************************************************************************/
+
 template <std::unsigned_integral T, typename Container> RangeIterator<T, Container> &RangeIterator<T, Container>::operator++ ()
 {
         if (++currentBitOffset >= S) {
                 currentBitOffset = 0;
                 std::advance (element, 1);
+                ++currentByteOffset;
 
                 if (element == channel ().cend ()) {
                         std::advance (block, 1);
+                        element = channel ().cbegin (); // TODO but whati  if block == cend? UB here.
+                        currentByteOffset = 0;
+                        ++currentBlockOffset;
                 }
         }
 
@@ -126,8 +182,7 @@ template <std::unsigned_integral T, typename Container> RangeIterator<T, Contain
 
 template <std::unsigned_integral T, typename Container> bool RangeIterator<T, Container>::operator== (const RangeIterator &a) const
 {
-        return channelIndex == a.channelIndex && currentBitOffset == a.currentBitOffset /* && currentElemOffset == a.currentElemOffset */
-                && data.cbegin () == a.data.cbegin () && data.cend () == a.data.cend ();
+        return block == a.block && element == a.element && channelIndex == a.channelIndex && currentBitOffset == a.currentBitOffset;
 }
 
 /**
@@ -148,26 +203,41 @@ public:
 
         RangeBitSpan () = default;
         RangeBitSpan (SubRange data, size_t channelIndex, size_t bitOffset, size_t bitSize)
-            : data{data}, channelIndex{channelIndex}, offsetInBits{bitOffset}, sizeInBits{bitSize}
+            : data{data}, channelIndex{channelIndex}, offsetInBits{bitOffset}, sizeInBits{trimSize (bitSize)}
         {
         }
 
-        iterator begin () { return {data, channelIndex, offsetInBits}; }
-        const_iterator begin () const { return {data, channelIndex, offsetInBits}; }
-        const_iterator cbegin () const { return {data, channelIndex, offsetInBits}; }
+        iterator begin () { return {data.cbegin (), channelIndex, offsetInBits}; }
+        const_iterator begin () const { return {data.cbegin (), channelIndex, offsetInBits}; }
+        const_iterator cbegin () const { return {data.cbegin (), channelIndex, offsetInBits}; }
 
-        iterator end () { return {data, channelIndex, offsetInBits + sizeInBits}; }
-        const_iterator end () const { return {data, channelIndex, offsetInBits + sizeInBits}; }
-        const_iterator cend () const { return {data, channelIndex, offsetInBits + sizeInBits}; }
+        iterator end () { return {data.cbegin (), channelIndex, offsetInBits + sizeInBits}; }
+        const_iterator end () const { return {data.cbegin (), channelIndex, offsetInBits + sizeInBits}; }
+        const_iterator cend () const { return {data.cbegin (), channelIndex, offsetInBits + sizeInBits}; }
 
         size_t size () const { return sizeInBits; }
         bool empty () const { return sizeInBits == 0; }
 
 private:
+        static constexpr auto S = sizeof (T) * CHAR_BIT;
+        size_t trimSize (size_t offset) const;
+
         SubRange data{};
         size_t channelIndex{};
         size_t offsetInBits{};
         size_t sizeInBits{};
 };
+
+/****************************************************************************/
+
+template <std::unsigned_integral T, typename Container> size_t RangeBitSpan<T, Container>::trimSize (size_t offset) const
+{
+        if (data.empty ()) {
+                return 0;
+        }
+
+        auto const maxLength = data.front ().channelLength () * data.size (); // In S units
+        return std::min<size_t> (maxLength - offsetInBits, offset);
+}
 
 } // namespace logic
