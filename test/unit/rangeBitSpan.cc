@@ -28,42 +28,42 @@ TEST_CASE ("Size, empty", "[rangeBitSpan]")
 
         SECTION ("size 1")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 0, 1};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 0, 1};
                 REQUIRE (rbs.size () == 1);
                 REQUIRE (!rbs.empty ());
         }
 
         SECTION ("size 1a")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1};
                 REQUIRE (rbs.size () == 1);
                 REQUIRE (!rbs.empty ());
         }
 
         SECTION ("size 6")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 6};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 6};
                 REQUIRE (rbs.size () == 6);
                 REQUIRE (!rbs.empty ());
         }
 
         SECTION ("size 32")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 32};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 32};
                 REQUIRE (rbs.size () == 32);
                 REQUIRE (!rbs.empty ());
         }
 
         SECTION ("size max")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 90};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 90};
                 REQUIRE (rbs.size () == 90);
                 REQUIRE (!rbs.empty ());
         }
 
         SECTION ("size past the max")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
                 REQUIRE (rbs.size () == 90);
                 REQUIRE (!rbs.empty ());
         }
@@ -74,7 +74,7 @@ TEST_CASE ("Size, empty", "[rangeBitSpan]")
                 blockArray.append (BITS_PER_SAMPLE, {});
                 auto r = blockArray.range (0, 96);
 
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
                 REQUIRE (rbs.size () == 0);
                 REQUIRE (rbs.empty ());
         }
@@ -85,7 +85,7 @@ TEST_CASE ("Size, empty", "[rangeBitSpan]")
                 blockArray.append (BITS_PER_SAMPLE, {{}, {}});
                 auto r = blockArray.range (0, 96);
 
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
                 REQUIRE (rbs.size () == 0);
                 REQUIRE (rbs.empty ());
         }
@@ -107,7 +107,7 @@ TEST_CASE ("Advance 1 block", "[rangeBitSpan]")
 
         SECTION ("first bit")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 0, 8};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 0, 8};
                 auto iter = rbs.begin ();
                 REQUIRE (*iter == 1);
 
@@ -117,7 +117,7 @@ TEST_CASE ("Advance 1 block", "[rangeBitSpan]")
 
         SECTION ("advance by 1")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 0, 8};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 0, 8};
                 auto iter = rbs.begin ();
                 REQUIRE (*iter == 1);
 
@@ -149,7 +149,7 @@ TEST_CASE ("Advance 1 block", "[rangeBitSpan]")
 
         SECTION ("advance by 2")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 1, 7};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 1, 7};
                 auto iter = rbs.begin ();
                 REQUIRE (*iter == 0);
 
@@ -171,7 +171,7 @@ TEST_CASE ("Advance 1 block", "[rangeBitSpan]")
 
         SECTION ("advance by 5")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 2, 1000}; // len == 30 bits
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 2, 1000}; // len == 30 bits
                 auto iter = rbs.begin ();
                 REQUIRE (*iter == 1);
 
@@ -196,7 +196,7 @@ TEST_CASE ("Advance 1 block", "[rangeBitSpan]")
 
         SECTION ("max advance")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 2, 1000};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 2, 1000};
                 auto iter = rbs.begin ();
                 REQUIRE (*iter == 1);
 
@@ -222,7 +222,7 @@ TEST_CASE ("Advance 3 blocks", "[rangeBitSpan]")
 
         SECTION ("advance A")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
                 auto iter = rbs.begin ();
                 REQUIRE (*iter == 1);
 
@@ -256,7 +256,7 @@ TEST_CASE ("Advance 3 blocks", "[rangeBitSpan]")
 
         SECTION ("advance by 30")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
                 auto iter = rbs.begin ();
                 REQUIRE (*iter == 1);
 
@@ -276,7 +276,7 @@ TEST_CASE ("Increment++ 1 block", "[rangeBitSpan]")
 
         SECTION ("advance by 1")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 0, 8};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 0, 8};
                 auto iter = rbs.begin ();
                 REQUIRE (*iter == 1);
 
@@ -320,7 +320,7 @@ TEST_CASE ("Increment++ 3 blocks", "[rangeBitSpan]")
 
         SECTION ("advance")
         {
-                RangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
+                BlockRangeBitSpan<uint8_t const, BlockArray::Container> rbs{r, 0, 6, 1000};
                 auto iter = rbs.begin ();
                 REQUIRE (*iter == 1);
 

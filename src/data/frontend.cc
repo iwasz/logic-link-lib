@@ -47,7 +47,8 @@ DigitalFrontend::~DigitalFrontend () { backend->removeObserver (this); }
 
 /****************************************************************************/
 
-BitSpan<uint8_t const> DigitalFrontend::channel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum length)
+BlockRangeBitSpan<uint8_t const, BlockArray::Container> DigitalFrontend::channel (size_t groupIdx, size_t channelIdx, SampleIdx begin,
+                                                                                  SampleNum length)
 {
         ZoneScoped;
         if (int (channelIdx) > int (backend->channelsNumber (groupIdx)) - 1) {
@@ -61,17 +62,15 @@ BitSpan<uint8_t const> DigitalFrontend::channel (size_t groupIdx, size_t channel
                 return {};
         }
 
-        // ZoneNamedN (z1, "bitSpanPrepare", true);
-        // Bytes const &currentData = grp.channel (channelIdx);
-        // auto grpStart = grp.front ().firstSampleNo ();
-        // auto off = begin - grpStart;
+        ZoneNamedN (z1, "bitSpanPrepare", true);
+        auto grpStart = grp.front ().firstSampleNo ();
+        auto off = begin - grpStart;
 
-        // if (off < 0) {
-        //         throw Exception{"Frontend internal error. Offset < 0."};
-        // }
+        if (off < 0) {
+                throw Exception{"Frontend internal error. Offset < 0."};
+        }
 
-        // return {currentData.data (), size_t (off), size_t (length)};
-        return {};
+        return {grp, channelIdx, size_t (off), size_t (length)};
 }
 
 /****************************************************************************/
