@@ -59,6 +59,7 @@ private:
         using UsbHandles = std::unordered_map<libusb_device const *, std::shared_ptr<UsbDevice>>;
         UsbHandles handles;
         std::mutex mutex; // Protects the `handles` collection.
+        std::condition_variable handlesCVar;
 
         std::future<void> acquireFuture;
         std::future<void> analyzeFuture;

@@ -9,9 +9,9 @@
 module;
 #include <climits>
 #include <cstdint>
+#include <ranges>
 #include <vector>
 export module logic.util:poly;
-// import logic.data;
 
 namespace logic::util {
 
@@ -121,6 +121,51 @@ std::vector<Coord> toPolyPointsb (Collection const &data, bool *lastBit, Coord h
                 ret.push_back ((bit) ? (0) : (h));
 
                 *lastBit = bit;
+        }
+
+        return ret;
+}
+
+/**
+ * First bit is used only for the edge rendering. No level corresponding to
+ * the first bit will be rendered. This is to make seamless tiles possible,
+ * where we need to start from a known state rendered before. For instance
+ * if a tile on the left finished with HI state, and the next (current) tile
+ * starts with tle LO state, we need to draw a level ↓. But how are supposed
+ * to know that? This is why src/PlotView/digitalSamplesTile.cc peeks one
+ * bit before, and this functions uses it to draw corresponding level.
+ */
+export template <typename Coord, typename Collection>
+std::vector<Coord> toPolyPointsb (Collection const &data, Coord h, Coord lineWidth, Coord padding)
+{
+        if (data.empty ()) {
+                return {};
+        }
+
+        bool lastBit = *data.begin ();
+
+        Coord x = padding * lineWidth;
+        std::vector<Coord> ret;
+        ret.reserve (data.size ());
+
+        // Starting point.
+        ret.push_back (x);
+        ret.push_back ((lastBit) ? (0) : (h));
+
+        for (uint8_t bit : data | std::views::drop (1)) {
+                // edge
+                if (lastBit != bit) {
+                        ret.push_back (x);
+                        ret.push_back ((bit) ? (0) : (h));
+                }
+
+                // level
+                x += lineWidth;
+
+                ret.push_back (x);
+                ret.push_back ((bit) ? (0) : (h));
+
+                lastBit = bit;
         }
 
         return ret;
