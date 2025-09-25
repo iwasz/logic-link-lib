@@ -107,21 +107,27 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
                                         std::lock_guard lock{input->mutex};
                                         input->handles[dev] = device;
                                 }
+
+                                input->handlesCVar.notify_all ();
                                 eventQueue->setAlarm<DeviceAlarm> (std::move (device));
                         }
                 }
                 else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
-                        std::lock_guard lock{input->mutex};
-                        auto &intDevice = input->handles.at (dev);
-                        eventQueue->clearAlarm<DeviceAlarm> (intDevice);
-                        /*
-                         * Remove from the `handles` set. This releases (or prepares to release)
-                         * all the resources. Removes the InternalHandle, deletes the shared_ptr
-                         * device (if upper layers don't use it), which in turn calls libusb_close.
-                         * If upper layers till hold a shared_pointer to the device, it gets
-                         * destroyed when they release it.
-                         */
-                        input->handles.erase (dev);
+                        {
+                                std::lock_guard lock{input->mutex};
+                                auto &intDevice = input->handles.at (dev);
+                                eventQueue->clearAlarm<DeviceAlarm> (intDevice);
+                                /*
+                                 * Remove from the `handles` set. This releases (or prepares to release)
+                                 * all the resources. Removes the InternalHandle, deletes the shared_ptr
+                                 * device (if upper layers don't use it), which in turn calls libusb_close.
+                                 * If upper layers till hold a shared_pointer to the device, it gets
+                                 * destroyed when they release it.
+                                 */
+                                input->handles.erase (dev);
+                        }
+
+                        input->handlesCVar.notify_all ();
                 }
         }
         catch (std::exception const &e) {
@@ -184,8 +190,6 @@ void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBacken
                         break;
                 }
 
-                // TODO ad contidtional_variable for handles and wait if handles collection is empty (100% of 1 core usage).
-
                 {
                         /*
                          * Locking for the whole time prevents `handles` collection modification,
@@ -199,7 +203,8 @@ void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBacken
                          * TODO Though... I could un-register the hot-plug callback if at least one device
                          * is acquiring.
                          */
-                        std::lock_guard lock{mutex};
+                        std::unique_lock lock{mutex};
+                        handlesCVar.wait (lock, [this] { return !handles.empty (); });
 
                         for (auto &h : handles) {
                                 h.second->run ();
