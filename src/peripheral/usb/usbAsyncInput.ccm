@@ -46,7 +46,11 @@ public:
         ~UsbAsyncInput () noexcept override;
 
         void run () override;
-        void kill () override { kill_.store (true); }
+        void kill () override
+        {
+                kill_.store (true);
+                handlesCVar.notify_all ();
+        }
 
 private:
         void acquireLoop ();

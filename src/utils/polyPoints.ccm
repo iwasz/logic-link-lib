@@ -24,6 +24,8 @@ namespace logic::util {
  * TODO If level does not change, no points shall be added, but rather the resulting line
  * shall be prolonged! For example if I call this with data collection containig 256 bytes
  * of value 0, this function shall output only 2 vertices instead od 2048 as it does currently!
+ *
+ * TODO The does not stand if we display the individual samples as dots.
  */
 export template <typename Coord, typename Collection>
 std::vector<Coord> toPolyPointsW (Collection const &data, bool *lastBit, Coord w, Coord h, Coord lineWidth)

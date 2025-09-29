@@ -204,7 +204,7 @@ void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBacken
                          * is acquiring.
                          */
                         std::unique_lock lock{mutex};
-                        handlesCVar.wait (lock, [this] { return !handles.empty (); });
+                        handlesCVar.wait (lock, [this] { return !handles.empty () || kill_; });
 
                         for (auto &h : handles) {
                                 h.second->run ();
