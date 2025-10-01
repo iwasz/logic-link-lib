@@ -28,4 +28,12 @@ private:
         bool state{};
 };
 
+/**
+ * Random stream of bits.
+ */
+export class Random {
+public:
+        Bytes operator() (size_t hiBits, size_t loBits, size_t bitsTotal);
+};
+
 } // namespace logic

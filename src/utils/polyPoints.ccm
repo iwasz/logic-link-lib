@@ -103,7 +103,7 @@ std::vector<Coord> toPolyPointsb (Collection const &data, bool *lastBit, Coord h
 
         Coord x = padding * lineWidth;
         std::vector<Coord> ret;
-        ret.reserve (data.size ());
+        ret.reserve (data.size () * 2);
 
         // Starting point.
         ret.push_back (x);
@@ -148,7 +148,7 @@ std::vector<Coord> toPolyPointsb (Collection const &data, Coord h, Coord lineWid
 
         Coord x = padding * lineWidth;
         std::vector<Coord> ret;
-        ret.reserve (data.size ());
+        ret.reserve (data.size () * 2);
 
         // Starting point.
         ret.push_back (x);

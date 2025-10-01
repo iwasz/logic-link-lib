@@ -43,4 +43,14 @@ Bytes Square::operator() (size_t hiBits, size_t loBits, size_t bitsTotal)
         return buf;
 }
 
+/****************************************************************************/
+
+Bytes Random::operator() (size_t /* hiBits */, size_t /* loBits */, size_t bitsTotal)
+{
+        auto bytesTotal = size_t (std::round (bitsTotal / CHAR_BIT));
+        Bytes buf (bytesTotal);
+        std::ranges::generate (buf, [] { return std::rand () % 256; });
+        return buf;
+}
+
 } // namespace logic
