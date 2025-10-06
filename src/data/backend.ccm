@@ -11,7 +11,7 @@ module;
 #include <Tracy.hpp>
 #include <algorithm>
 #include <climits>
-#include <deque>
+#include <list>
 #include <map>
 #include <mutex>
 #include <ranges>
@@ -120,9 +120,9 @@ using Stream = Block;
  */
 class BlockArray {
 public:
-        using Container = std::deque<Block>;
+        using Container = std::list<Block>;
         using SubRange = std::ranges::subrange<Container::const_iterator>;
-
+        // BlockArray () { data_.reserve (2000000); }
         void append (uint8_t bitsPerSample, std::vector<Bytes> &&cb);
         void clear ();
 

@@ -24,7 +24,7 @@ TEST_CASE ("Size, empty", "[rangeBitSpan]")
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (2));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (1));
         auto r = blockArray.range (0, 96);
-        REQUIRE (r.size () == 3);
+        REQUIRE (std::ranges::distance (r) == 3);
 
         SECTION ("size 1")
         {
@@ -218,7 +218,7 @@ TEST_CASE ("Advance 3 blocks", "[rangeBitSpan]")
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (2));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (1));
         auto r = blockArray.range (0, 96);
-        REQUIRE (r.size () == 3);
+        REQUIRE (std::ranges::distance (r) == 3);
 
         SECTION ("advance A")
         {
@@ -316,7 +316,7 @@ TEST_CASE ("Increment++ 3 blocks", "[rangeBitSpan]")
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (2));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (1));
         auto r = blockArray.range (0, 96);
-        REQUIRE (r.size () == 3);
+        REQUIRE (std::ranges::distance (r) == 3);
 
         SECTION ("advance")
         {

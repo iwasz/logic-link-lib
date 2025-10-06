@@ -26,8 +26,8 @@ public:
         using value_type = bool;
 
         BlockRangeBitSpanIterator () = default;
-        BlockRangeBitSpanIterator (SubRange data, size_t channelIndex, size_t bitOffset)
-            : blockRange{data}, currentBlockIterator{data.cbegin ()}, channelIndex{channelIndex}
+        BlockRangeBitSpanIterator (SubRange data, size_t blockRangeSize, size_t channelIndex, size_t bitOffset)
+            : blockRange{data}, blockRangeSize{blockRangeSize}, currentBlockIterator{data.cbegin ()}, channelIndex{channelIndex}
         {
                 advance (bitOffset);
         }
@@ -36,8 +36,6 @@ public:
 
         BlockRangeBitSpanIterator &operator++ ();
         BlockRangeBitSpanIterator operator++ (int);
-        // BlockRangeBitSpanIterator &operator-- ();
-        // BlockRangeBitSpanIterator operator-- (int);
 
         bool operator== (const BlockRangeBitSpanIterator &a) const;
 
@@ -51,6 +49,7 @@ private:
         auto const &channel () const { return currentBlockIterator->channel (channelIndex); }
 
         SubRange blockRange{};               // For example subrange<deque<Block>::const_iterator>;
+        size_t blockRangeSize{};             // Copy of the size to avoid std::distance over a std::list
         BlockIterator currentBlockIterator;  // For example deque<Block>::const_iterator -> Block
         ElementIterator currentByteIterator; // For example std::vector<Bytes>::const_iterator
 
@@ -94,8 +93,8 @@ template <std::unsigned_integral T, typename Container> void BlockRangeBitSpanIt
 
         currentBlockIterator = blockRange.cbegin ();
 
-        if (currentBlockOffset >= blockRange.size ()) {
-                currentBlockOffset = blockRange.size () - 1;
+        if (currentBlockOffset >= blockRangeSize) {
+                currentBlockOffset = blockRangeSize - 1;
                 currentBlockIterator = blockRange.cend ();
                 currentBitOffset = 0;
                 currentByteOffset = 0;
@@ -143,33 +142,6 @@ BlockRangeBitSpanIterator<T, Container> BlockRangeBitSpanIterator<T, Container>:
 
 /****************************************************************************/
 
-// template <std::unsigned_integral T, typename Container>
-// BlockRangeBitSpanIterator<T, Container> &BlockRangeBitSpanIterator<T, Container>::operator-- ()
-// {
-//         // // TODO Implement
-//         // if (currentBitOffset == 0) {
-//         //         currentBitOffset = S - 1;
-//         //         --currentElemOffset;
-//         // }
-//         // else {
-//         //         --currentBitOffset;
-//         // }
-
-//         return *this;
-// }
-
-/****************************************************************************/
-
-// template <std::unsigned_integral T, typename Container>
-// BlockRangeBitSpanIterator<T, Container> BlockRangeBitSpanIterator<T, Container>::operator-- (int)
-// {
-//         auto tmp = *this;
-//         --*this;
-//         return tmp;
-// }
-
-/****************************************************************************/
-
 template <std::unsigned_integral T, typename Container>
 bool BlockRangeBitSpanIterator<T, Container>::operator== (const BlockRangeBitSpanIterator &a) const
 {
@@ -194,17 +166,21 @@ public:
 
         BlockRangeBitSpan () = default;
         BlockRangeBitSpan (SubRange data, size_t channelIndex, size_t bitOffset, size_t bitSize)
-            : data{data}, channelIndex{channelIndex}, offsetInBits{bitOffset}, sizeInBits{trimSize (bitSize)}
+            : data{data},
+              dataSize{size_t (std::ranges::distance (data))}, // TODO This is linear (instead of O(1)) if Container is a std::list
+              channelIndex{channelIndex},
+              offsetInBits{bitOffset},
+              sizeInBits{trimSize (bitSize)}
         {
         }
 
-        iterator begin () { return {data, channelIndex, offsetInBits}; }
-        const_iterator begin () const { return {data, channelIndex, offsetInBits}; }
-        const_iterator cbegin () const { return {data, channelIndex, offsetInBits}; }
+        iterator begin () { return {data, dataSize, channelIndex, offsetInBits}; }
+        const_iterator begin () const { return {data, dataSize, channelIndex, offsetInBits}; }
+        const_iterator cbegin () const { return {data, dataSize, channelIndex, offsetInBits}; }
 
-        iterator end () { return {data, channelIndex, offsetInBits + sizeInBits}; }
-        const_iterator end () const { return {data, channelIndex, offsetInBits + sizeInBits}; }
-        const_iterator cend () const { return {data, channelIndex, offsetInBits + sizeInBits}; }
+        iterator end () { return {data, dataSize, channelIndex, offsetInBits + sizeInBits}; }
+        const_iterator end () const { return {data, dataSize, channelIndex, offsetInBits + sizeInBits}; }
+        const_iterator cend () const { return {data, dataSize, channelIndex, offsetInBits + sizeInBits}; }
 
         size_t size () const { return sizeInBits; }
         bool empty () const { return sizeInBits == 0; }
@@ -214,6 +190,7 @@ private:
         size_t trimSize (size_t offset) const;
 
         SubRange data{};
+        size_t dataSize{};
         size_t channelIndex{};
         size_t offsetInBits{};
         size_t sizeInBits{};
@@ -227,7 +204,7 @@ template <std::unsigned_integral T, typename Container> size_t BlockRangeBitSpan
                 return 0;
         }
 
-        auto const maxLength = data.front ().channelLength () * data.size (); // In S units
+        auto const maxLength = data.front ().channelLength () * dataSize; // In S units
         return std::min<size_t> (maxLength - offsetInBits, offset);
 }
 

@@ -137,7 +137,7 @@ TEST_CASE ("one block 8bit", "[backend]")
         {
                 // Empty range should result in 0 blocks.
                 auto r = cbs.range (0, 0);
-                REQUIRE (r.size () == 0);
+                REQUIRE (std::ranges::distance (r) == 0);
         }
 
         SECTION ("4..8")
@@ -245,10 +245,10 @@ TEST_CASE ("one block 1bit", "[backend]")
         {
                 // Empty range should result in 0 blocks.
                 auto r = cbs.range (0, 0);
-                REQUIRE (r.size () == 0);
+                REQUIRE (std::ranges::distance (r) == 0);
 
                 r = cbs.range (10, 10);
-                REQUIRE (r.size () == 0);
+                REQUIRE (std::ranges::distance (r) == 0);
         }
 
         SECTION ("out of range")
@@ -305,10 +305,10 @@ TEST_CASE ("many blocks 1bit", "[backend]")
         {
                 // Empty range should result in 0 blocks.
                 auto r = cbs.range (0, 0);
-                REQUIRE (r.size () == 0);
+                REQUIRE (std::ranges::distance (r) == 0);
 
                 r = cbs.range (10, 10);
-                REQUIRE (r.size () == 0);
+                REQUIRE (std::ranges::distance (r) == 0);
         }
 
         SECTION ("out of range")
@@ -340,7 +340,7 @@ TEST_CASE ("huge blocks 1bit", "[backend]")
         auto r = cbs.range (cbs.channelLength () - 100, cbs.channelLength () - 1);
 
         // This should be the last block right?
-        REQUIRE (r.size () == 1);
+        REQUIRE (std::ranges::distance (r) == 1);
         REQUIRE (r.cbegin () == std::next (cbs.data ().cbegin (), 99));
         REQUIRE (r.cbegin () == std::next (cbs.data ().cend (), -1));
         REQUIRE (r.front ().firstSampleNo () == SAMPLES_PER_BLOCK * 99);
