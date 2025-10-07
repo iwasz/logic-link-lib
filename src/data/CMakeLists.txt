@@ -13,4 +13,5 @@ target_sources(${PROJECT_NAME}
     queue.ccm
     bitSpan.ccm
     rangeBitSpan.ccm
+    rangeWordSpan.ccm
 )

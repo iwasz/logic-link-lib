@@ -62,6 +62,8 @@ target_sources(${PROJECT_NAME}
     rearrange.cc
     uart.cc
     rangeBitSpan.cc
+    downsample.cc
+    rangeWordSpan.cc
 
   PUBLIC FILE_SET CXX_MODULES FILES
     utils.ccm

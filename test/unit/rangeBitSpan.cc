@@ -8,10 +8,9 @@
 
 module;
 #include <catch2/catch_test_macros.hpp>
-#include <deque>
 module logic.data;
 import utils;
-import :range.span; // Hacks to speed up UT compilation (thus development).
+// import :range.span; // Hacks to speed up UT compilation (thus development).
 
 using namespace logic;
 

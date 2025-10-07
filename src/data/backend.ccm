@@ -122,7 +122,6 @@ class BlockArray {
 public:
         using Container = std::list<Block>;
         using SubRange = std::ranges::subrange<Container::const_iterator>;
-        // BlockArray () { data_.reserve (2000000); }
         void append (uint8_t bitsPerSample, std::vector<Bytes> &&cb);
         void clear ();
 

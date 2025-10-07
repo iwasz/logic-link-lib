@@ -34,6 +34,10 @@ void DemoDevice::start (IBackend *backend)
         notify (true, State::ok);
         totalSizePerChan = 0;
 
+        if (thread.joinable ()) {
+                thread.join ();
+        }
+
         thread = std::thread{[backend, this] {
                 double delay = double (transferSize) * CHAR_BIT / acquisitionParams.digitalSampleRate;
                 auto chDelay = std::chrono::round<std::chrono::microseconds> (std::chrono::duration<double> (delay));
@@ -64,6 +68,10 @@ void DemoDevice::start (IBackend *backend)
                         static constexpr auto GROUP = 0U;
                         ZoneNamedN (append, "append", false);
                         backend->append (GROUP, BITS_PER_SAMPLE, std::move (channels));
+
+                        // if (totalSizePerChan >= 49152) {
+                        //         notify (false, State::ok);
+                        // }
 
                         ZoneNamedN (sleep, "sleep", false);
                         std::this_thread::sleep_until (now + chDelay);

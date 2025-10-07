@@ -1,0 +1,90 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include <climits>
+#include <cmath>
+#include <concepts>
+#include <cstdint>
+#include <cstdlib>
+export module logic.processing:downsample.digital;
+import logic.data;
+
+namespace logic {
+
+export struct State {
+        bool prevEvenAvg = false;
+
+        void clear () { prevEvenAvg = false; }
+};
+
+/**
+ * Downsample digital samples. Doesn't validate input length.
+ *
+ * @param begin Skip this number of samples (bits)
+ * @param inputSize In samples (bits).
+ * @param outSampleNum In samples (bits).
+ */
+export template <typename ByteCollection>
+        requires requires { typename ByteCollection::value_type; }
+&& std::same_as<std::remove_cv_t<typename ByteCollection::value_type>, uint8_t>
+Bytes downsample (ByteCollection const &in, SampleIdx begin, SampleNum inputSize, logic::SampleNum outSampleNum, State *state)
+{
+        using BitHoldingT = Bytes::value_type;
+        static constexpr size_t BITS = sizeof (BitHoldingT) * CHAR_BIT;
+
+        float ratio = float (inputSize) / float (outSampleNum);
+
+        Bytes ret;
+        ret.reserve (std::ceil (float (outSampleNum) / BITS));
+
+        float bitCnt{};
+        int cntIn{};
+        int setBits{};
+
+        BitHoldingT outWord{};
+        int cntOut = BITS - 1;
+
+        for (BitHoldingT inWord : in) {
+                for (int i = BITS - 1; i >= 0; --i) {
+                        if (begin > 0) {
+                                --begin;
+                                continue;
+                        }
+
+                        setBits += int ((inWord & (1 << i)) != 0);
+                        bitCnt += 1.0F;
+                        ++cntIn;
+
+                        if (bitCnt >= ratio) {
+                                bool avg = bool (std::round (float (setBits) / cntIn));
+
+                                // If exactly half of the bits are set, we have to round it up and down interchangeably.
+                                if (setBits * 2 == cntIn) {
+                                        state->prevEvenAvg = avg = !state->prevEvenAvg;
+                                }
+
+                                outWord |= (avg) ? (1 << cntOut) : (0);
+
+                                if (cntOut-- <= 0) {
+                                        cntOut = BITS - 1;
+                                        ret.push_back (outWord);
+                                        outWord = 0;
+                                }
+
+                                setBits = 0;
+                                cntIn = 0;
+                                bitCnt -= ratio;
+                        }
+                }
+        }
+
+        return ret;
+}
+
+} // namespace logic

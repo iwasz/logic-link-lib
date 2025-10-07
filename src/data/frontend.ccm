@@ -59,6 +59,8 @@ struct IFrontend {
         virtual BlockRangeBitSpan<uint8_t const, BlockArray::Container> channel (size_t groupIdx, size_t channelIdx, SampleIdx offset,
                                                                                  SampleNum length) = 0;
 
+        virtual Bytes downsampleChannel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum inLength, SampleNum outLength) = 0;
+
         /// Says if there's new data since last called. Warning! Clears on read!
         virtual bool isNewData () = 0;
 };
@@ -78,9 +80,11 @@ public:
         SampleNum size (size_t groupIdx) const override { return backend->channelLength (groupIdx); }
         // Stream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
 
-        // TODO dependency on BlockArray::Container.
+        // TODO remove dependency on BlockArray::Container.
         BlockRangeBitSpan<uint8_t const, BlockArray::Container> channel (size_t groupIdx, size_t channelIdx, SampleIdx begin,
                                                                          SampleNum length) override;
+
+        Bytes downsampleChannel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum inLength, SampleNum outLength) override;
 
         // ChannelStreams next () override { return {}; }
         // ChannelStreams const &range (TimePoint const &begin, TimePoint const &end) override { return current; }

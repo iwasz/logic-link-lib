@@ -9,9 +9,12 @@
 module;
 #include "common/constants.hh"
 #include <Tracy.hpp>
-module logic.data;
+#include <climits>
 
+#include <print>
+module logic.data;
 import logic.core;
+import logic.processing;
 
 namespace logic {
 
@@ -71,6 +74,30 @@ BlockRangeBitSpan<uint8_t const, BlockArray::Container> DigitalFrontend::channel
         }
 
         return {grp, channelIdx, size_t (off), size_t (length)};
+}
+
+/****************************************************************************/
+
+Bytes DigitalFrontend::downsampleChannel (size_t groupIdx, size_t channelIdx, SampleIdx begin, SampleNum inLength, SampleNum outLength)
+{
+        ZoneScoped;
+        if (int (channelIdx) > int (backend->channelsNumber (groupIdx)) - 1) {
+                return {};
+        }
+
+        // Stream const &grp = group (groupIdx, begin, begin + length);
+        auto grp = backend->range (groupIdx, begin, begin + inLength);
+
+        if (grp.empty ()) {
+                return {};
+        }
+
+        // TODO ommit 2 last params, and convert the whole grp into this span.
+        auto span = BlockRangeWordSpan<uint8_t const, BlockArray::Container>{grp, channelIdx, 0,
+                                                                             size_t (inLength / CHAR_BIT + int (inLength % CHAR_BIT != 0))};
+        logic::State state{};
+        std::println ("inS: {}, outS: {}", inLength, outLength);
+        return /* TODO !!!! BitSpan  */ downsample (span, begin, inLength, outLength, &state);
 }
 
 /****************************************************************************/

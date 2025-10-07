@@ -14,6 +14,7 @@ module;
 #include <vector>
 export module logic.processing;
 export import :generate;
+export import :downsample.digital;
 import logic.data;
 // import logic.analysis;
 

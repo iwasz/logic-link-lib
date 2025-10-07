@@ -96,7 +96,7 @@ template <std::unsigned_integral T> Iterator<T> Iterator<T>::operator-- (int)
 
 /**
  * Semantics like std::span, but iteration happens bit by bit instead of
- * T element after T element. Bits are iterated over in the big endian manner
+ * T element after T element. Bits are iterated over in the big endian manner,
  * meaning from left to right.
  */
 export template <std::unsigned_integral T> class BitSpan {
@@ -124,4 +124,4 @@ private:
         size_t sizeInBits{};
 };
 
-} // namespace logic::util
+} // namespace logic

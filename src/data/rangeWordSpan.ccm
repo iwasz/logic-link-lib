@@ -9,41 +9,42 @@
 module;
 #include <algorithm>
 #include <climits>
+#include <cstdint>
 #include <iterator>
-export module logic.data:range.span;
+export module logic.data:range.span.byte;
 
 namespace logic {
 
 /**
- * Iterator for BlockRangeBitSpan.
+ * Iterator for BlockRangeWordSpan.
  */
-template <std::unsigned_integral T, typename Container> class BlockRangeBitSpanIterator {
+template <std::unsigned_integral T, typename Container> class BlockRangeWordSpanIterator {
 public:
         using BlockIterator = Container::const_iterator;
         using SubRange = std::ranges::subrange<BlockIterator>;                                // Block by block iteration.
         using ElementIterator = Container::value_type::Container::value_type::const_iterator; // T by T element iteration (usually byte by byte).
         using difference_type = std::ptrdiff_t;
-        using value_type = bool;
+        using value_type = T;
 
-        BlockRangeBitSpanIterator () = default;
-        BlockRangeBitSpanIterator (SubRange data, size_t blockRangeSize, size_t channelIndex, size_t bitOffset)
+        BlockRangeWordSpanIterator () = default;
+        BlockRangeWordSpanIterator (SubRange data, size_t blockRangeSize, size_t channelIndex, size_t byteOffset)
             : blockRange{data}, blockRangeSize{blockRangeSize}, currentBlockIterator{data.cbegin ()}, channelIndex{channelIndex}
         {
-                advance (bitOffset);
+                advance (byteOffset);
         }
 
-        bool operator* () const;
+        T operator* () const;
 
-        BlockRangeBitSpanIterator &operator++ ();
-        BlockRangeBitSpanIterator operator++ (int);
+        BlockRangeWordSpanIterator &operator++ ();
+        BlockRangeWordSpanIterator operator++ (int);
 
-        bool operator== (const BlockRangeBitSpanIterator &a) const;
+        bool operator== (const BlockRangeWordSpanIterator &a) const;
 
-        /// Advance by bitsNumber bits.  Only forward. Public for UTs.
-        void advance (size_t bitsNumber);
+        /// Advance by byteNumber bytes. Only forward. Public for UTs.
+        void advance (size_t byteNumber);
 
 private:
-        static constexpr auto S = sizeof (T) * CHAR_BIT;
+        static constexpr auto S = sizeof (T) * CHAR_BIT; // TODO more meaningful name
 
         /// Current block's channelIndex-th channel. The channel we want to iterate.
         auto const &channel () const { return currentBlockIterator->channel (channelIndex); }
@@ -54,33 +55,23 @@ private:
         ElementIterator currentByteIterator; // For example std::vector<Bytes>::const_iterator
 
         size_t channelIndex{};
-        size_t currentBitOffset{};
+        // size_t currentBitOffset{};
         size_t currentByteOffset{};
         size_t currentBlockOffset{};
 };
 
-// Move to BlockArray
-// static_assert (std::bidirectional_iterator<RangeIterator<uint8_t, std::deque<Block>>>);
-
 /****************************************************************************/
 
-template <std::unsigned_integral T, typename Container> bool BlockRangeBitSpanIterator<T, Container>::operator* () const
+template <std::unsigned_integral T, typename Container> T BlockRangeWordSpanIterator<T, Container>::operator* () const
 {
-        return (*currentByteIterator & T (1 << (S - 1 - currentBitOffset))) != 0;
+        return *currentByteIterator;
 }
 
 /****************************************************************************/
 
-template <std::unsigned_integral T, typename Container> void BlockRangeBitSpanIterator<T, Container>::advance (size_t bitsNumber)
+template <std::unsigned_integral T, typename Container> void BlockRangeWordSpanIterator<T, Container>::advance (size_t bytesNumber)
 {
-        currentBitOffset += bitsNumber % S;
-        auto byteOffset = bitsNumber / S; // That much bytes
-
-        if (currentBitOffset >= S) {
-                currentBitOffset %= S;
-                ++byteOffset;
-        }
-
+        auto const byteOffset = bytesNumber;
         auto const channelLengthB = currentBlockIterator->channelLength () / S;
 
         currentByteOffset += byteOffset % channelLengthB;
@@ -96,7 +87,6 @@ template <std::unsigned_integral T, typename Container> void BlockRangeBitSpanIt
         if (currentBlockOffset >= blockRangeSize) {
                 currentBlockOffset = blockRangeSize - 1;
                 currentBlockIterator = blockRange.cend ();
-                currentBitOffset = 0;
                 currentByteOffset = 0;
         }
         else {
@@ -109,21 +99,18 @@ template <std::unsigned_integral T, typename Container> void BlockRangeBitSpanIt
 /****************************************************************************/
 
 template <std::unsigned_integral T, typename Container>
-BlockRangeBitSpanIterator<T, Container> &BlockRangeBitSpanIterator<T, Container>::operator++ ()
+BlockRangeWordSpanIterator<T, Container> &BlockRangeWordSpanIterator<T, Container>::operator++ ()
 {
-        if (++currentBitOffset >= S) {
-                currentBitOffset = 0;
-                std::advance (currentByteIterator, 1);
-                ++currentByteOffset;
+        std::advance (currentByteIterator, 1);
+        ++currentByteOffset;
 
-                if (currentByteIterator == channel ().cend ()) {
-                        std::advance (currentBlockIterator, 1);
-                        ++currentBlockOffset;
-                        currentByteOffset = 0;
+        if (currentByteIterator == channel ().cend ()) {
+                std::advance (currentBlockIterator, 1);
+                ++currentBlockOffset;
+                currentByteOffset = 0;
 
-                        if (currentBlockIterator != blockRange.cend ()) {
-                                currentByteIterator = channel ().cbegin (); // TODO but whati  if block == cend? UB here.
-                        }
+                if (currentBlockIterator != blockRange.cend ()) {
+                        currentByteIterator = channel ().cbegin (); // TODO but whati  if block == cend? UB here.
                 }
         }
 
@@ -133,7 +120,7 @@ BlockRangeBitSpanIterator<T, Container> &BlockRangeBitSpanIterator<T, Container>
 /****************************************************************************/
 
 template <std::unsigned_integral T, typename Container>
-BlockRangeBitSpanIterator<T, Container> BlockRangeBitSpanIterator<T, Container>::operator++ (int)
+BlockRangeWordSpanIterator<T, Container> BlockRangeWordSpanIterator<T, Container>::operator++ (int)
 {
         auto tmp = *this;
         ++*this;
@@ -143,70 +130,70 @@ BlockRangeBitSpanIterator<T, Container> BlockRangeBitSpanIterator<T, Container>:
 /****************************************************************************/
 
 template <std::unsigned_integral T, typename Container>
-bool BlockRangeBitSpanIterator<T, Container>::operator== (const BlockRangeBitSpanIterator &a) const
+bool BlockRangeWordSpanIterator<T, Container>::operator== (const BlockRangeWordSpanIterator &a) const
 {
         return (currentBlockIterator == a.currentBlockIterator
                 && currentBlockIterator == blockRange.cend ()) // If block iterator is at the end, there is no valid element iterator
                 || (currentBlockIterator == a.currentBlockIterator && currentByteIterator == a.currentByteIterator
-                    && channelIndex == a.channelIndex && currentBitOffset == a.currentBitOffset);
+                    && channelIndex == a.channelIndex);
 }
 
 /**
- * Semantics like std::span, but iteration happens bit by bit instead of
- * T element after T element. Bits are iterated over in the big endian manner
- * meaning from left to right. Works on ranges of Blocks returned from
- * a Backend.
+ * Semantics like std::span, but works on a subrange of Blocks. Tested
+ * for T == uint8_t only (for now).
+ * TODO This thing (among with the acompanying iterator) is almost identical
+ * to BlockRangeBitSpan. Reduce code duplication.
  */
-export template <std::unsigned_integral T, typename Container> class BlockRangeBitSpan {
+export template <std::unsigned_integral T, typename Container> class BlockRangeWordSpan {
 public:
         // Container: for example std::deque<Block>
         using SubRange = std::ranges::subrange<typename Container::const_iterator>;
-        using iterator = BlockRangeBitSpanIterator<T, Container>;
-        using const_iterator = BlockRangeBitSpanIterator<T const, Container>;
+        using iterator = BlockRangeWordSpanIterator<T, Container>;
+        using const_iterator = BlockRangeWordSpanIterator<T const, Container>;
+        using value_type = T;
 
-        BlockRangeBitSpan () = default;
-        BlockRangeBitSpan (SubRange data, size_t channelIndex, size_t bitOffset, size_t bitSize)
+        BlockRangeWordSpan () = default;
+        BlockRangeWordSpan (SubRange data, size_t channelIndex, size_t byteOffset, size_t byteLength)
             : data{data},
               dataSize{size_t (std::ranges::distance (data))}, // TODO This is linear (instead of O(1)) if Container is a std::list
               channelIndex{channelIndex},
-              offsetInBits{bitOffset},
-              sizeInBits{trimSize (bitSize)}
+              offsetInBytes{byteOffset},
+              sizeInBytes{trimSize (byteLength)}
         {
         }
 
-        iterator begin () { return {data, dataSize, channelIndex, offsetInBits}; }
-        const_iterator begin () const { return {data, dataSize, channelIndex, offsetInBits}; }
-        const_iterator cbegin () const { return {data, dataSize, channelIndex, offsetInBits}; }
+        iterator begin () { return {data, dataSize, channelIndex, offsetInBytes}; }
+        const_iterator begin () const { return {data, dataSize, channelIndex, offsetInBytes}; }
+        const_iterator cbegin () const { return {data, dataSize, channelIndex, offsetInBytes}; }
 
-        iterator end () { return {data, dataSize, channelIndex, offsetInBits + sizeInBits}; }
-        const_iterator end () const { return {data, dataSize, channelIndex, offsetInBits + sizeInBits}; }
-        const_iterator cend () const { return {data, dataSize, channelIndex, offsetInBits + sizeInBits}; }
+        iterator end () { return {data, dataSize, channelIndex, offsetInBytes + sizeInBytes}; }
+        const_iterator end () const { return {data, dataSize, channelIndex, offsetInBytes + sizeInBytes}; }
+        const_iterator cend () const { return {data, dataSize, channelIndex, offsetInBytes + sizeInBytes}; }
 
-        /// Size in bits.
-        size_t size () const { return sizeInBits; }
-        bool empty () const { return sizeInBits == 0; }
+        size_t size () const { return sizeInBytes; }
+        bool empty () const { return sizeInBytes == 0; }
 
 private:
-        static constexpr auto S = sizeof (T) * CHAR_BIT;
+        static constexpr auto BITS_PER_T = sizeof (T) * CHAR_BIT;
         size_t trimSize (size_t offset) const;
 
         SubRange data{};
         size_t dataSize{};
         size_t channelIndex{};
-        size_t offsetInBits{};
-        size_t sizeInBits{};
+        size_t offsetInBytes{};
+        size_t sizeInBytes{};
 };
 
 /****************************************************************************/
 
-template <std::unsigned_integral T, typename Container> size_t BlockRangeBitSpan<T, Container>::trimSize (size_t offset) const
+template <std::unsigned_integral T, typename Container> size_t BlockRangeWordSpan<T, Container>::trimSize (size_t offset) const
 {
         if (data.empty ()) {
                 return 0;
         }
 
-        auto const maxLength = data.front ().channelLength () * dataSize; // In S units
-        return std::min<size_t> (maxLength - offsetInBits, offset);
+        auto const maxLength = (data.front ().channelLength () / BITS_PER_T) * dataSize; // In S units
+        return std::min<size_t> (maxLength - offsetInBytes, offset);
 }
 
 } // namespace logic
