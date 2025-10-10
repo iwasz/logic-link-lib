@@ -7,15 +7,165 @@
  ****************************************************************************/
 
 module;
+#include <bitset>
 #include <climits>
 #include <cmath>
 #include <concepts>
 #include <cstdint>
 #include <cstdlib>
+#include <span>
 export module logic.processing:downsample.digital;
 import logic.data;
+import logic.core;
 
 namespace logic {
+
+template <std::unsigned_integral auto BITS> struct WordType {};
+
+template <> struct WordType<8UL> {
+        using type = uint8_t;
+};
+template <> struct WordType<16UL> {
+        using type = uint16_t;
+};
+
+export {
+        template <std::integral auto factor, byte_collection Collection> struct Downsample {};
+
+        template <byte_collection Collection> struct Downsample<2, Collection> {
+                static constexpr size_t BITS = 2;
+                static Collection operator() (Collection const &in);
+        };
+
+        template <byte_collection Collection> struct Downsample<4, Collection> {
+                static constexpr size_t BITS = 4;
+                static Collection operator() (Collection const &in);
+        };
+
+        template <std::integral auto factor, byte_collection Collection>
+                requires requires { requires factor == 8 || factor == 16; }
+        struct Downsample<factor, Collection> {
+                static constexpr size_t BITS = factor;
+                using WordT = WordType<BITS>::type;
+                static Collection operator() (Collection const &in);
+        };
+
+        /**
+         * Factory/helper function.
+         */
+        template <std::integral auto factor, byte_collection Collection> Collection dwnsample (Collection const &in)
+        {
+                return Downsample<factor, Collection>::operator() (in);
+        }
+}
+
+/****************************************************************************/
+
+template <byte_collection Collection> Collection Downsample<2, Collection>::operator() (Collection const &in)
+{
+        if (in.size () % BITS) {
+                throw logic::Exception{"in.size () % BITS"};
+        }
+
+        Collection out;
+        out.reserve (in.size () / BITS);
+
+        size_t cntOut = BITS - 1;
+        uint8_t outB{};
+
+        for (uint8_t b : in) {
+                int bit7 = (b & 0b11000000) > 0b10000000;
+                int bit6 = (b & 0b00110000) > 0b00100000;
+                int bit5 = (b & 0b00001100) > 0b00001000;
+                int bit4 = (b & 0b00000011) > 0b00000010;
+
+                if (cntOut == 1) {
+                        outB |= (bit7 << 7 | bit6 << 6 | bit5 << 5 | bit4 << 4);
+                        --cntOut;
+                }
+                else {
+                        outB |= (bit7 << 3 | bit6 << 2 | bit5 << 1 | bit4 << 0);
+                        out.push_back (outB);
+                        outB = 0;
+                        cntOut = BITS - 1;
+                }
+        }
+
+        return out;
+}
+
+/****************************************************************************/
+
+template <byte_collection Collection> Collection Downsample<4, Collection>::operator() (Collection const &in)
+{
+        if (in.size () % BITS) {
+                throw logic::Exception{"in.size () % BITS"};
+        }
+
+        Collection out;
+        out.reserve (in.size () / BITS);
+
+        size_t cntOut = BITS - 1;
+        uint8_t outB{};
+
+        for (uint8_t b : in) {
+                std::bitset<8> b1{size_t (b & 0b11110000)};
+                std::bitset<8> b2{size_t (b & 0b00001111)};
+
+                if (cntOut == 3) {
+                        outB |= int (b1.count () > 2) << 7 | int (b2.count () > 2) << 6;
+                        --cntOut;
+                }
+                else if (cntOut == 2) {
+                        outB |= int (b1.count () > 2) << 5 | int (b2.count () > 2) << 4;
+                        --cntOut;
+                }
+                else if (cntOut == 1) {
+                        outB |= int (b1.count () > 2) << 3 | int (b2.count () > 2) << 2;
+                        --cntOut;
+                }
+                else {
+                        outB |= int (b1.count () > 2) << 1 | int (b2.count () > 2) << 0;
+                        out.push_back (outB);
+                        outB = 0;
+                        cntOut = BITS - 1;
+                }
+        }
+
+        return out;
+}
+
+/****************************************************************************/
+
+template <std::integral auto factor, byte_collection Collection>
+        requires requires { requires factor == 8 || factor == 16; }
+Collection Downsample<factor, Collection>::operator() (Collection const &in)
+{
+        if (in.size () % BITS) {
+                throw logic::Exception{"in.size () % BITS"};
+        }
+
+        Collection out;
+        out.reserve (in.size () / BITS);
+
+        size_t cnt = CHAR_BIT - 1;
+        WordT outB{};
+        auto inSp = std::span<WordT const>{reinterpret_cast<WordT const *> (in.data ()), in.size () / (BITS / CHAR_BIT)};
+
+        for (WordT inB : inSp) {
+                outB |= int (std::popcount (inB) >= BITS / 2) << cnt;
+
+                if (--cnt == 0) {
+                        out.push_back (outB);
+                        outB = 0;
+                        cnt = CHAR_BIT - 1;
+                }
+        }
+
+        return out;
+}
+
+/****************************************************************************/
 
 export struct State {
         bool prevEvenAvg = false;
@@ -24,16 +174,16 @@ export struct State {
 };
 
 /**
- * Downsample digital samples. Doesn't validate input length.
+ * Downsample digital samples. Doesn't validate input length. Naiive implementation.
  *
  * @param begin Skip this number of samples (bits)
  * @param inputSize In samples (bits).
  * @param outSampleNum In samples (bits).
  */
-export template <typename ByteCollection>
-        requires requires { typename ByteCollection::value_type; }
-&& std::same_as<std::remove_cv_t<typename ByteCollection::value_type>, uint8_t>
-Bytes downsample (ByteCollection const &in, SampleIdx begin, SampleNum inputSize, logic::SampleNum outSampleNum, State *state)
+export template <typename byte_collection>
+        requires requires { typename byte_collection::value_type; }
+&& std::same_as<std::remove_cv_t<typename byte_collection::value_type>, uint8_t>
+Bytes downsample (byte_collection const &in, SampleIdx begin, SampleNum inputSize, logic::SampleNum outSampleNum, State *state)
 {
         using BitHoldingT = Bytes::value_type;
         static constexpr size_t BITS = sizeof (BitHoldingT) * CHAR_BIT;

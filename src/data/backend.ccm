@@ -138,12 +138,12 @@ public:
         Container const &data () const { return data_; }
 
         // TODO Make it agnostic? Move to a frontend?
-        StreamType type () const { return type_; }
-        void setType (StreamType type) { type_ = type; }
+        // StreamType type () const { return type_; }
+        // void setType (StreamType type) { type_ = type; }
 
         // TODO Make it agnostic? Move to a frontend?
-        SampleRate sampleRate () const { return sampleRate_; }
-        void setSampleRate (SampleRate sr) { sampleRate_ = sr; }
+        // SampleRate sampleRate () const { return sampleRate_; }
+        // void setSampleRate (SampleRate sr) { sampleRate_ = sr; }
 
         size_t channelsNumber () const { return (data_.empty ()) ? (0) : (data_.front ().channelsNumber ()); }
         SampleNum channelLength () const;

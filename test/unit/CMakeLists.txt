@@ -64,6 +64,7 @@ target_sources(${PROJECT_NAME}
     rangeBitSpan.cc
     downsample.cc
     rangeWordSpan.cc
+    downsamplePopcount.cc
 
   PUBLIC FILE_SET CXX_MODULES FILES
     utils.ccm

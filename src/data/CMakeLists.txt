@@ -14,4 +14,5 @@ target_sources(${PROJECT_NAME}
     bitSpan.ccm
     rangeBitSpan.ccm
     rangeWordSpan.ccm
+    owningBitSpan.ccm
 )

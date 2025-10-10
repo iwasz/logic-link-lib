@@ -207,7 +207,7 @@ Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx en
 
 /*--------------------------------------------------------------------------*/
 
-void Backend::configureGroup (size_t groupIdx, SampleRate sampleRate)
+void Backend::configureGroup (size_t groupIdx, SampleRate /* sampleRate */)
 {
         std::lock_guard lock{mutex};
 
@@ -215,7 +215,7 @@ void Backend::configureGroup (size_t groupIdx, SampleRate sampleRate)
                 groups.resize (groupIdx + 1);
         }
 
-        groups.at (groupIdx).setSampleRate (sampleRate);
+        // groups.at (groupIdx).setSampleRate (sampleRate);
 }
 
 /*--------------------------------------------------------------------------*/

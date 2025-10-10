@@ -68,6 +68,8 @@ export auto generateDemoDeviceBlock (uint8_t channelsNumber = 16, size_t samples
         return channels;
 };
 
+namespace utl {
+
 /// Yes.
 export auto vectorize = [] (auto const &sp) {
         std::vector<bool> dreadedVector;
@@ -77,3 +79,5 @@ export auto vectorize = [] (auto const &sp) {
         }
         return dreadedVector;
 };
+
+} // namespace utl

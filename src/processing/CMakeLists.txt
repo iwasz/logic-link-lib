@@ -9,4 +9,5 @@ target_sources(${PROJECT_NAME}
     processing.ccm
     generate.ccm
     downsample.ccm
+    polyPoints.ccm
 )

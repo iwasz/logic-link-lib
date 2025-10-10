@@ -18,6 +18,27 @@ export module logic.data:types;
 
 export namespace logic {
 
+template <typename T>
+concept byte_collection = requires {
+        typename T::value_type;
+        requires sizeof (typename T::value_type) == 1;
+} && std::integral<std::remove_cv_t<typename T::value_type>>;
+
+/// Simply check a boolean variable.
+template <typename T>
+concept sample_collection = requires (T t) {
+        T::SAMPLES;
+        requires T::SAMPLES;
+};
+
+template <typename T>
+concept digital_sample_collection = sample_collection<T> && requires (T t) {
+        T::DIGITAL;
+        requires T::DIGITAL;
+};
+
+/****************************************************************************/
+
 using TimePoint = std::chrono::high_resolution_clock::time_point;
 
 using Bytes = std::vector<uint8_t>;

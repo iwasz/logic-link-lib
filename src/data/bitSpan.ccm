@@ -103,6 +103,9 @@ export template <std::unsigned_integral T> class BitSpan {
 public:
         using iterator = Iterator<T>;
         using const_iterator = Iterator<T const>;
+        using value_type = bool;
+        static constexpr bool SAMPLES = true;
+        static constexpr bool DIGITAL = true;
 
         BitSpan () = default;
         BitSpan (T *data, size_t bitOffset, size_t bitSize) : data{data}, offsetInBits{bitOffset}, sizeInBits{bitSize} {}

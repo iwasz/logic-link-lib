@@ -65,6 +65,8 @@ BlockRangeBitSpan<uint8_t const, BlockArray::Container> DigitalFrontend::channel
                 return {};
         }
 
+        // auto joined = grp |
+
         ZoneNamedN (z1, "bitSpanPrepare", true);
         auto grpStart = grp.front ().firstSampleNo ();
         auto off = begin - grpStart;

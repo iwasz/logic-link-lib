@@ -163,6 +163,9 @@ public:
         using SubRange = std::ranges::subrange<typename Container::const_iterator>;
         using iterator = BlockRangeBitSpanIterator<T, Container>;
         using const_iterator = BlockRangeBitSpanIterator<T const, Container>;
+        using value_type = bool;
+        static constexpr bool SAMPLES = true;
+        static constexpr bool DIGITAL = true;
 
         BlockRangeBitSpan () = default;
         BlockRangeBitSpan (SubRange data, size_t channelIndex, size_t bitOffset, size_t bitSize)

@@ -7,5 +7,4 @@
  ****************************************************************************/
 
 export module logic.util;
-export import :poly;
 export import :thread;

@@ -7,8 +7,10 @@
  ****************************************************************************/
 
 module;
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <deque>
+#include <ranges>
 module logic.data;
 import utils;
 

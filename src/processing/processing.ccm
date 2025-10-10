@@ -15,6 +15,8 @@ module;
 export module logic.processing;
 export import :generate;
 export import :downsample.digital;
+export import :poly;
+
 import logic.data;
 // import logic.analysis;
 

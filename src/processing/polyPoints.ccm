@@ -11,9 +11,10 @@ module;
 #include <cstdint>
 #include <ranges>
 #include <vector>
-export module logic.util:poly;
+export module logic.processing:poly;
+import logic.data;
 
-namespace logic::util {
+namespace logic {
 
 /**
  * "Draws" a binary data sterem as a poly line. Returns the coordinates as a vector of Coord (int,
@@ -27,7 +28,7 @@ namespace logic::util {
  *
  * TODO The does not stand if we display the individual samples as dots.
  */
-export template <typename Coord, typename Collection>
+export template <typename Coord, digital_sample_collection Collection>
 std::vector<Coord> toPolyPointsW (Collection const &data, bool *lastBit, Coord w, Coord h, Coord lineWidth)
 {
         Coord x = 0;
@@ -94,7 +95,7 @@ std::vector<Coord> toPolyPointsW (Collection const &data, bool *lastBit, Coord w
  * All comments from the function above this one apply. But this one expects
  * a collection of bits (bools).
  */
-export template <typename Coord, typename Collection>
+export template <typename Coord, digital_sample_collection Collection>
 std::vector<Coord> toPolyPointsb (Collection const &data, bool *lastBit, Coord h, Coord lineWidth, Coord padding)
 {
         if (data.empty ()) {
@@ -137,7 +138,7 @@ std::vector<Coord> toPolyPointsb (Collection const &data, bool *lastBit, Coord h
  * to know that? This is why src/PlotView/digitalSamplesTile.cc peeks one
  * bit before, and this functions uses it to draw corresponding level.
  */
-export template <typename Coord, typename Collection>
+export template <typename Coord, digital_sample_collection Collection>
 std::vector<Coord> toPolyPointsb (Collection const &data, Coord h, Coord lineWidth, Coord padding)
 {
         if (data.empty ()) {
@@ -173,4 +174,79 @@ std::vector<Coord> toPolyPointsb (Collection const &data, Coord h, Coord lineWid
         return ret;
 }
 
-} // namespace logic::util
+export struct PolyPointsCfg {
+        /// Height in points.
+        float height{};
+
+        /// In points.
+        float lineWidth{};
+
+        /// Empty space before thestart of the plot.
+        logic::SampleNum paddingS{};
+
+        /// Maximum number of samples that can be displayed without blening one with another as a result of zoom-out.
+        // size_t discernibleSamples{};
+
+        /// To maintain seamless plot betwen the tiles we get 1 bit before our range to see how the signal changed.
+        bool continuation{};
+};
+
+/**
+ *
+ */
+export template <typename Coord, digital_sample_collection Collection>
+std::vector<Coord> toPolyPointsb2 (Collection const &data, PolyPointsCfg const &cfg)
+{
+        if (data.empty ()) {
+                return {};
+        }
+
+        bool lastBit = *data.begin ();
+
+        Coord x = float (cfg.paddingS) * cfg.lineWidth;
+        std::vector<Coord> ret;
+        // Just to be sure. there are 2 line segments for every sample for square wave.
+        auto dataSize = data.size () - int (cfg.continuation);
+        ret.reserve (dataSize * 4);
+
+        // Starting point. Continuation from the prevbious iteration.
+        if (cfg.continuation) {
+                ret.push_back (x);
+                ret.push_back ((lastBit) ? (0) : (cfg.height));
+        }
+
+        // auto ratio = double (dataSize) / double (cfg.discernibleSamples);
+        // std::println ("dataSize: {}, discernible: {}, ratio: {}", dataSize, cfg.discernibleSamples, ratio);
+
+        for (uint8_t bit : data | std::views::drop (int (cfg.continuation))) {
+                // edge
+                if (lastBit != bit) {
+                        ret.push_back (x);
+                        ret.push_back ((bit) ? (0) : (cfg.height));
+                }
+
+                // level
+                x += cfg.lineWidth;
+
+                ret.push_back (x);
+                ret.push_back ((bit) ? (0) : (cfg.height));
+
+                lastBit = bit;
+        }
+
+        return ret;
+}
+
+/****************************************************************************/
+
+export template <typename PolyCollection> void scalePolyPoints (PolyCollection *data, double scaleX, double scaleY)
+{
+        // TODO how to achieve this with views? *data = *data | std::views::stride (2) | std::views::adjacent<2> (adj) ;
+
+        size_t cnt{};
+        for (auto &el : *data) {
+                el *= (cnt++ % 2 == 0) ? (scaleX) : (scaleY);
+        }
+}
+
+} // namespace logic
