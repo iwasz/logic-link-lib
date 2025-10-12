@@ -22,6 +22,10 @@ import :types;
 
 export namespace logic {
 class BlockArray;
+class Block;
+
+template <typename Range>
+concept block_range = std::ranges::range<Range> && std::convertible_to<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, Block>;
 
 /**
  * Byte oriented data for a group of channels.
@@ -31,14 +35,17 @@ public:
         using Container = std::vector<Bytes>;
 
         Block () = default;
-        Block (uint8_t bitsPerSample, size_t channels, size_t numberOfSamples);
 
-        template <typename Range> explicit Block (Range const &range);
-
-        Block (uint8_t bitsPerSample, /* SampleIdx firstSampleNo, */ Container &&d)
-            : bitsPerSample_{bitsPerSample}, /* firstSampleNo_{firstSampleNo}, */ data_{std::move (d)}
+        /**
+         * Construct from vector of bytes.
+         */
+        Block (uint8_t bitsPerSample, Container &&d, size_t zoomOut = 1) : bitsPerSample_{bitsPerSample}, data_{std::move (d)}, zoomOut_{zoomOut}
         {
         }
+
+        void append (Container &&d);
+        void append (Block &&d);
+        void reserve (size_t channels, SampleNum bits);
 
         /// First valid sample index that can be referenced.
         SampleIdx firstSampleNo () const { return firstSampleNo_; }
@@ -56,57 +63,74 @@ public:
 
         /// Length of the block in samples. Assumes that all channels are the same length.
         SampleNum channelLength () const;
+        size_t bytesUsed () const;
 
         uint8_t bitsPerSample () const { return bitsPerSample_; }
 
         Bytes const &channel (size_t idx) const { return data_.at (idx); }
         Container const &data () const { return data_; }
+        Container &&data () && { return std::move (data_); }
+
+        size_t zoomOut () const { return zoomOut_; }
 
         // Truncates all the channels to 0.
         void clear ();
 
-        // Only for BlockArray::clipBytes which is not used anywhere, so....
-        friend class BlockArray;
-
 private:
+        friend class BlockArray;          // Only for BlockArray::clipBytes which is not used anywhere, so....
+        friend struct BlockArrayUtHelper; // Defined in UTs
+
         uint8_t bitsPerSample_{};
         SampleIdx firstSampleNo_{};
         // For now only Bytes are supported.
         Container data_; // Horizontal
+        size_t zoomOut_ = 1;
 };
 
-/*--------------------------------------------------------------------------*/
+SampleIdx firstSampleNo (Block const &b) { return b.firstSampleNo (); }
+SampleIdx lastSampleNo (Block const &b) { return b.lastSampleNo (); }
+size_t channelsNumber (Block const &b) { return b.channelsNumber (); }
+SampleNum channelLength (Block const &b) { return b.channelLength (); }
+uint8_t bitsPerSample (Block const &b) { return b.bitsPerSample (); }
+size_t zoomOut (Block const &b) { return b.zoomOut (); }
 
-template <typename Range> Block::Block (Range const &range)
+template <block_range Range> SampleIdx firstSampleNo (Range const &r)
 {
-        if (range.empty ()) {
-                return;
-        }
-
-        size_t byteSizeOfRange{};
-
-        for (auto const &block : range) {
-                // TODO works only (and tested only) for bitsPerSample == 1 or 8.
-                byteSizeOfRange += block.channelLength () / (CHAR_BIT / block.bitsPerSample ());
-        }
-
-        Block const &front = range.front ();
-        firstSampleNo_ = front.firstSampleNo ();
-        bitsPerSample_ = front.bitsPerSample ();
-
-        data_.resize (front.channelsNumber ());
-
-        int chNo{};
-        for (auto &ch : data_) {
-                ch.reserve (byteSizeOfRange);
-
-                for (auto const &sourceBlock : range) {
-                        std::ranges::copy (sourceBlock.data_.at (chNo), std::back_inserter (ch));
-                }
-
-                ++chNo;
-        }
+        return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->firstSampleNo ());
 }
+
+template <block_range Range> SampleIdx lastSampleNo (Range const &r) { return (std::ranges::empty (r)) ? (0) : (r.back ().lastSampleNo ()); }
+
+template <block_range Range> size_t channelsNumber (Range const &r)
+{
+        return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->channelsNumber ());
+}
+
+template <block_range Range> SampleNum channelLength (Range const &r)
+{
+        // I assume all channels (except the last) have equal length.
+        SampleNum size{};
+
+        if (auto rsize = std::ranges::distance (r); rsize > 1) {
+                size = std::ranges::begin (r)->channelLength () * (rsize - 1);
+        }
+
+        // This imposes some restricions.
+        size += r.back ().channelLength ();
+
+        // This is suboptimal:
+        // return std::ranges::fold_left (r | std::views::transform ([] (auto const &block) { return block.channelLength (); }), 0,
+        //                                std::plus<SampleNum> ());
+
+        return size;
+}
+
+template <block_range Range> uint8_t bitsPerSample (Range const &r)
+{
+        return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->bitsPerSample ());
+}
+
+template <block_range Range> size_t zoomOut (Range const &r) { return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->zoomOut ()); }
 
 /**
  * Like block, but should be regarded as a continuous and presumable longer
@@ -117,45 +141,57 @@ using Stream = Block;
 
 /**
  * Multiple blocks one after another.
+ * TODO more constraints: constraint the block size (in the append etc.)
  */
 class BlockArray {
 public:
+        static constexpr size_t DEFAULT_ZOOM_OUT_PER_LEVEL = 16; // Every next level is zoomed-out by this value.
+
         using Container = std::list<Block>;
         using SubRange = std::ranges::subrange<Container::const_iterator>;
-        void append (uint8_t bitsPerSample, std::vector<Bytes> &&cb);
+
+        /// Note that cb is passed by value. Move.
+        void append (uint8_t bitsPerSample, std::vector<Bytes> &&channels);
         void clear ();
+
+        BlockArray (size_t maxZoomOutLevels = 1, size_t zoomOutPerLevel = DEFAULT_ZOOM_OUT_PER_LEVEL)
+            : levels (std::max (maxZoomOutLevels, 1uz)), zoomOutPerLevel{zoomOutPerLevel}
+        {
+        }
 
         /**
          * Returns block range that includes sample numbers passed (inclusive).
          */
-        SubRange range (SampleIdx begin, SampleIdx end) const;
+        SubRange range (SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1) const;
 
         /**
          * Returns a Stream cut precisely down to the byte.
+         * @deprecated Use more fine grained methods. To be removed.
          */
         Stream clipBytes (ByteIdx begin, ByteIdx end);
 
-        Container const &data () const { return data_; }
-
-        // TODO Make it agnostic? Move to a frontend?
-        // StreamType type () const { return type_; }
-        // void setType (StreamType type) { type_ = type; }
-
-        // TODO Make it agnostic? Move to a frontend?
-        // SampleRate sampleRate () const { return sampleRate_; }
-        // void setSampleRate (SampleRate sr) { sampleRate_ = sr; }
-
-        size_t channelsNumber () const { return (data_.empty ()) ? (0) : (data_.front ().channelsNumber ()); }
-        SampleNum channelLength () const;
+        size_t channelsNumber () const { return (levels[0].data_.empty ()) ? (0) : (levels[0].data_.front ().channelsNumber ()); }
+        SampleNum channelLength () const { return channelLength_; }
 
 private:
+        friend struct BlockArrayUtHelper; // Defined in UTs
+
         StreamType type_{};
         SampleRate sampleRate_{};
-        SampleIdx currentSampleNo{};
-        Container data_; // Grows horizontally.
+        // SampleIdx currentSampleNo{};
         using BlockIndex = std::map<SampleIdx, Container::const_iterator>;
-        BlockIndex index_;          // Like DB index SampleIndex -> block.
-        SampleNum channelLength_{}; // Assuming all channels have equal length.
+
+        struct ZoomOutLevel {
+                Container data_;   // Grows horizontally.
+                BlockIndex index_; // Like DB index SampleIndex -> block.
+                size_t zoomOut = 1;
+                Container::const_iterator zoomedEnd = data_.cbegin ();
+        };
+
+        std::vector<ZoomOutLevel> levels;
+        size_t zoomOutPerLevel;
+
+        SampleNum channelLength_{};
 };
 
 // Multiple BlockArray-s, each represeinging one channel-group

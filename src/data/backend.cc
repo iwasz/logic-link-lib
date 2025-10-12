@@ -17,13 +17,42 @@ module;
 
 module logic.data;
 import logic.core;
+import logic.processing;
 
 namespace logic {
 
-Block::Block (uint8_t bitsPerSample, size_t channels, size_t numberOfSampl) : bitsPerSample_{bitsPerSample}, data_ (channels)
+void Block::append (Block &&d)
 {
+        bitsPerSample_ = d.bitsPerSample_;
+        append (std::move (d).data_);
+}
+
+/*--------------------------------------------------------------------------*/
+
+void Block::append (Container &&d)
+{
+        if (d.size () != channelsNumber ()) {
+                throw Exception{"Block::append: d.size () != channelsNumber ()"};
+        }
+
+        Container copy = std::move (d);
+        for (std::tuple<Bytes &, Bytes const &> t : std::views::zip (data_, copy)) {
+                Bytes &dest = std::get<0> (t);
+                Bytes const &src = std::get<1> (t);
+
+                dest.reserve (dest.size () + src.size ());
+                std::ranges::copy (src, std::back_inserter (dest));
+        }
+}
+
+/*--------------------------------------------------------------------------*/
+
+void Block::reserve (size_t channels, SampleNum numberOfSampl)
+{
+        data_.resize (std::max (channels, data_.size ()));
+
         for (auto &ch : data_) {
-                ch.resize (numberOfSampl);
+                ch.reserve (numberOfSampl);
         }
 }
 
@@ -36,7 +65,18 @@ SampleNum Block::channelLength () const
         }
 
         auto const SAMPLES_PER_BYTE = CHAR_BIT / bitsPerSample_;
-        return SampleNum (data_.front ().size ()) * SAMPLES_PER_BYTE;
+        return SampleNum (bytesUsed () * SAMPLES_PER_BYTE * zoomOut_);
+}
+
+/*--------------------------------------------------------------------------*/
+
+size_t Block::bytesUsed () const
+{
+        if (data_.empty ()) {
+                return 0;
+        }
+
+        return data_.front ().size ();
 }
 
 /*--------------------------------------------------------------------------*/
@@ -50,42 +90,112 @@ void Block::clear ()
 
 /****************************************************************************/
 
-void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
+template <std::integral auto factor> Block downsample (Block const &block)
 {
-        auto cb = Block{bitsPerSample, std::move (channels)};
-
-        if (cb.channelLength () == 0) {
-                return;
-        }
-
-        cb.firstSampleNo () = currentSampleNo;
-        currentSampleNo = currentSampleNo + cb.channelLength ();
-        channelLength_ += cb.channelLength ();
-        auto lsnTmp = cb.lastSampleNo ();
-        data_.push_back (std::move (cb));
-        auto p = BlockIndex::value_type{lsnTmp, std::next (data_.cend (), -1)};
-        index_.insert (p);
+        return {block.bitsPerSample (),
+                block.data () | std::views::transform ([] (Bytes const &bts) -> Bytes { return downsample<factor> (bts); })
+                        | std::ranges::to<Block::Container> ()};
 }
 
 /*--------------------------------------------------------------------------*/
 
-BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end) const
+Block downsample (Block const &block, size_t zoomOut)
+{
+        if (zoomOut == 1) {
+                return block;
+        }
+
+        return {block.bitsPerSample (),
+                block.data () | std::views::transform ([zoomOut] (Bytes const &bts) -> Bytes { return downsample (bts, zoomOut); })
+                        | std::ranges::to<Block::Container> ()};
+}
+
+/****************************************************************************/
+
+void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
+{
+        if (channels.empty ()) {
+                return;
+        }
+
+        size_t levNo = 0;
+        auto const chLenBytes = channels.front ().size ();
+        auto const SAMPLES_PER_BYTE = CHAR_BIT / bitsPerSample;
+        auto const chLenBits = chLenBytes * SAMPLES_PER_BYTE;
+
+        if (chLenBits == 0) {
+                return;
+        }
+
+        auto doAppend = [chLenBytes, this] (Block block, size_t levNo, auto &that) -> void {
+                block.zoomOut_ = 1 << levNo;
+
+                if (levels.size () - 1 > levNo) {
+                        Block zoomed = downsample (block, zoomOutPerLevel);
+                        that (zoomed, levNo + 1, that);
+                }
+
+                auto &level = levels.at (levNo);
+
+                if (level.data_.empty () || level.data_.back ().bytesUsed () >= chLenBytes) {
+                        level.data_.emplace_back (std::move (block));
+                        level.data_.back ().firstSampleNo () = channelLength_;
+                }
+                else {
+                        level.data_.back ().append (std::move (block));
+                }
+
+                auto p = BlockIndex::value_type{level.data_.back ().lastSampleNo (), std::next (level.data_.cend (), -1)};
+
+                /*
+                 * index_ size and deta_ sizes have to be the same. So if index_ already
+                 * contains the same number of entries, it means we have to modify it.
+                 */
+                if (level.index_.size () >= level.data_.size ()) {
+                        level.index_.erase (std::next (level.index_.end (), -1)); // Last element has the highest key (lastSampleNo)
+                }
+
+                level.index_.insert (p);
+        };
+
+        Block block{bitsPerSample, std::move (channels), 1};
+        doAppend (std::move (block), levNo, doAppend);
+
+        channelLength_ += SampleNum (chLenBits);
+}
+
+/*--------------------------------------------------------------------------*/
+
+BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples) const
 {
         if (begin == end) {
                 return {};
         }
 
-        ZoneScoped;
-        auto bi = index_.lower_bound (begin);
+        size_t len = end - begin;
 
-        if (bi == index_.cend ()) {
+        if (maxDiscernibleSamples < 0) {
+                maxDiscernibleSamples = len;
+        }
+        else {
+                maxDiscernibleSamples = std::min<SampleNum> (maxDiscernibleSamples, len);
+        }
+
+        auto level = std::bit_floor (len / maxDiscernibleSamples);
+        level = std::bit_width (level) - 1; // Effectively log2 (level)
+        (void)level;
+
+        ZoneScoped;
+        auto bi = levels.at (level).index_.lower_bound (begin);
+
+        if (bi == levels.at (level).index_.cend ()) {
                 return {};
         }
 
         ZoneNamedN (z1, "end", true);
-        auto ei = index_.lower_bound (end);
+        auto ei = levels.at (level).index_.lower_bound (end);
 
-        if (ei == index_.cend ()) {
+        if (ei == levels.at (level).index_.cend ()) {
                 std::advance (ei, -1);
         }
 
@@ -93,7 +203,7 @@ BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end) const
         auto e = ei->second;
 
         // Maintain "past-the-end" semantics.
-        if (e != data_.cend ()) {
+        if (e != levels.at (level).data_.cend ()) {
                 std::advance (e, 1);
         }
 
@@ -115,7 +225,15 @@ Stream BlockArray::clipBytes (ByteIdx begin, ByteIdx end)
         }
 
         SampleNum totalLenToCopy = std::min<SampleNum> (end, subRangeBlocks.back ().lastSampleNo () + 1) - begin;
-        Stream trimmedSubrange{subRangeBlocks.front ().bitsPerSample (), channelsNumber (), size_t (totalLenToCopy)};
+        // Stream trimmedSubrange{subRangeBlocks.front ().bitsPerSample (), channelsNumber (), totalLenToCopy};
+        Block const &f = subRangeBlocks.front ();
+
+        std::vector<Bytes> tmp (f.channelsNumber ());
+        for (auto &ch : tmp) {
+                ch.resize (totalLenToCopy);
+        }
+
+        Stream trimmedSubrange{f.bitsPerSample (), std::move (tmp)};
 
         size_t cnt{};
         SampleNum outputStartOffset{};
@@ -146,14 +264,12 @@ Stream BlockArray::clipBytes (ByteIdx begin, ByteIdx end)
 
 /*--------------------------------------------------------------------------*/
 
-SampleNum BlockArray::channelLength () const { return channelLength_; }
-
-/*--------------------------------------------------------------------------*/
-
 void BlockArray::clear ()
 {
-        for (auto &blck : data_) {
-                blck.clear ();
+        for (auto &levels : levels) {
+                for (auto &blck : levels.data_) {
+                        blck.clear ();
+                }
         }
 
         channelLength_ = 0;
@@ -198,10 +314,6 @@ Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx en
          * device, there's no need to modifu it.
          */
         std::lock_guard lock{mutex};
-
-        // // TODO This copy takes ~90% of the frame time.
-        // Block copy{groups.at (groupIdx).range (begin, end)};
-        // return copy;
         return groups.at (groupIdx).range (begin, end);
 }
 

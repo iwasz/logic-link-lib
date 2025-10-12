@@ -13,6 +13,8 @@ module;
 #include <concepts>
 #include <cstdint>
 #include <cstdlib>
+#include <format>
+#include <ranges>
 #include <span>
 export module logic.processing:downsample.digital;
 import logic.data;
@@ -53,9 +55,44 @@ export {
         /**
          * Factory/helper function.
          */
-        template <std::integral auto factor, byte_collection Collection> Collection dwnsample (Collection const &in)
+        template <std::integral auto factor, byte_collection Collection> Collection downsample (Collection const &in)
         {
                 return Downsample<factor, Collection>::operator() (in);
+        }
+
+        template <byte_collection Collection> Collection downsample (Collection const &in, size_t zoomOut)
+        {
+                static constexpr std::array allowedZoomLevels{2, 4, 8, 16};
+
+                if (auto f = allowedZoomLevels | std::views::filter ([zoomOut] (auto z) { return z == zoomOut; }); std::ranges::empty (f)) {
+                        throw Exception{std::format ("Zoom level: {} not allowed. Allowed: {}", zoomOut, allowedZoomLevels)};
+                }
+
+                switch (zoomOut) {
+                case 2:
+                        return downsample<2> (in);
+                case 4:
+                        return downsample<4> (in);
+                case 8:
+                        return downsample<8> (in);
+                case 16:
+                        return downsample<16> (in);
+                default:
+                        return Collection{};
+                }
+
+                // TODO do it the fancy way...
+                // static constexpr std::integer_sequence<int, 2, 4, 8, 16> allowedZoomLevels;
+
+                // auto lbd = [zoomOut, &block] (/* auto &that */ auto x, auto... y) {
+                //         // if (x == zoomOut) {
+                //         //         return downsample<x, Block> (block);
+                //         // }
+
+                //         return Block{};
+                // };
+
+                // return std::apply (lbd, allowedZoomLevels);
         }
 }
 

@@ -121,7 +121,7 @@ template <typename I> OwningBitSpanIterator<I> OwningBitSpanIterator<I>::operato
 
 /**
  * Like bit span, but with copy semantics.
- * TODO this is barely working proove of concept.
+ * TODO this is barely working prove of concept.
  */
 export template <std::ranges::forward_range Collection> class OwningBitSpan {
 public:
