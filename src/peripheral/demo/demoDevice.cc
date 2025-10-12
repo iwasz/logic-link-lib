@@ -12,7 +12,6 @@ module;
 #include <Tracy.hpp>
 #include <spdlog/spdlog.h>
 #include <thread>
-
 module logic.peripheral;
 import logic.processing;
 import logic.util;
@@ -52,8 +51,8 @@ void DemoDevice::start (IBackend *backend)
                         std::vector<Bytes> channels;
                         channels.reserve (dc);
 
-                        auto sizePerChan = transferSize * CHAR_BIT / dc;
-                        totalSizePerChan += sizePerChan;
+                        auto sizePerChanBits = transferSize * CHAR_BIT / dc;
+                        totalSizePerChan += sizePerChanBits;
 
                         ZoneNamedN (pushBack, "generate", false);
                         for (auto i = 0U; i < dc; ++i) {
@@ -61,7 +60,7 @@ void DemoDevice::start (IBackend *backend)
                                  * Square wave which frequency increases proportionally with the
                                  * channel number and length (number of bits) decreases.
                                  */
-                                channels.push_back (generators.at (i) (i + 1, i + 1, sizePerChan));
+                                channels.push_back (generators.at (i) (i + 1, i + 1, sizePerChanBits));
                         }
 
                         static constexpr auto BITS_PER_SAMPLE = 1U;
@@ -69,7 +68,7 @@ void DemoDevice::start (IBackend *backend)
                         ZoneNamedN (append, "append", false);
                         backend->append (GROUP, BITS_PER_SAMPLE, std::move (channels));
 
-                        // if (totalSizePerChan >= 49152) {
+                        // if (totalSizePerChan >= 240'000'000 * 3) {
                         //         notify (false, State::ok);
                         // }
 

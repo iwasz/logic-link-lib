@@ -59,41 +59,32 @@ export {
         {
                 return Downsample<factor, Collection>::operator() (in);
         }
+}
 
-        template <byte_collection Collection> Collection downsample (Collection const &in, size_t zoomOut)
+namespace impl {
+        template <byte_collection Collection, int N, int... Ns> Collection downsample (Collection const &in, size_t zoomOut)
         {
-                static constexpr std::array allowedZoomLevels{2, 4, 8, 16};
-
-                if (auto f = allowedZoomLevels | std::views::filter ([zoomOut] (auto z) { return z == zoomOut; }); std::ranges::empty (f)) {
-                        throw Exception{std::format ("Zoom level: {} not allowed. Allowed: {}", zoomOut, allowedZoomLevels)};
+                if (zoomOut == N) {
+                        return logic::downsample<N> (in);
                 }
 
-                switch (zoomOut) {
-                case 2:
-                        return downsample<2> (in);
-                case 4:
-                        return downsample<4> (in);
-                case 8:
-                        return downsample<8> (in);
-                case 16:
-                        return downsample<16> (in);
-                default:
-                        return Collection{};
+                if constexpr (sizeof...(Ns) > 0) {
+                        return impl::downsample<Collection, Ns...> (in, zoomOut);
                 }
 
-                // TODO do it the fancy way...
-                // static constexpr std::integer_sequence<int, 2, 4, 8, 16> allowedZoomLevels;
-
-                // auto lbd = [zoomOut, &block] (/* auto &that */ auto x, auto... y) {
-                //         // if (x == zoomOut) {
-                //         //         return downsample<x, Block> (block);
-                //         // }
-
-                //         return Block{};
-                // };
-
-                // return std::apply (lbd, allowedZoomLevels);
+                throw Exception{std::format ("Zoom level: {} not allowed.", zoomOut)};
         }
+} // namespace impl
+
+export template <byte_collection Collection> Collection downsample (Collection const &in, size_t zoomOut)
+{
+        static constexpr std::integer_sequence<int, 2, 4, 8, 16> allowedZoomLevels2;
+
+        auto lbd = [&in, zoomOut]<int... Ns> (std::integer_sequence<int, Ns...> const & /* alwd */) {
+                return impl::downsample<Collection, Ns...> (in, zoomOut);
+        };
+
+        return lbd (allowedZoomLevels2);
 }
 
 /****************************************************************************/
