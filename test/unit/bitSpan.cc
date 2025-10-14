@@ -71,17 +71,7 @@ TEST_CASE ("Owning Basic", "[bitSpan]")
                 0b1110'0011,
         };
 
-        SECTION ("Span")
-        {
-                auto a = utl::vectorize (OwningBitSpan{bytes, 12U, 8U});
-                REQUIRE (a == std::vector<bool>{1, 0, 1, 0, 1, 1, 0, 0});
-                REQUIRE (utl::vectorize (OwningBitSpan{bytes, 0U, 8U}) == std::vector<bool>{1, 1, 1, 1, 0, 0, 0, 0});
-                REQUIRE (utl::vectorize (OwningBitSpan{bytes, 0U, 32U})
-                         == std::vector<bool>{1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1});
-                REQUIRE (utl::vectorize (OwningBitSpan{bytes, 31U, 1U}) == std::vector<bool>{1});
-        }
-
-        SECTION ("Iterator increment decrement")
+        SECTION ("Iterator increment")
         {
                 auto span = OwningBitSpan{bytes, 4, 4};
                 auto i = span.begin ();
@@ -92,13 +82,16 @@ TEST_CASE ("Owning Basic", "[bitSpan]")
                 REQUIRE (*i++ == 0);
                 REQUIRE (*i++ == 0);
                 REQUIRE (i == span.end ());
+        }
 
-                i = span.begin ();
-                REQUIRE (*i-- == 0);
-                REQUIRE (*i-- == 1);
-                REQUIRE (*i-- == 1);
-                REQUIRE (*i-- == 1);
-                REQUIRE (*i-- == 1);
+        SECTION ("Span")
+        {
+                auto a = utl::vectorize (OwningBitSpan{bytes, 12U, 8U});
+                REQUIRE (a == std::vector<bool>{1, 0, 1, 0, 1, 1, 0, 0});
+                REQUIRE (utl::vectorize (OwningBitSpan{bytes, 0U, 8U}) == std::vector<bool>{1, 1, 1, 1, 0, 0, 0, 0});
+                REQUIRE (utl::vectorize (OwningBitSpan{bytes, 0U, 32U})
+                         == std::vector<bool>{1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1});
+                REQUIRE (utl::vectorize (OwningBitSpan{bytes, 31U, 1U}) == std::vector<bool>{1});
         }
 }
 
@@ -148,14 +141,56 @@ TEST_CASE ("Join", "[backend]")
                 REQUIRE (std::ranges::equal (x, Bytes{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xa, 0xb}));
         }
 
-        // SECTION ("bit-wise")
-        // {
-        //         auto x = cbs.range (0, 96) | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
-        //         auto span = OwningBitSpan{x, 0, 96};
+        SECTION ("bit-wise all")
+        {
+                auto x = cbs.range (0, 96) | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
+                auto span = OwningBitSpan{x, 0, 96};
 
-        //         static_assert (std::is_same_v<decltype (span)::BitCarrierT, uint8_t>);
+                static_assert (std::is_same_v<decltype (span)::BitCarrierT, uint8_t>);
 
-        //         bool b = std::ranges::equal (span, std::vector<bool>{0, 0, 0, 0, 0, 0, 0, 0});
-        //         REQUIRE (b);
-        // }
+                bool b = std::ranges::equal (span,
+                                             std::vector<bool>{
+                                                     0, 0, 0, 0, 0, 0, 0, 0, //
+                                                     0, 0, 0, 0, 0, 0, 0, 1, //
+                                                     0, 0, 0, 0, 0, 0, 1, 0, //
+                                                     0, 0, 0, 0, 0, 0, 1, 1, //
+                                                     0, 0, 0, 0, 0, 1, 0, 0, //
+                                                     0, 0, 0, 0, 0, 1, 0, 1, //
+                                                     0, 0, 0, 0, 0, 1, 1, 0, //
+                                                     0, 0, 0, 0, 0, 1, 1, 1, //
+                                                     0, 0, 0, 0, 1, 0, 0, 0, //
+                                                     0, 0, 0, 0, 1, 0, 0, 1, //
+                                                     0, 0, 0, 0, 1, 0, 1, 0, //
+                                                     0, 0, 0, 0, 1, 0, 1, 1, //
+                                             });
+                REQUIRE (b);
+        }
+
+        SECTION ("bit-wise 2nd and 3rd block")
+        {
+                auto x = cbs.range (32, 64) | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
+                auto span = OwningBitSpan{x, 32, 64};
+
+                static_assert (std::is_same_v<decltype (span)::BitCarrierT, uint8_t>);
+
+                bool b = std::ranges::equal (span,
+                                             std::vector<bool>{
+                                                     0, 0, 0, 0, 0, 1, 0, 0, //
+                                                     0, 0, 0, 0, 0, 1, 0, 1, //
+                                                     0, 0, 0, 0, 0, 1, 1, 0, //
+                                                     0, 0, 0, 0, 0, 1, 1, 1, //
+                                                     0, 0, 0, 0, 1, 0, 0, 0, //
+                                                     0, 0, 0, 0, 1, 0, 0, 1, //
+                                                     0, 0, 0, 0, 1, 0, 1, 0, //
+                                                     0, 0, 0, 0, 1, 0, 1, 1, //
+                                             });
+                REQUIRE (b);
+        }
+
+        SECTION ("bit-wise 9 bits")
+        {
+                auto x = cbs.range (31, 9) | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
+                auto span = OwningBitSpan{x, 31, 9};
+                REQUIRE (std::ranges::equal (span, std::vector<bool>{1, 0, 0, 0, 0, 0, 1, 0, 1}));
+        }
 }

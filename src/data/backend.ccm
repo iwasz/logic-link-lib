@@ -69,7 +69,7 @@ public:
 
         Bytes const &channel (size_t idx) const { return data_.at (idx); }
         Container const &data () const { return data_; }
-        Container &&data () && { return std::move (data_); }
+        Container &&data () /* && */ { return std::move (data_); }
 
         size_t zoomOut () const { return zoomOut_; }
 
@@ -147,7 +147,8 @@ class BlockArray {
 public:
         static constexpr size_t DEFAULT_ZOOM_OUT_PER_LEVEL = 16; // Every next level is zoomed-out by this value.
 
-        using Container = std::list<Block>;
+        using Container = std::vector<Block>;
+        // using Container = std::list<Block>;
         using SubRange = std::ranges::subrange<Container::const_iterator>;
 
         /// Note that cb is passed by value. Move.
@@ -182,6 +183,7 @@ private:
         using BlockIndex = std::map<SampleIdx, Container::const_iterator>;
 
         struct ZoomOutLevel {
+                ZoomOutLevel () { data_.reserve (2000000); }
                 Container data_;   // Grows horizontally.
                 BlockIndex index_; // Like DB index SampleIndex -> block.
                 size_t zoomOut = 1;
@@ -236,7 +238,7 @@ struct IBackend {
          * the `begin` sample and finish after the `end` sample, so you
          * have to trim it yourself (use std::span / BitSpan).
          */
-        virtual SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end) const = 0;
+        virtual SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1) const = 0;
         virtual size_t groupsNo () const = 0;
 
         virtual size_t channelsNumber (size_t groupIdx) const = 0;
@@ -256,7 +258,7 @@ public:
         void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) override;
         void clear () override;
 
-        SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end) const override;
+        SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1) const override;
 
         void configureGroup (size_t groupIdx, SampleRate sampleRate); // TODO not used. Remove the CTOr and use this somewhere.
         size_t groupsNo () const override { return groups.size (); }

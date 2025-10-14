@@ -18,6 +18,7 @@ module;
 #include <libusb.h>
 #include <string>
 module logic.peripheral;
+import logic.util;
 
 namespace logic {
 using namespace std::string_literals;
@@ -153,7 +154,7 @@ void UsbAsyncInput::acquireLoop ()
 {
         static timeval tv = {.tv_sec = 0, .tv_usec = 10000};
         std::optional<high_resolution_clock::time_point> startPoint;
-        tracy::SetThreadName ("Acquire");
+        setThreadName ("Acquire");
 
         while (true) {
                 if (kill_.load ()) {
@@ -183,7 +184,7 @@ void UsbAsyncInput::acquireLoop ()
 
 void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBackend *backend */)
 {
-        tracy::SetThreadName ("Analyze");
+        setThreadName ("Analyze");
 
         while (true) {
                 if (kill_.load ()) {

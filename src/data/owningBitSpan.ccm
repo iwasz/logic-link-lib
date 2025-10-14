@@ -26,11 +26,9 @@ public:
         using value_type = bool;
 
         OwningBitSpanSentinel () = default;
-        OwningBitSpanSentinel (I data, size_t bitOffset) : iter{data}, currentBitOffset{bitOffset % BITS_PER_CARRIER} {}
+        OwningBitSpanSentinel (size_t bitOffset) : totalBitOffset{bitOffset} {}
 
-        // TODO private.
-        I iter{};
-        size_t currentBitOffset{};
+        size_t totalBitOffset{};
 
 private:
         // size_t currentElemOffset{};
@@ -38,6 +36,7 @@ private:
 
 /**
  * TODO requirements for the iterator.
+ * TODO consider using this: https://boostorg.github.io/stl_interfaces/doc/html/index.html
  */
 export template <typename I> class OwningBitSpanIterator {
 public:
@@ -49,7 +48,7 @@ public:
         using value_type = bool;
 
         OwningBitSpanIterator () = default;
-        OwningBitSpanIterator (I data, size_t bitOffset) : iter{data}, currentBitOffset{bitOffset % BITS_PER_CARRIER}
+        OwningBitSpanIterator (I data, size_t bitOffset) : iter{data}, currentBitOffset{bitOffset % BITS_PER_CARRIER}, totalBitOffset{bitOffset}
         {
                 std::ranges::advance (iter, bitOffset / BITS_PER_CARRIER);
         }
@@ -58,25 +57,21 @@ public:
 
         OwningBitSpanIterator &operator++ ();
         OwningBitSpanIterator operator++ (int);
-        OwningBitSpanIterator &operator-- ();
-        OwningBitSpanIterator operator-- (int);
 
         bool operator== (const OwningBitSpanIterator &a) const { return currentBitOffset == a.currentBitOffset && iter == a.iter; }
-
-        template <typename J> bool operator== (const OwningBitSpanSentinel<J> &a) const
-        {
-                return currentBitOffset == a.currentBitOffset && iter == a.iter;
-        }
+        template <typename J> bool operator== (const OwningBitSpanSentinel<J> &a) const { return totalBitOffset == a.totalBitOffset; }
 
 private:
         I iter{};
         size_t currentBitOffset{};
+        size_t totalBitOffset{};
 };
 
 /****************************************************************************/
 
 template <typename I> OwningBitSpanIterator<I> &OwningBitSpanIterator<I>::operator++ ()
 {
+        ++totalBitOffset;
 
         if (++currentBitOffset >= BITS_PER_CARRIER) {
                 currentBitOffset = 0;
@@ -95,35 +90,11 @@ template <typename I> OwningBitSpanIterator<I> OwningBitSpanIterator<I>::operato
         return tmp;
 }
 
-/****************************************************************************/
-
-template <typename I> OwningBitSpanIterator<I> &OwningBitSpanIterator<I>::operator-- ()
-{
-        if (currentBitOffset == 0) {
-                currentBitOffset = BITS_PER_CARRIER - 1;
-                --iter;
-        }
-        else {
-                --currentBitOffset;
-        }
-
-        return *this;
-}
-
-/****************************************************************************/
-
-template <typename I> OwningBitSpanIterator<I> OwningBitSpanIterator<I>::operator-- (int)
-{
-        auto tmp = *this;
-        --*this;
-        return tmp;
-}
-
 /**
  * Like bit span, but with copy semantics.
  * TODO this is barely working prove of concept.
  */
-export template <std::ranges::forward_range Collection> class OwningBitSpan {
+export template <std::ranges::input_range Collection> class OwningBitSpan {
 public:
         using BitCarrierT = std::remove_cvref_t<std::ranges::range_reference_t<Collection>>;
         static constexpr auto BITS_PER_CARRIER = sizeof (BitCarrierT) * CHAR_BIT;
@@ -143,238 +114,61 @@ public:
 
         OwningBitSpan () = default;
         OwningBitSpan (Collection data, size_t bitOffset = 0, ssize_t bitSize = -1)
-            : data{std::move (data)},
+            : data_{std::move (data)},
               offsetInBits{bitOffset},
-              sizeInBits{(bitSize < 0) ? (std::ranges::distance (data) * CHAR_BIT) : (bitSize)} //,
-        //       end_{data.begin (), offsetInBits}
+              sizeInBits{(bitSize < 0) ? (std::ranges::distance (data_) * CHAR_BIT)
+                                       : (std::min (bitSize, std::ranges::distance (data_) * CHAR_BIT))}
         {
         }
 
-        iterator begin () { return iterator{data.begin (), offsetInBits}; }
-        iterator begin () const { return iterator{std::ranges::begin (const_cast<Collection &> (data)), offsetInBits}; }
-        const_iterator cbegin () const { return const_iterator{data.cbegin (), offsetInBits}; }
+        iterator begin () { return iterator{data_.begin (), offsetInBits}; }
+        iterator begin () const { return iterator{std::ranges::begin (const_cast<Collection &> (data_)), offsetInBits}; }
+        const_iterator cbegin () const { return const_iterator{data_.cbegin (), offsetInBits}; }
 
-        iterator end ()
-        {
-                return iterator{std::next (data.begin (), (offsetInBits + sizeInBits) / BITS_PER_CARRIER),
-                                (offsetInBits + sizeInBits) % BITS_PER_CARRIER};
-        }
-
-        iterator end () const
-        {
-                // TODO no cast
-                return iterator{std::next (std::ranges::begin (const_cast<Collection &> (data)), (offsetInBits + sizeInBits) / BITS_PER_CARRIER),
-                                (offsetInBits + sizeInBits) % BITS_PER_CARRIER};
-        }
-
-        // const_sentinel cend () const
+        // iterator end ()
         // {
-        //         return sentinel{std::next (data.cbegin (), (offsetInBits + sizeInBits) / BITS_PER_CARRIER),
+        //         return iterator{std::next (data_.begin (), (offsetInBits + sizeInBits) / BITS_PER_CARRIER),
         //                         (offsetInBits + sizeInBits) % BITS_PER_CARRIER};
         // }
 
-        // sentinel end () { return sentinel{data.begin (), offsetInBits}; }
-        // sentinel end () const { return sentinel{std::ranges::begin (const_cast<Collection &> (data)), offsetInBits}; }
-        // const_sentinel cend () const { return const_sentinel{data.cbegin (), offsetInBits}; }
-
-        // sentinel &end () { return end_; }
-        // sentinel const &end () const { return end_; }
-        // // const_sentinel cend () const { return const_sentinel{data.cbegin (), offsetInBits}; }
-
-        // sentinel end () { return sentinel{data.end (), 0}; }
-        // sentinel end () const { return sentinel{std::ranges::end (const_cast<Collection &> (data)), 0}; } // TODO no cast
-        // const_sentinel cend () const { return const_sentinel{data.cbegin (), 0}; }
-
-        size_t size () const { return sizeInBits; }
-        bool empty () const { return sizeInBits == 0; }
-
-private:
-        Collection data;
-        size_t offsetInBits{}; // Starting offset.
-        ssize_t sizeInBits{};
-
-        // sentinel end_;
-};
-
-// TODO for input_ranges.
-#if 0
-export template <typename I> class OwningBitSpanSentinel {
-public:
-        // using BitCarrierT = I::value_type; // Bits are stored in bytes.
-        using BitCarrierT = uint8_t; // Bits are stored in bytes.
-        static constexpr auto BITS_PER_CARRIER = sizeof (BitCarrierT) * CHAR_BIT;
-
-        using difference_type = std::ptrdiff_t;
-        using value_type = bool;
-
-        OwningBitSpanSentinel () = default;
-        OwningBitSpanSentinel (I data, size_t bitOffset) : iter{data}, currentBitOffset{bitOffset % BITS_PER_CARRIER} {}
-
-        // TODO private.
-        I iter{};
-        size_t currentBitOffset{};
-
-private:
-        // size_t currentElemOffset{};
-};
-
-/**
- * TODO requirements for the iterator.
- */
-export template <typename I> class OwningBitSpanIterator {
-public:
-        // using BitCarrierT = I::value_type; // Bits are stored in bytes.
-        using BitCarrierT = uint8_t; // Bits are stored in bytes.
-        static constexpr auto BITS_PER_CARRIER = sizeof (BitCarrierT) * CHAR_BIT;
-
-        using difference_type = std::ptrdiff_t;
-        using value_type = bool;
-
-        OwningBitSpanIterator () = default;
-        OwningBitSpanIterator (I data, size_t bitOffset) : iter{data}, currentBitOffset{bitOffset % BITS_PER_CARRIER}
-        {
-                std::ranges::advance (iter, bitOffset / BITS_PER_CARRIER);
-        }
-
-        bool operator* () const { return (*iter & BitCarrierT (1 << (BITS_PER_CARRIER - 1 - currentBitOffset))) != 0; }
-
-        OwningBitSpanIterator &operator++ ();
-        OwningBitSpanIterator operator++ (int);
-        OwningBitSpanIterator &operator-- ();
-        OwningBitSpanIterator operator-- (int);
-
-        bool operator== (const OwningBitSpanIterator &a) const { return currentBitOffset == a.currentBitOffset && iter == a.iter; }
-
-        template <typename J> bool operator== (const OwningBitSpanSentinel<J> &a) const
-        {
-                return currentBitOffset == a.currentBitOffset && iter == a.iter;
-        }
-
-private:
-        I iter{};
-        size_t currentBitOffset{};
-};
-
-/****************************************************************************/
-
-template <typename I> OwningBitSpanIterator<I> &OwningBitSpanIterator<I>::operator++ ()
-{
-
-        if (++currentBitOffset >= BITS_PER_CARRIER) {
-                currentBitOffset = 0;
-                ++iter;
-        }
-
-        return *this;
-}
-
-/****************************************************************************/
-
-template <typename I> OwningBitSpanIterator<I> OwningBitSpanIterator<I>::operator++ (int)
-{
-        auto tmp = *this;
-        ++*this;
-        return tmp;
-}
-
-/****************************************************************************/
-
-template <typename I> OwningBitSpanIterator<I> &OwningBitSpanIterator<I>::operator-- ()
-{
-        if (currentBitOffset == 0) {
-                currentBitOffset = BITS_PER_CARRIER - 1;
-                --iter;
-        }
-        else {
-                --currentBitOffset;
-        }
-
-        return *this;
-}
-
-/****************************************************************************/
-
-template <typename I> OwningBitSpanIterator<I> OwningBitSpanIterator<I>::operator-- (int)
-{
-        auto tmp = *this;
-        --*this;
-        return tmp;
-}
-
-/**
- * Like bit span, but with copy semantics.
- */
-export template <std::ranges::forward_range Collection> class OwningBitSpan {
-public:
-        using BitCarrierT = std::remove_cvref_t<std::ranges::range_reference_t<Collection>>;
-        static constexpr auto BITS_PER_CARRIER = sizeof (BitCarrierT) * CHAR_BIT;
-
-        using iterator = OwningBitSpanIterator<std::ranges::iterator_t<Collection>>;
-        using const_iterator = OwningBitSpanIterator<std::ranges::const_iterator_t<Collection>>;
-
-        using sentinel = OwningBitSpanSentinel<std::ranges::sentinel_t<Collection>>;
-        using const_sentinel = OwningBitSpanSentinel<std::ranges::const_sentinel_t<Collection>>;
-        // using sentinel = OwningBitSpanSentinel<std::ranges::iterator_t<Collection>>;
-        // using const_sentinel = OwningBitSpanSentinel<std::ranges::const_iterator_t<Collection>>;
-
-        using value_type = bool;
-        using difference_type = std::ptrdiff_t;
-        static constexpr bool SAMPLES = true;
-        static constexpr bool DIGITAL = true;
-
-        OwningBitSpan () = default;
-        OwningBitSpan (Collection data, size_t bitOffset = 0, ssize_t bitSize = -1)
-            : data{std::move (data)},
-              offsetInBits{bitOffset},
-              sizeInBits{(bitSize < 0) ? (std::ranges::distance (data) * CHAR_BIT) : (bitSize)} //,
-        //       end_{data.begin (), offsetInBits}
-        {
-        }
-
-        iterator begin () { return iterator{data.begin (), offsetInBits}; }
-        iterator begin () const { return iterator{std::ranges::begin (const_cast<Collection &> (data)), offsetInBits}; }
-        const_iterator cbegin () const { return const_iterator{data.cbegin (), offsetInBits}; }
-
-        // sentinel end ()
+        // iterator end () const
         // {
-        //         return sentinel{std::next (data.begin (), (offsetInBits + sizeInBits) / BITS_PER_CARRIER),
-        //                         (offsetInBits + sizeInBits) % BITS_PER_CARRIER};
-        // }
-
-        // sentinel end () const
-        // {
-        //         return sentinel{std::next (data.begin (), (offsetInBits + sizeInBits) / BITS_PER_CARRIER),
+        //         // TODO no cast
+        //         return iterator{std::next (std::ranges::begin (const_cast<Collection &> (data_)), (offsetInBits + sizeInBits) /
+        //         BITS_PER_CARRIER),
         //                         (offsetInBits + sizeInBits) % BITS_PER_CARRIER};
         // }
 
         // const_sentinel cend () const
         // {
-        //         return sentinel{std::next (data.cbegin (), (offsetInBits + sizeInBits) / BITS_PER_CARRIER),
+        //         return sentinel{std::next (data_.cbegin (), (offsetInBits + sizeInBits) / BITS_PER_CARRIER),
         //                         (offsetInBits + sizeInBits) % BITS_PER_CARRIER};
         // }
 
-        // sentinel end () { return sentinel{data.begin (), offsetInBits}; }
-        // sentinel end () const { return sentinel{std::ranges::begin (const_cast<Collection &> (data)), offsetInBits}; }
-        // const_sentinel cend () const { return const_sentinel{data.cbegin (), offsetInBits}; }
+        // sentinel end () { return sentinel{data_.begin (), offsetInBits}; }
+        // sentinel end () const { return sentinel{std::ranges::begin (const_cast<Collection &> (data_)), offsetInBits}; }
+        // const_sentinel cend () const { return const_sentinel{data_.cbegin (), offsetInBits}; }
 
         // sentinel &end () { return end_; }
         // sentinel const &end () const { return end_; }
-        // // const_sentinel cend () const { return const_sentinel{data.cbegin (), offsetInBits}; }
+        // // const_sentinel cend () const { return const_sentinel{data_.cbegin (), offsetInBits}; }
 
-        sentinel end () { return sentinel{data.end (), 0}; }
-        sentinel end () const { return sentinel{std::ranges::end (const_cast<Collection &> (data)), 0}; } // TODO no cast
-        const_sentinel cend () const { return const_sentinel{data.cbegin (), 0}; }
+        // sentinel end () { return sentinel{data_.end (), 0}; }
+        // sentinel end () const { return sentinel{std::ranges::end (const_cast<Collection &> (data_)), 0}; } // TODO no cast
+        // const_sentinel cend () const { return const_sentinel{data_.cbegin (), 0}; }
+
+        sentinel end () { return sentinel{offsetInBits + sizeInBits}; }
+        sentinel end () const { return sentinel{offsetInBits + sizeInBits}; }
 
         size_t size () const { return sizeInBits; }
         bool empty () const { return sizeInBits == 0; }
 
 private:
-        Collection data;
+        Collection data_;
         size_t offsetInBits{}; // Starting offset.
         ssize_t sizeInBits{};
 
         // sentinel end_;
 };
-#endif
 
 } // namespace logic

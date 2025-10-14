@@ -17,81 +17,6 @@ import logic.data;
 namespace logic {
 
 /**
- * "Draws" a binary data sterem as a poly line. Returns the coordinates as a vector of Coord (int,
- * float, etc). Data order is x0, y0, x1, y1 etc. ~~The w parameter is the limit (no vertices past
- * this point gets generated~~, h is the vertical stretch). Input data is expected to be a
- * collection of unsigned integers of arbitrary size. Every such word is then converted bit by bit.
- *
- * TODO If level does not change, no points shall be added, but rather the resulting line
- * shall be prolonged! For example if I call this with data collection containig 256 bytes
- * of value 0, this function shall output only 2 vertices instead od 2048 as it does currently!
- *
- * TODO The does not stand if we display the individual samples as dots.
- */
-export template <typename Coord, digital_sample_collection Collection>
-std::vector<Coord> toPolyPointsW (Collection const &data, bool *lastBit, Coord w, Coord h, Coord lineWidth)
-{
-        Coord x = 0;
-        std::vector<Coord> ret;
-        ret.reserve (data.size () * CHAR_BIT);
-
-        // Starting point.
-        ret.push_back (0);
-        ret.push_back ((*lastBit) ? (0) : (h));
-
-        // bool clipped = false;
-
-        for (uint8_t byte : data) {
-#if 0
-                if (cnt == 0 || cnt == data.size () - 1) {
-                        std::print ("{:0b},", byte);
-                }
-                ++cnt;
-#endif
-
-                for (int i = CHAR_BIT - 1; i >= 0; --i) {
-                        bool bit = (byte & (1 << i));
-
-#if 0
-                        ret.push_back (x);
-                        ret.push_back ((bit) ? (0) : (h));
-                        ret.push_back (x);
-                        ret.push_back ((bit) ? (5) : (h - 5));
-                        ret.push_back (x);
-                        ret.push_back ((bit) ? (0) : (h));
-#endif
-                        // edge
-                        if (*lastBit != bit) {
-                                ret.push_back (x);
-                                ret.push_back ((bit) ? (0) : (h));
-                        }
-
-                        // level
-                        x += lineWidth;
-
-                        // if (x >= w) { // Clipping
-                        //         x = std::min (x, w); // Clip the plot if necesarry
-                        //         i = -1;              // Make this iteration the last one
-                        //         clipped = true;      // Break the outer loop as well
-                        // }
-
-                        ret.push_back (x);
-                        ret.push_back ((bit) ? (0) : (h));
-
-                        *lastBit = bit;
-                }
-
-                // if (clipped) {
-                //         // For now I simply print a "warning". The clipping is undesirable.
-                //         // std::println ("C");
-                //         break;
-                // }
-        }
-
-        return ret;
-}
-
-/**
  * All comments from the function above this one apply. But this one expects
  * a collection of bits (bools).
  */
@@ -232,6 +157,90 @@ std::vector<Coord> toPolyPointsb2 (Collection const &data, PolyPointsCfg const &
                 ret.push_back ((bit) ? (0) : (cfg.height));
 
                 lastBit = bit;
+        }
+
+        return ret;
+}
+
+/**
+ * "Draws" a binary data sterem as a poly line. Returns the coordinates as a vector of Coord (int,
+ * float, etc). Data order is x0, y0, x1, y1 etc. ~~The w parameter is the limit (no vertices past
+ * this point gets generated~~, h is the vertical stretch). Input data is expected to be a
+ * collection of unsigned integers of arbitrary size. Every such word is then converted bit by bit.
+ *
+ * TODO If level does not change, no points shall be added, but rather the resulting line
+ * shall be prolonged! For example if I call this with data collection containig 256 bytes
+ * of value 0, this function shall output only 2 vertices instead od 2048 as it does currently!
+ *
+ * TODO The does not stand if we display the individual samples as dots.
+ * @deprecated
+ */
+export template <typename Coord, typename Collection> std::vector<Coord> toPolyPointsW (Collection &&data, PolyPointsCfg const &cfg)
+{
+        // if (std::ranges::empty (data)) {
+        //         return {};
+        // }
+
+        Coord x = 0;
+        std::vector<Coord> ret;
+        // ret.reserve (data.size () * CHAR_BIT);
+
+        // bool lastBit = *data.begin () & 0b1000'0000;
+        bool lastBit = false;
+
+        // Starting point.
+        if (cfg.continuation) {
+                ret.push_back (0);
+                ret.push_back ((lastBit) ? (0) : (cfg.height));
+        }
+
+        // bool clipped = false;
+
+        for (uint8_t byte : data) {
+#if 0
+                if (cnt == 0 || cnt == data.size () - 1) {
+                        std::print ("{:0b},", byte);
+                }
+                ++cnt;
+#endif
+
+                for (int i = CHAR_BIT - 1; i >= 0; --i) {
+                        bool bit = (byte & (1 << i));
+
+#if 0
+                        ret.push_back (x);
+                        ret.push_back ((bit) ? (0) : (cfg.height));
+                        ret.push_back (x);
+                        ret.push_back ((bit) ? (5) : (cfg.height - 5));
+                        ret.push_back (x);
+                        ret.push_back ((bit) ? (0) : (cfg.height));
+#endif
+                        // edge
+                        if (lastBit != bit) {
+                                ret.push_back (x);
+                                ret.push_back ((bit) ? (0) : (cfg.height));
+                        }
+
+                        // level
+                        x += cfg.lineWidth;
+
+                        // if (x >= w) { // Clipping
+                        //         x = std::min (x, w); // Clip the plot if necesarry
+                        //         i = -1;              // Make this iteration the last one
+                        //         clipped = true;      // Break the outer loop as well
+                        // }
+
+                        ret.push_back (x);
+                        ret.push_back ((bit) ? (0) : (cfg.height));
+
+                        lastBit = bit;
+                }
+
+                // if (clipped) {
+                //         // For now I simply print a "warning". The clipping is undesirable.
+                //         // std::println ("C");
+                //         break;
+                // }
         }
 
         return ret;

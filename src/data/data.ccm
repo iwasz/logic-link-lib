@@ -15,4 +15,4 @@ export import :types;
 export import :span;
 export import :range.span;
 export import :range.span.byte;
-// export import :span.owning;
+export import :span.owning;

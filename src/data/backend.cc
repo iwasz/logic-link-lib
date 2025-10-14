@@ -303,7 +303,7 @@ void Backend::clear ()
 
 /*--------------------------------------------------------------------------*/
 
-Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx end) const
+Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples) const
 {
         ZoneScopedN ("BackendRange");
         /*
@@ -314,7 +314,7 @@ Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx en
          * device, there's no need to modifu it.
          */
         std::lock_guard lock{mutex};
-        return groups.at (groupIdx).range (begin, end);
+        return groups.at (groupIdx).range (begin, end, maxDiscernibleSamples);
 }
 
 /*--------------------------------------------------------------------------*/

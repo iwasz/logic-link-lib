@@ -40,7 +40,7 @@ void DemoDevice::start (IBackend *backend)
         thread = std::thread{[backend, this] {
                 double delay = double (transferSize) * CHAR_BIT / acquisitionParams.digitalSampleRate;
                 auto chDelay = std::chrono::round<std::chrono::microseconds> (std::chrono::duration<double> (delay));
-                tracy::SetThreadName ("DemoDev");
+                setThreadName ("DemoDev");
 
                 while (running ()) {
                         ZoneNamedN (demoDev, "demoDev", true);

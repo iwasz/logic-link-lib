@@ -1,0 +1,37 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base_config",
+      "displayName": "base_config",
+      "hidden": true,
+      "description": "Configure for base_config build",
+      "binaryDir": "${sourceDir}/build",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "LOCAL_DEPENDENCIES": "ON",
+        "CMAKE_POLICY_VERSION_MINIMUM": "4.0",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "ON",
+        "TRACY_ENABLE": "OFF"
+      },
+      "environment": {
+        "CPM_SOURCE_CACHE": ".cache/CPM",
+        "C": "/opt/clang-22/bin/clang",
+        "CXX": "/opt/clang-22/bin/clang++"
+      }
+    },
+    {
+      "name": "Development",
+      "inherits": "base_config",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ]
+}
