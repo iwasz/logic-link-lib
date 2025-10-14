@@ -158,6 +158,10 @@ public:
         BlockArray (size_t maxZoomOutLevels = 1, size_t zoomOutPerLevel = DEFAULT_ZOOM_OUT_PER_LEVEL)
             : levels (std::max (maxZoomOutLevels, 1uz)), zoomOutPerLevel{zoomOutPerLevel}
         {
+                for (size_t curZoomOut = 1; auto &lev : levels) {
+                        lev.zoomOut = curZoomOut;
+                        curZoomOut *= zoomOutPerLevel;
+                }
         }
 
         /**

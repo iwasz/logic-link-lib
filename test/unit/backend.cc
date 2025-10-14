@@ -546,6 +546,26 @@ TEST_CASE ("ZoomOut", "[backend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
 
+        SECTION ("zoomOut 0")
+        {
+                BlockArray cbs; // Only 1 zoomLevel, so no zooming is possible.
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
+
+                // However we try our luck. We should get 96 samples.
+                auto r = cbs.range (0, 96, 48);
+                REQUIRE (!r.empty ());
+
+                Block copy = BlockArrayUtHelper::makeBlock (r);
+                REQUIRE (copy.bitsPerSample () == 1);
+                REQUIRE (copy.firstSampleNo () == 0);
+                REQUIRE (copy.lastSampleNo () == 95);
+                REQUIRE (copy.channelLength () == 96);
+                REQUIRE (copy.channelsNumber () == 4);
+                REQUIRE (copy.channel (0).size () == 12);
+        }
+
         SECTION ("zoomOut 2")
         {
                 BlockArray cbs (2, 2); // 2 zoom levels : 1 and 0.5 (zoomOut==2)
@@ -618,6 +638,25 @@ TEST_CASE ("ZoomOut", "[backend]")
                         REQUIRE (copy.channelsNumber () == 4);
                         REQUIRE (copy.channel (0).size () == 3);
                 }
+        }
+
+        SECTION ("zoomOut by 4")
+        {
+                BlockArray cbs (2, 4); // 2 zoom levels : 1 and 0.5 (zoomOut==2)
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
+
+                auto r = cbs.range (0, 96, 24);
+                REQUIRE (!r.empty ());
+
+                Block copy = BlockArrayUtHelper::makeBlock (r);
+                REQUIRE (copy.bitsPerSample () == 1);
+                REQUIRE (copy.firstSampleNo () == 0);
+                REQUIRE (copy.lastSampleNo () == 95);
+                REQUIRE (copy.channelLength () == 96);
+                REQUIRE (copy.channelsNumber () == 4);
+                REQUIRE (copy.channel (0).size () == 3);
         }
 }
 

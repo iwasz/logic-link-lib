@@ -150,11 +150,11 @@ TEST_CASE ("Join", "[backend]")
 
                 bool b = std::ranges::equal (span,
                                              std::vector<bool>{
-                                                     0, 0, 0, 0, 0, 0, 0, 0, //
-                                                     0, 0, 0, 0, 0, 0, 0, 1, //
-                                                     0, 0, 0, 0, 0, 0, 1, 0, //
-                                                     0, 0, 0, 0, 0, 0, 1, 1, //
-                                                     0, 0, 0, 0, 0, 1, 0, 0, //
+                                                     0, 0, 0, 0, 0, 0, 0, 0, // 0-7
+                                                     0, 0, 0, 0, 0, 0, 0, 1, // 8-15
+                                                     0, 0, 0, 0, 0, 0, 1, 0, // 16-23
+                                                     0, 0, 0, 0, 0, 0, 1, 1, // 24-31
+                                                     0, 0, 0, 0, 0, 1, 0, 0, // 32-...
                                                      0, 0, 0, 0, 0, 1, 0, 1, //
                                                      0, 0, 0, 0, 0, 1, 1, 0, //
                                                      0, 0, 0, 0, 0, 1, 1, 1, //
@@ -168,10 +168,22 @@ TEST_CASE ("Join", "[backend]")
 
         SECTION ("bit-wise 2nd and 3rd block")
         {
-                auto x = cbs.range (32, 64) | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
-                auto span = OwningBitSpan{x, 32, 64};
+                auto range = cbs.range (32, 64);
+                REQUIRE (logic::firstSampleNo (range) == 32);
+                auto x = range | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
+                auto span = OwningBitSpan{x, 0, 64};
 
                 static_assert (std::is_same_v<decltype (span)::BitCarrierT, uint8_t>);
+
+                auto i = span.begin ();
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 1);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
 
                 bool b = std::ranges::equal (span,
                                              std::vector<bool>{

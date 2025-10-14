@@ -11,6 +11,7 @@ module;
 #include <Tracy.hpp>
 #include <algorithm>
 #include <climits>
+#include <cmath>
 #include <mutex>
 #include <ranges>
 #include <vector>
@@ -128,7 +129,7 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
         }
 
         auto doAppend = [chLenBytes, this] (Block block, size_t levNo, auto &that) -> void {
-                block.zoomOut_ = 1 << levNo;
+                block.zoomOut_ = std::pow (zoomOutPerLevel, levNo);
 
                 if (levels.size () - 1 > levNo) {
                         Block zoomed = downsample (block, zoomOutPerLevel);
@@ -181,21 +182,22 @@ BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, SampleNu
                 maxDiscernibleSamples = std::min<SampleNum> (maxDiscernibleSamples, len);
         }
 
-        auto level = std::bit_floor (len / maxDiscernibleSamples);
-        level = std::bit_width (level) - 1; // Effectively log2 (level)
-        (void)level;
+        auto zoomOut = std::bit_floor (len / maxDiscernibleSamples);
+
+        auto lll = levels | std::views::filter ([zoomOut] (auto &lev) { return lev.zoomOut >= zoomOut; });
+        auto &level = (std::ranges::empty (lll)) ? (levels.front ()) : (lll.front ());
 
         ZoneScoped;
-        auto bi = levels.at (level).index_.lower_bound (begin);
+        auto bi = level.index_.lower_bound (begin);
 
-        if (bi == levels.at (level).index_.cend ()) {
+        if (bi == level.index_.cend ()) {
                 return {};
         }
 
         ZoneNamedN (z1, "end", true);
-        auto ei = levels.at (level).index_.lower_bound (end);
+        auto ei = level.index_.lower_bound (end);
 
-        if (ei == levels.at (level).index_.cend ()) {
+        if (ei == level.index_.cend ()) {
                 std::advance (ei, -1);
         }
 
@@ -203,7 +205,7 @@ BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, SampleNu
         auto e = ei->second;
 
         // Maintain "past-the-end" semantics.
-        if (e != levels.at (level).data_.cend ()) {
+        if (e != level.data_.cend ()) {
                 std::advance (e, 1);
         }
 
