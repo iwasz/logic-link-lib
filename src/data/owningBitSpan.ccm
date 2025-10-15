@@ -93,6 +93,7 @@ template <typename I> OwningBitSpanIterator<I> OwningBitSpanIterator<I>::operato
 /**
  * Like bit span, but with copy semantics.
  * TODO this is barely working prove of concept.
+ * TODO make it random_access_range and view, and simply use take / drop.
  */
 export template <std::ranges::input_range Collection> class OwningBitSpan {
 public:
@@ -102,8 +103,6 @@ public:
         using iterator = OwningBitSpanIterator<std::ranges::iterator_t<Collection>>;
         using const_iterator = OwningBitSpanIterator<std::ranges::const_iterator_t<Collection>>;
 
-        // using sentinel = OwningBitSpanSentinel<std::ranges::sentinel_t<Collection>>;
-        // using const_sentinel = OwningBitSpanSentinel<std::ranges::const_sentinel_t<Collection>>;
         using sentinel = OwningBitSpanSentinel<std::ranges::iterator_t<Collection>>;
         using const_sentinel = OwningBitSpanSentinel<std::ranges::const_iterator_t<Collection>>;
 
@@ -116,46 +115,16 @@ public:
         OwningBitSpan (Collection data, size_t bitOffset = 0, ssize_t bitSize = -1)
             : data_{std::move (data)},
               offsetInBits{bitOffset},
-              sizeInBits{(bitSize < 0) ? (std::ranges::distance (data_) * CHAR_BIT)
-                                       : (std::min (bitSize, std::ranges::distance (data_) * CHAR_BIT))}
+              sizeInBits{(bitSize < 0)
+                                 // Maximum available space when bitSize < 0
+                                 ? (std::max<ssize_t> (0, std::ranges::distance (data_) * CHAR_BIT - bitOffset))
+                                 // Otherwise bitSize OR the above.
+                                 : (std::min<size_t> (bitSize, std::max<ssize_t> (0, std::ranges::distance (data_) * CHAR_BIT - bitOffset)))}
         {
         }
 
         iterator begin () { return iterator{data_.begin (), offsetInBits}; }
         iterator begin () const { return iterator{std::ranges::begin (const_cast<Collection &> (data_)), offsetInBits}; }
-        const_iterator cbegin () const { return const_iterator{data_.cbegin (), offsetInBits}; }
-
-        // iterator end ()
-        // {
-        //         return iterator{std::next (data_.begin (), (offsetInBits + sizeInBits) / BITS_PER_CARRIER),
-        //                         (offsetInBits + sizeInBits) % BITS_PER_CARRIER};
-        // }
-
-        // iterator end () const
-        // {
-        //         // TODO no cast
-        //         return iterator{std::next (std::ranges::begin (const_cast<Collection &> (data_)), (offsetInBits + sizeInBits) /
-        //         BITS_PER_CARRIER),
-        //                         (offsetInBits + sizeInBits) % BITS_PER_CARRIER};
-        // }
-
-        // const_sentinel cend () const
-        // {
-        //         return sentinel{std::next (data_.cbegin (), (offsetInBits + sizeInBits) / BITS_PER_CARRIER),
-        //                         (offsetInBits + sizeInBits) % BITS_PER_CARRIER};
-        // }
-
-        // sentinel end () { return sentinel{data_.begin (), offsetInBits}; }
-        // sentinel end () const { return sentinel{std::ranges::begin (const_cast<Collection &> (data_)), offsetInBits}; }
-        // const_sentinel cend () const { return const_sentinel{data_.cbegin (), offsetInBits}; }
-
-        // sentinel &end () { return end_; }
-        // sentinel const &end () const { return end_; }
-        // // const_sentinel cend () const { return const_sentinel{data_.cbegin (), offsetInBits}; }
-
-        // sentinel end () { return sentinel{data_.end (), 0}; }
-        // sentinel end () const { return sentinel{std::ranges::end (const_cast<Collection &> (data_)), 0}; } // TODO no cast
-        // const_sentinel cend () const { return const_sentinel{data_.cbegin (), 0}; }
 
         sentinel end () { return sentinel{offsetInBits + sizeInBits}; }
         sentinel end () const { return sentinel{offsetInBits + sizeInBits}; }
@@ -166,9 +135,7 @@ public:
 private:
         Collection data_;
         size_t offsetInBits{}; // Starting offset.
-        ssize_t sizeInBits{};
-
-        // sentinel end_;
+        size_t sizeInBits{};
 };
 
 } // namespace logic
