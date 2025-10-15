@@ -66,7 +66,7 @@ TEST_CASE ("size", "[frontend]")
  */
 TEST_CASE ("square wave integration test usecase", "[frontend]")
 {
-        static constexpr auto BITS_PER_SAMPLE = 8U;
+        static constexpr auto BITS_PER_SAMPLE = 1U;
         static constexpr auto GROUP = 0U;
 
         Backend backend;

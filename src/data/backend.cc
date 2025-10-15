@@ -186,7 +186,7 @@ BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, SampleNu
 
         auto zoomOut = std::bit_floor (len / maxDiscernibleSamples);
 
-        auto lll = levels | std::views::filter ([zoomOut] (auto &lev) { return lev.zoomOut >= zoomOut; });
+        auto lll = levels | std::views::reverse | std::views::filter ([zoomOut] (auto &lev) { return lev.zoomOut <= zoomOut; });
         auto &level = (std::ranges::empty (lll)) ? (levels.front ()) : (lll.front ());
 
         ZoneScoped;

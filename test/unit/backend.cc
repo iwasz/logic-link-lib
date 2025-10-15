@@ -647,16 +647,28 @@ TEST_CASE ("ZoomOut", "[backend]")
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
 
-                auto r = cbs.range (0, 96, 24);
-                REQUIRE (!r.empty ());
+                SECTION ("lev 0")
+                {
+                        // First request a range from the level 0 (level 1 is too compressed and we would loose details).
+                        auto r = cbs.range (0, 96, 48);
+                        REQUIRE (!r.empty ());
+                        Block copy = BlockArrayUtHelper::makeBlock (r);
+                        REQUIRE (copy.channel (0).size () == 12);
+                }
 
-                Block copy = BlockArrayUtHelper::makeBlock (r);
-                REQUIRE (copy.bitsPerSample () == 1);
-                REQUIRE (copy.firstSampleNo () == 0);
-                REQUIRE (copy.lastSampleNo () == 95);
-                REQUIRE (copy.channelLength () == 96);
-                REQUIRE (copy.channelsNumber () == 4);
-                REQUIRE (copy.channel (0).size () == 3);
+                SECTION ("lev 1")
+                {
+                        auto r = cbs.range (0, 96, 24);
+                        REQUIRE (!r.empty ());
+
+                        Block copy = BlockArrayUtHelper::makeBlock (r);
+                        REQUIRE (copy.bitsPerSample () == 1);
+                        REQUIRE (copy.firstSampleNo () == 0);
+                        REQUIRE (copy.lastSampleNo () == 95);
+                        REQUIRE (copy.channelLength () == 96);
+                        REQUIRE (copy.channelsNumber () == 4);
+                        REQUIRE (copy.channel (0).size () == 3);
+                }
         }
 }
 
@@ -669,7 +681,7 @@ TEST_CASE ("size", "[backend]")
         static constexpr auto BITS_PER_SAMPLE = 1U;
         static constexpr auto GROUP = 0U;
 
-        Backend backend;
+        Backend backend{1, 1}; // No zoom levels
         backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (0));
         REQUIRE (backend.channelLength (0) == 32);
 

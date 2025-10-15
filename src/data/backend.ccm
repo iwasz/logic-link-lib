@@ -147,8 +147,19 @@ class BlockArray {
 public:
         static constexpr size_t DEFAULT_ZOOM_OUT_PER_LEVEL = 16; // Every next level is zoomed-out by this value.
 
-        using Container = std::vector<Block>;
-        // using Container = std::list<Block>;
+        /*
+         * TODO The container first was a std::deque, but deque uses 2 vectors inside and
+         * invalidates (it may) it's ityerators on push_back and my app crashed (I store
+         * these iterators and pass them around). I temporarily switched to pre-allocated
+         * std::vector and all was fine but then as a final solution I opted for std::list.
+         * And it started to crash again (search Obsidian for `deque`). Albeit I believe,
+         * this time the culprit are not invalidated iters, EVEN THOUGH switching back to
+         * pre-allocated vector seems to make the problem go away.
+         * After introducing levels, the `reserve` call doesn't get called when BlockArray
+         * gets copied / moved, and thus I moved yet another time do std::list.
+         */
+        // using Container = std::vector<Block>;
+        using Container = std::list<Block>;
         using SubRange = std::ranges::subrange<Container::const_iterator>;
 
         /// Note that cb is passed by value. Move.
@@ -187,7 +198,7 @@ private:
         using BlockIndex = std::map<SampleIdx, Container::const_iterator>;
 
         struct ZoomOutLevel {
-                ZoomOutLevel () { data_.reserve (2000000); }
+                // ZoomOutLevel () { data_.reserve (2000000); }
                 Container data_;   // Grows horizontally.
                 BlockIndex index_; // Like DB index SampleIndex -> block.
                 size_t zoomOut = 1;
@@ -257,7 +268,8 @@ struct IBackend {
  */
 class Backend : public IBackend {
 public:
-        Backend () : groups (1) {} // TODO configurable number of groups.
+        Backend () : groups{BlockArray{2, 2}} {} // TODO configurable number of groups.
+        Backend (size_t maxZoomOutLevels, size_t zoomOutPerLevel) : groups{BlockArray{maxZoomOutLevels, zoomOutPerLevel}} {}
 
         void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) override;
         void clear () override;

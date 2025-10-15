@@ -202,7 +202,7 @@ TEST_CASE ("Join", "[backend]")
         SECTION ("bit-wise 9 bits")
         {
                 auto range = cbs.range (31, 31 + 9);
-                REQUIRE (std::ranges::size (range) == 2); // 2 blocks
+                REQUIRE (std::ranges::distance (range) == 2); // 2 blocks
                 REQUIRE (range.front ().firstSampleNo () == 0);
 
                 auto x = range | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
