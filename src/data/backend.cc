@@ -167,6 +167,8 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 
 /*--------------------------------------------------------------------------*/
 
+// TODO I confused end with length at least once. Maybe it's time to make SampleIdx "strongly typed" with explicit ctors?
+// TODO like here: https://www.fluentcpp.com/2016/12/08/strong-types-for-strong-interfaces/
 BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples) const
 {
         if (begin == end) {

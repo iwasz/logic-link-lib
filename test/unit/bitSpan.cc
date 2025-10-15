@@ -201,8 +201,24 @@ TEST_CASE ("Join", "[backend]")
 
         SECTION ("bit-wise 9 bits")
         {
-                auto x = cbs.range (31, 9) | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
+                auto range = cbs.range (31, 31 + 9);
+                REQUIRE (std::ranges::size (range) == 2); // 2 blocks
+                REQUIRE (range.front ().firstSampleNo () == 0);
+
+                auto x = range | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
                 auto span = OwningBitSpan{x, 31, 9};
-                REQUIRE (std::ranges::equal (span, std::vector<bool>{1, 0, 0, 0, 0, 0, 1, 0, 1}));
+
+                auto i = span.begin ();
+                REQUIRE (*i++ == 1);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 1);
+                REQUIRE (*i++ == 0);
+                REQUIRE (*i++ == 0);
+
+                REQUIRE (std::ranges::equal (span, std::vector<bool>{1, 0, 0, 0, 0, 0, 1, 0, 0}));
         }
 }
