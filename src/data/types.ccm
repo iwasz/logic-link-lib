@@ -53,6 +53,12 @@ using SampleNum = int64_t;
 using ByteIdx = int64_t;
 using ByteNum = int64_t;
 
+SampleIdx relativeBegin (SampleIdx index, SampleIdx rangeBegin, size_t zoomOut) { return (index - rangeBegin) / zoomOut; }
+SampleIdx relativeEnd (SampleIdx index, SampleIdx rangeBegin, size_t zoomOut)
+{
+        return ((index - rangeBegin) / zoomOut) - 1 + (((index - rangeBegin) % zoomOut == zoomOut - 1) ? (1) : (0));
+}
+
 /**
  * The data as received from the device. Possibly compressed with LZ4.
  */

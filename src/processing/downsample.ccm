@@ -92,31 +92,33 @@ export template <byte_collection Collection> Collection downsample (Collection c
 template <byte_collection Collection> Collection Downsample<2, Collection>::operator() (Collection const &in)
 {
         if (in.size () % BITS) {
-                throw logic::Exception{"in.size () % BITS"};
+                throw logic::Exception{std::format ("in.size () % {} != 0", BITS)};
         }
 
         Collection out;
         out.reserve (in.size () / BITS);
 
-        size_t cntOut = BITS - 1;
-        uint8_t outB{};
-
-        for (uint8_t b : in) {
-                int bit7 = (b & 0b11000000) > 0b10000000;
-                int bit6 = (b & 0b00110000) > 0b00100000;
-                int bit5 = (b & 0b00001100) > 0b00001000;
-                int bit4 = (b & 0b00000011) > 0b00000010;
-
-                if (cntOut == 1) {
-                        outB |= (bit7 << 7 | bit6 << 6 | bit5 << 5 | bit4 << 4);
-                        --cntOut;
+        auto last = [state = false] (int bits) mutable -> bool {
+                if (bits == 1) {
+                        bits = !state;
+                        state = bits;
                 }
-                else {
-                        outB |= (bit7 << 3 | bit6 << 2 | bit5 << 1 | bit4 << 0);
-                        out.push_back (outB);
-                        outB = 0;
-                        cntOut = BITS - 1;
-                }
+
+                return bool (bits);
+        };
+
+        for (auto [a, b] : in | std::views::adjacent<2> | std::views::stride (2)) {
+                int bit7 = last (std::popcount (uint8_t (a & 0b11000000)));
+                int bit6 = last (std::popcount (uint8_t (a & 0b00110000)));
+                int bit5 = last (std::popcount (uint8_t (a & 0b00001100)));
+                int bit4 = last (std::popcount (uint8_t (a & 0b00000011)));
+
+                int bit3 = last (std::popcount (uint8_t (b & 0b11000000)));
+                int bit2 = last (std::popcount (uint8_t (b & 0b00110000)));
+                int bit1 = last (std::popcount (uint8_t (b & 0b00001100)));
+                int bit0 = last (std::popcount (uint8_t (b & 0b00000011)));
+
+                out.push_back (bit7 << 7 | bit6 << 6 | bit5 << 5 | bit4 << 4 | bit3 << 3 | bit2 << 2 | bit1 << 1 | bit0 << 0);
         }
 
         return out;
@@ -207,6 +209,7 @@ export struct State {
  * @param begin Skip this number of samples (bits)
  * @param inputSize In samples (bits).
  * @param outSampleNum In samples (bits).
+ * @deprecated description
  */
 export template <typename byte_collection>
         requires requires { typename byte_collection::value_type; }

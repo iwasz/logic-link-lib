@@ -268,7 +268,7 @@ struct IBackend {
  */
 class Backend : public IBackend {
 public:
-        Backend () : groups{BlockArray{2, 2}} {} // TODO configurable number of groups.
+        Backend () : groups{BlockArray{10, 2}} {} // TODO configurable number of groups.
         Backend (size_t maxZoomOutLevels, size_t zoomOutPerLevel) : groups{BlockArray{maxZoomOutLevels, zoomOutPerLevel}} {}
 
         void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) override;
