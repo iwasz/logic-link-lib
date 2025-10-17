@@ -98,10 +98,12 @@ template <byte_collection Collection> Collection Downsample<2, Collection>::oper
         Collection out;
         out.reserve (in.size () / BITS);
 
-        auto last = [state = false] (int bits) mutable -> bool {
+        static bool state;
+        auto last = [/* state = false */] (int bits) mutable -> bool {
                 if (bits == 1) {
                         bits = !state;
-                        state = bits;
+                        state = bits; // Flipping back and forth
+                        // bits = std::rand () & 1; // TODO benchmark this https://stackoverflow.com/questions/26237419/faster-than-rand
                 }
 
                 return bool (bits);

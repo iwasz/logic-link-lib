@@ -151,7 +151,7 @@ std::vector<Coord> toPolyPointsb2 (Collection const &data, PolyPointsCfg const &
                 }
 
                 // level
-                x += cfg.lineWidth;
+                x += 1 /* cfg.lineWidth */;
 
                 ret.push_back (x);
                 ret.push_back ((bit) ? (0) : (cfg.height));
