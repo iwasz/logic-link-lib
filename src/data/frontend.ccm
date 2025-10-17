@@ -59,7 +59,7 @@ struct IFrontend {
         virtual BlockRangeBitSpan<uint8_t const, BlockArray::Container> channel (size_t groupIdx, size_t channelIdx, SampleIdx offset,
                                                                                  SampleNum length) = 0;
 
-        virtual BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, SampleNum maxDiscernibleSamples) = 0;
+        virtual BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, SampleNum maxDiscernibleSamples, bool peek) = 0;
 
         /// Says if there's new data since last called. Warning! Clears on read!
         virtual bool isNewData () = 0;
@@ -84,7 +84,7 @@ public:
         BlockRangeBitSpan<uint8_t const, BlockArray::Container> channel (size_t groupIdx, size_t channelIdx, SampleIdx begin,
                                                                          SampleNum length) override;
 
-        BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, SampleNum maxDiscernibleSamples) override;
+        BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, SampleNum maxDiscernibleSamples, bool peek) override;
 
         // ChannelStreams next () override { return {}; }
         // ChannelStreams const &range (TimePoint const &begin, TimePoint const &end) override { return current; }

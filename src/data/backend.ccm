@@ -178,7 +178,7 @@ public:
         /**
          * Returns block range that includes sample numbers passed (inclusive).
          */
-        SubRange range (SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1) const;
+        SubRange range (SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1, bool peek = false) const;
 
         /**
          * Returns a Stream cut precisely down to the byte.
@@ -253,7 +253,8 @@ struct IBackend {
          * the `begin` sample and finish after the `end` sample, so you
          * have to trim it yourself (use std::span / BitSpan).
          */
-        virtual SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1) const = 0;
+        virtual SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1, bool peek = false) const
+                = 0;
         virtual size_t groupsNo () const = 0;
 
         virtual size_t channelsNumber (size_t groupIdx) const = 0;
@@ -274,7 +275,7 @@ public:
         void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) override;
         void clear () override;
 
-        SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1) const override;
+        SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1, bool peek = false) const override;
 
         void configureGroup (size_t groupIdx, SampleRate sampleRate); // TODO not used. Remove the CTOr and use this somewhere.
         size_t groupsNo () const override { return groups.size (); }

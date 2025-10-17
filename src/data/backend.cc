@@ -169,7 +169,7 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 
 // TODO I confused end with length at least once. Maybe it's time to make SampleIdx "strongly typed" with explicit ctors?
 // TODO like here: https://www.fluentcpp.com/2016/12/08/strong-types-for-strong-interfaces/
-BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples) const
+BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples, bool peek) const
 {
         if (begin == end) {
                 return {};
@@ -187,7 +187,11 @@ BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, SampleNu
         auto zoomOut = std::bit_floor (len / maxDiscernibleSamples);
 
         auto lll = levels | std::views::reverse | std::views::filter ([zoomOut] (auto &lev) { return lev.zoomOut <= zoomOut; });
-        auto &level = (std::ranges::empty (lll)) ? (levels.front ()) : (lll.front ());
+        auto const &level = (std::ranges::empty (lll)) ? (levels.front ()) : (lll.front ());
+
+        if (peek) {
+                begin -= level.zoomOut;
+        }
 
         ZoneScoped;
         auto bi = level.index_.lower_bound (begin);
@@ -307,7 +311,7 @@ void Backend::clear ()
 
 /*--------------------------------------------------------------------------*/
 
-Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples) const
+Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples, bool peek) const
 {
         ZoneScopedN ("BackendRange");
         /*
@@ -318,7 +322,7 @@ Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx en
          * device, there's no need to modifu it.
          */
         std::lock_guard lock{mutex};
-        return groups.at (groupIdx).range (begin, end, maxDiscernibleSamples);
+        return groups.at (groupIdx).range (begin, end, maxDiscernibleSamples, peek);
 }
 
 /*--------------------------------------------------------------------------*/
