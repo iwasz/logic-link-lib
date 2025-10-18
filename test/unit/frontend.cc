@@ -18,7 +18,8 @@ using namespace logic;
 TEST_CASE ("new data", "[frontend]")
 {
         Backend backend;
-        backend.configureGroup (0, 240'000'000); // Digital channels
+        backend.addGroup ({.channelsNumber = 4});
+
         DigitalFrontend frontend1{&backend};
         DigitalFrontend frontend2{&backend};
 
@@ -43,7 +44,7 @@ TEST_CASE ("new data", "[frontend]")
 TEST_CASE ("size", "[frontend]")
 {
         Backend backend;
-        backend.configureGroup (0, 240'000'000); // Digital channels
+        backend.addGroup ({.channelsNumber = 4});
         DigitalFrontend frontend{&backend};
 
         REQUIRE (frontend.size (0) == 0);
@@ -70,7 +71,7 @@ TEST_CASE ("square wave integration test usecase", "[frontend]")
         static constexpr auto GROUP = 0U;
 
         Backend backend;
-        backend.configureGroup (0, 240'000'000); // Digital channels
+        backend.addGroup ({.channelsNumber = 4});
 
         // Add some of these blocks.
         for (int i = 0; i < 10; ++i) {

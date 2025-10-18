@@ -36,12 +36,12 @@ export {
 
         template <byte_collection Collection> struct Downsample<2, Collection> {
                 static constexpr size_t BITS = 2;
-                static Collection operator() (Collection const &in);
+                static Collection operator() (Collection const &in, bool *state);
         };
 
         template <byte_collection Collection> struct Downsample<4, Collection> {
                 static constexpr size_t BITS = 4;
-                static Collection operator() (Collection const &in);
+                static Collection operator() (Collection const &in, bool *state);
         };
 
         template <std::integral auto factor, byte_collection Collection>
@@ -49,39 +49,39 @@ export {
         struct Downsample<factor, Collection> {
                 static constexpr size_t BITS = factor;
                 using WordT = WordType<BITS>::type;
-                static Collection operator() (Collection const &in);
+                static Collection operator() (Collection const &in, bool *state);
         };
 
         /**
          * Factory/helper function.
          */
-        template <std::integral auto factor, byte_collection Collection> Collection downsample (Collection const &in)
+        template <std::integral auto factor, byte_collection Collection> Collection downsample (Collection const &in, bool *state)
         {
-                return Downsample<factor, Collection>::operator() (in);
+                return Downsample<factor, Collection>::operator() (in, state);
         }
 }
 
 namespace impl {
-        template <byte_collection Collection, int N, int... Ns> Collection downsample (Collection const &in, size_t zoomOut)
+        template <byte_collection Collection, int N, int... Ns> Collection downsample (Collection const &in, size_t zoomOut, bool *state)
         {
                 if (zoomOut == N) {
-                        return logic::downsample<N> (in);
+                        return logic::downsample<N> (in, state);
                 }
 
                 if constexpr (sizeof...(Ns) > 0) {
-                        return impl::downsample<Collection, Ns...> (in, zoomOut);
+                        return impl::downsample<Collection, Ns...> (in, zoomOut, state);
                 }
 
                 throw Exception{std::format ("Zoom level: {} not allowed.", zoomOut)};
         }
 } // namespace impl
 
-export template <byte_collection Collection> Collection downsample (Collection const &in, size_t zoomOut)
+export template <byte_collection Collection> Collection downsample (Collection const &in, size_t zoomOut, bool *state)
 {
         static constexpr std::integer_sequence<int, 2, 4, 8, 16> allowedZoomLevels2;
 
-        auto lbd = [&in, zoomOut]<int... Ns> (std::integer_sequence<int, Ns...> const & /* alwd */) {
-                return impl::downsample<Collection, Ns...> (in, zoomOut);
+        auto lbd = [&in, zoomOut, state]<int... Ns> (std::integer_sequence<int, Ns...> const & /* alwd */) {
+                return impl::downsample<Collection, Ns...> (in, zoomOut, state);
         };
 
         return lbd (allowedZoomLevels2);
@@ -89,7 +89,7 @@ export template <byte_collection Collection> Collection downsample (Collection c
 
 /****************************************************************************/
 
-template <byte_collection Collection> Collection Downsample<2, Collection>::operator() (Collection const &in)
+template <byte_collection Collection> Collection Downsample<2, Collection>::operator() (Collection const &in, bool *state)
 {
         if (in.size () % BITS) {
                 throw logic::Exception{std::format ("in.size () % {} != 0", BITS)};
@@ -98,11 +98,10 @@ template <byte_collection Collection> Collection Downsample<2, Collection>::oper
         Collection out;
         out.reserve (in.size () / BITS);
 
-        static bool state;
-        auto last = [/* state = false */] (int bits) mutable -> bool {
+        auto last = [state] (int bits) mutable -> bool {
                 if (bits == 1) {
-                        bits = !state;
-                        state = bits; // Flipping back and forth
+                        bits = !(*state);
+                        *state = bits; // Flipping back and forth
                         // bits = std::rand () & 1; // TODO benchmark this https://stackoverflow.com/questions/26237419/faster-than-rand
                 }
 
@@ -128,7 +127,7 @@ template <byte_collection Collection> Collection Downsample<2, Collection>::oper
 
 /****************************************************************************/
 
-template <byte_collection Collection> Collection Downsample<4, Collection>::operator() (Collection const &in)
+template <byte_collection Collection> Collection Downsample<4, Collection>::operator() (Collection const &in, bool * /* state */)
 {
         if (in.size () % BITS) {
                 throw logic::Exception{"in.size () % BITS"};
@@ -171,7 +170,7 @@ template <byte_collection Collection> Collection Downsample<4, Collection>::oper
 
 template <std::integral auto factor, byte_collection Collection>
         requires requires { requires factor == 8 || factor == 16; }
-Collection Downsample<factor, Collection>::operator() (Collection const &in)
+Collection Downsample<factor, Collection>::operator() (Collection const &in, bool * /* state */)
 {
         if (in.size () % BITS) {
                 throw logic::Exception{"in.size () % BITS"};

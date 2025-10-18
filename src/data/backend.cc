@@ -12,15 +12,22 @@ module;
 #include <algorithm>
 #include <climits>
 #include <cmath>
+#include <format>
+#include <memory>
 #include <mutex>
 #include <ranges>
 #include <vector>
-
 module logic.data;
 import logic.core;
 import logic.processing;
 
 namespace logic {
+
+/****************************************************************************/
+
+Bytes DigitalDownSampler::operator() (Bytes const &block, size_t zoomOut) const { return logic::downsample (block, zoomOut, &state); }
+
+/****************************************************************************/
 
 void Block::append (Block &&d)
 {
@@ -33,7 +40,7 @@ void Block::append (Block &&d)
 void Block::append (Container &&d)
 {
         if (d.size () != channelsNumber ()) {
-                throw Exception{"Block::append: d.size () != channelsNumber ()"};
+                throw Exception{std::format ("Block::append: d.size ():{} != channelsNumber ():{}", d.size (), channelsNumber ())};
         }
 
         Container copy = std::move (d);
@@ -91,27 +98,36 @@ void Block::clear ()
 
 /****************************************************************************/
 
-template <std::integral auto factor> Block downsample (Block const &block)
+BlockArray::BlockArray (size_t channelsNumber, size_t maxZoomOutLevels, size_t zoomOutPerLevel)
+    : levels (std::max (maxZoomOutLevels, 1uz)), zoomOutPerLevel{zoomOutPerLevel}
 {
-        return {block.bitsPerSample (),
-                block.data () | std::views::transform ([] (Bytes const &bts) -> Bytes { return downsample<factor> (bts); })
-                        | std::ranges::to<Block::Container> ()};
+        for (size_t curZoomOut = 1; auto &lev : levels) {
+                lev.zoomOut = curZoomOut;
+                curZoomOut *= zoomOutPerLevel;
+                lev.downSamplers.resize (channelsNumber);
+
+                for (std::unique_ptr<IDownSampler> &ds : lev.downSamplers) {
+                        ds = std::make_unique<DigitalDownSampler> ();
+                }
+        }
 }
 
 /*--------------------------------------------------------------------------*/
 
-Block downsample (Block const &block, size_t zoomOut)
+Block BlockArray::downsample (Block const &block, size_t zoomOut, DownSamplers const &downSamplers) const
 {
         if (zoomOut == 1) {
                 return block;
         }
 
         return {block.bitsPerSample (),
-                block.data () | std::views::transform ([zoomOut] (Bytes const &bts) -> Bytes { return downsample (bts, zoomOut); })
+                std::views::zip_transform ([zoomOut] (Bytes const &channel, std::unique_ptr<IDownSampler> const &downSampler)
+                                                   -> Bytes { return (*downSampler) (channel, zoomOut); },
+                                           block.data (), downSamplers)
                         | std::ranges::to<Block::Container> ()};
 }
 
-/****************************************************************************/
+/*--------------------------------------------------------------------------*/
 
 void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 {
@@ -131,12 +147,12 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
         auto doAppend = [chLenBytes, this] (Block block, size_t levNo, auto &that) -> void {
                 block.zoomOut_ = std::pow (zoomOutPerLevel, levNo);
 
+                auto &level = levels.at (levNo);
+
                 if (levels.size () - 1 > levNo) {
-                        Block zoomed = downsample (block, zoomOutPerLevel);
+                        Block zoomed = downsample (block, zoomOutPerLevel, level.downSamplers);
                         that (zoomed, levNo + 1, that);
                 }
-
-                auto &level = levels.at (levNo);
 
                 if (level.data_.empty () || level.data_.back ().bytesUsed () >= chLenBytes) {
                         level.data_.emplace_back (std::move (block));
@@ -289,7 +305,7 @@ void Backend::append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes>
 {
         {
                 std::lock_guard lock{mutex};
-                groups.at (groupIdx).append (bitsPerSample, std::move (s));
+                groups_.at (groupIdx).append (bitsPerSample, std::move (s));
         }
 
         notifyObservers ();
@@ -301,7 +317,7 @@ void Backend::clear ()
         {
                 std::lock_guard lock{mutex};
 
-                for (auto &g : groups) {
+                for (auto &g : groups_) {
                         g.clear ();
                 }
         }
@@ -322,20 +338,16 @@ Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx en
          * device, there's no need to modifu it.
          */
         std::lock_guard lock{mutex};
-        return groups.at (groupIdx).range (begin, end, maxDiscernibleSamples, peek);
+        return groups_.at (groupIdx).range (begin, end, maxDiscernibleSamples, peek);
 }
 
 /*--------------------------------------------------------------------------*/
 
-void Backend::configureGroup (size_t groupIdx, SampleRate /* sampleRate */)
+size_t Backend::addGroup (Config const &config)
 {
         std::lock_guard lock{mutex};
-
-        if (groups.size () <= groupIdx) {
-                groups.resize (groupIdx + 1);
-        }
-
-        // groups.at (groupIdx).setSampleRate (sampleRate);
+        groups_.emplace_back (config.channelsNumber, config.maxZoomOutLevels, config.zoomOutPerLevel);
+        return groups_.size () - 1;
 }
 
 /*--------------------------------------------------------------------------*/
@@ -343,7 +355,7 @@ void Backend::configureGroup (size_t groupIdx, SampleRate /* sampleRate */)
 SampleNum Backend::channelLength (size_t groupIdx) const
 {
         std::lock_guard lock{mutex};
-        return groups.at (groupIdx).channelLength ();
+        return groups_.at (groupIdx).channelLength ();
 }
 
 /*--------------------------------------------------------------------------*/

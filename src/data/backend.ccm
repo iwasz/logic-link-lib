@@ -10,9 +10,9 @@ module;
 #include "common/constants.hh"
 #include <Tracy.hpp>
 #include <algorithm>
-#include <climits>
 #include <list>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <ranges>
 #include <unordered_set>
@@ -26,6 +26,33 @@ class Block;
 
 template <typename Range>
 concept block_range = std::ranges::range<Range> && std::convertible_to<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, Block>;
+
+/**
+ *
+ */
+struct IDownSampler {
+        IDownSampler () = default;
+        IDownSampler (IDownSampler const &) = default;
+        IDownSampler &operator= (IDownSampler const &) = default;
+        IDownSampler (IDownSampler &&) noexcept = default;
+        IDownSampler &operator= (IDownSampler &&) noexcept = default;
+        virtual ~IDownSampler () = default;
+
+        virtual Bytes operator() (Bytes const &in, size_t zoomOut) const = 0;
+};
+
+/**
+ * Class preservig the "even bit" state.
+ */
+class DigitalDownSampler : public IDownSampler {
+public:
+        Bytes operator() (Bytes const &block, size_t zoomOut) const override;
+
+private:
+        mutable bool state{};
+};
+
+/****************************************************************************/
 
 /**
  * Byte oriented data for a group of channels.
@@ -145,11 +172,9 @@ using Stream = Block;
  */
 class BlockArray {
 public:
-        static constexpr size_t DEFAULT_ZOOM_OUT_PER_LEVEL = 16; // Every next level is zoomed-out by this value.
-
         /*
          * TODO The container first was a std::deque, but deque uses 2 vectors inside and
-         * invalidates (it may) it's ityerators on push_back and my app crashed (I store
+         * invalidates (it may) it's iterators on push_back and my app crashed (I store
          * these iterators and pass them around). I temporarily switched to pre-allocated
          * std::vector and all was fine but then as a final solution I opted for std::list.
          * And it started to crash again (search Obsidian for `deque`). Albeit I believe,
@@ -162,18 +187,9 @@ public:
         using Container = std::list<Block>;
         using SubRange = std::ranges::subrange<Container::const_iterator>;
 
-        /// Note that cb is passed by value. Move.
+        BlockArray (size_t channelsNumber = 1, size_t maxZoomOutLevels = 1, size_t zoomOutPerLevel = 1);
         void append (uint8_t bitsPerSample, std::vector<Bytes> &&channels);
         void clear ();
-
-        BlockArray (size_t maxZoomOutLevels = 1, size_t zoomOutPerLevel = DEFAULT_ZOOM_OUT_PER_LEVEL)
-            : levels (std::max (maxZoomOutLevels, 1uz)), zoomOutPerLevel{zoomOutPerLevel}
-        {
-                for (size_t curZoomOut = 1; auto &lev : levels) {
-                        lev.zoomOut = curZoomOut;
-                        curZoomOut *= zoomOutPerLevel;
-                }
-        }
 
         /**
          * Returns block range that includes sample numbers passed (inclusive).
@@ -191,10 +207,11 @@ public:
 
 private:
         friend struct BlockArrayUtHelper; // Defined in UTs
+        using DownSamplers = std::vector<std::unique_ptr<IDownSampler>>;
+        Block downsample (Block const &block, size_t zoomOut, DownSamplers const &downSamplers) const;
 
         StreamType type_{};
         SampleRate sampleRate_{};
-        // SampleIdx currentSampleNo{};
         using BlockIndex = std::map<SampleIdx, Container::const_iterator>;
 
         struct ZoomOutLevel {
@@ -203,6 +220,7 @@ private:
                 BlockIndex index_; // Like DB index SampleIndex -> block.
                 size_t zoomOut = 1;
                 Container::const_iterator zoomedEnd = data_.cbegin ();
+                std::vector<std::unique_ptr<IDownSampler>> downSamplers;
         };
 
         std::vector<ZoomOutLevel> levels;
@@ -241,8 +259,6 @@ struct IBackend {
         IBackend &operator= (IBackend &&) noexcept = default;
         virtual ~IBackend () = default;
 
-        // using SubRange = ChannelBlockStream::SubRange;
-
         /// Adds s[0] to stream[0], s[1] to stream[1] etc
         virtual void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) = 0;
         virtual void clear () = 0;
@@ -255,7 +271,17 @@ struct IBackend {
          */
         virtual SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1, bool peek = false) const
                 = 0;
-        virtual size_t groupsNo () const = 0;
+
+        struct Config { // TODO change name to Group to reflect the qt counterpart
+                size_t channelsNumber{};
+                size_t maxZoomOutLevels = 1;
+                size_t zoomOutPerLevel = 1;
+                // SampleRate sampleRate{}; //?
+        };
+
+        /// Returns the added group index.
+        virtual size_t addGroup (Config const &config) = 0;
+        virtual size_t groupsNumber () const = 0;
 
         virtual size_t channelsNumber (size_t groupIdx) const = 0;
         virtual SampleNum channelLength (size_t groupIdx) const = 0;
@@ -269,18 +295,14 @@ struct IBackend {
  */
 class Backend : public IBackend {
 public:
-        Backend () : groups{BlockArray{10, 2}} {} // TODO configurable number of groups.
-        Backend (size_t maxZoomOutLevels, size_t zoomOutPerLevel) : groups{BlockArray{maxZoomOutLevels, zoomOutPerLevel}} {}
-
         void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) override;
         void clear () override;
-
         SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1, bool peek = false) const override;
 
-        void configureGroup (size_t groupIdx, SampleRate sampleRate); // TODO not used. Remove the CTOr and use this somewhere.
-        size_t groupsNo () const override { return groups.size (); }
+        size_t addGroup (Config const &config) override;
+        size_t groupsNumber () const override { return groups_.size (); }
 
-        size_t channelsNumber (size_t groupIdx) const override { return groups.at (groupIdx).channelsNumber (); }
+        size_t channelsNumber (size_t groupIdx) const override { return groups_.at (groupIdx).channelsNumber (); }
         SampleNum channelLength (size_t groupIdx) const override;
 
         void addObserver (IBackendObserver *observer) override { observers.insert (observer); }
@@ -289,7 +311,7 @@ public:
 private:
         void notifyObservers ();
 
-        BlockArrays groups;
+        BlockArrays groups_;
         mutable TracyLockable (std::mutex, mutex);
         std::unordered_set<IBackendObserver *> observers;
 };

@@ -4,6 +4,7 @@ target_sources(${PROJECT_NAME}
     decompress.cc
     rearrange.cc
     generate.cc
+    downsample.cc
 
   PUBLIC FILE_SET CXX_MODULES FILES
     processing.ccm

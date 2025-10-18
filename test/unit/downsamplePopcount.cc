@@ -108,23 +108,24 @@ template <byte_collection Collection> Collection Downsample<2, Collection>::oper
 
 TEST_CASE ("popcount", "[popcount]")
 {
-        REQUIRE (downsample<8> (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) == Bytes{0x00});
-        REQUIRE (downsample<8> (Bytes{0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x00}) == Bytes{0xaa});
+        bool s{};
+        REQUIRE (downsample<8> (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, &s) == Bytes{0x00});
+        REQUIRE (downsample<8> (Bytes{0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x00}, &s) == Bytes{0xaa});
 
-        REQUIRE (downsample<16> (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+        REQUIRE (downsample<16> (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, &s)
                  == Bytes{0x00});
-        REQUIRE (downsample<16> (Bytes{0xaa, 0xaa, 0x11, 0x11, 0xaa, 0xaa, 0x11, 0x00, 0xaa, 0xaa, 0x11, 0x11, 0xaa, 0xaa, 0x11, 0x00})
+        REQUIRE (downsample<16> (Bytes{0xaa, 0xaa, 0x11, 0x11, 0xaa, 0xaa, 0x11, 0x00, 0xaa, 0xaa, 0x11, 0x11, 0xaa, 0xaa, 0x11, 0x00}, &s)
                  == Bytes{0xaa});
 
-        REQUIRE (Downsample<2, Bytes>{}(Bytes{0x00, 0x00}) == Bytes{0x00});
-        REQUIRE (Downsample<2, Bytes>{}(Bytes{0x00, 0x00, 0x00, 0x00}) == Bytes{0x00, 0x00});
-        REQUIRE (Downsample<2, Bytes>{}(Bytes{0b11111111, 0b00000000}) == Bytes{0xf0});
-        REQUIRE (Downsample<2, Bytes>{}(Bytes{0b11001100, 0b11001100}) == Bytes{0xaa});
-        REQUIRE (Downsample<2, Bytes>{}(Bytes{0b11001100, 0b11001100, 0b11111111, 0b00000000}) == Bytes{0xaa, 0xf0});
-        REQUIRE (Downsample<2, Bytes>{}(Bytes{0b10101010, 0b10101010}) == Bytes{0b10101010});
-        // REQUIRE (test::Downsample<2, Bytes>{}(Bytes{0b10101010, 0b10101010, 0b10101010}) == Bytes{0b10101010, 0b1010'0000});
+        REQUIRE (Downsample<2, Bytes>{}(Bytes{0x00, 0x00}, &s) == Bytes{0x00});
+        REQUIRE (Downsample<2, Bytes>{}(Bytes{0x00, 0x00, 0x00, 0x00}, &s) == Bytes{0x00, 0x00});
+        REQUIRE (Downsample<2, Bytes>{}(Bytes{0b11111111, 0b00000000}, &s) == Bytes{0xf0});
+        REQUIRE (Downsample<2, Bytes>{}(Bytes{0b11001100, 0b11001100}, &s) == Bytes{0xaa});
+        REQUIRE (Downsample<2, Bytes>{}(Bytes{0b11001100, 0b11001100, 0b11111111, 0b00000000}, &s) == Bytes{0xaa, 0xf0});
+        REQUIRE (Downsample<2, Bytes>{}(Bytes{0b10101010, 0b10101010}, &s) == Bytes{0b10101010});
+        // REQUIRE (test::Downsample<2, Bytes>{}(Bytes{0b10101010, 0b10101010, 0b10101010}, &s) == Bytes{0b10101010, 0b1010'0000});
 
-        REQUIRE (downsample<4> (Bytes{0x00, 0x00, 0x00, 0x00}) == Bytes{0x00});
-        REQUIRE (downsample<4> (Bytes{0b11111111, 0b11111111, 0b00000000, 0b00000000}) == Bytes{0xf0});
-        REQUIRE (downsample<4> (Bytes{0b11110000, 0b11110000, 0b11110000, 0b11110000}) == Bytes{0xaa});
+        REQUIRE (downsample<4> (Bytes{0x00, 0x00, 0x00, 0x00}, &s) == Bytes{0x00});
+        REQUIRE (downsample<4> (Bytes{0b11111111, 0b11111111, 0b00000000, 0b00000000}, &s) == Bytes{0xf0});
+        REQUIRE (downsample<4> (Bytes{0b11110000, 0b11110000, 0b11110000, 0b11110000}, &s) == Bytes{0xaa});
 }

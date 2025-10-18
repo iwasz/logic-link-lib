@@ -85,7 +85,7 @@ TEST_CASE ("BlockArray size", "[backend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
 
-        BlockArray cbs;
+        BlockArray cbs{16};
         cbs.append (BITS_PER_SAMPLE, generateDemoDeviceBlock ());
         REQUIRE (cbs.channelLength () == 8192);
         REQUIRE (cbs.channelsNumber () == 16);
@@ -568,7 +568,7 @@ TEST_CASE ("ZoomOut", "[backend]")
 
         SECTION ("zoomOut 2")
         {
-                BlockArray cbs (2, 2); // 2 zoom levels : 1 and 0.5 (zoomOut==2)
+                BlockArray cbs (4, 2, 2); // 4 channels, 2 zoom levels : 1 and 0.5 (zoomOut==2)
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
@@ -594,7 +594,7 @@ TEST_CASE ("ZoomOut", "[backend]")
 
         SECTION ("zoomOut 4")
         {
-                BlockArray cbs (3, 2); // 3 zoom levels : 1, 0.5 (zoomOut==2) and 0.25 (zoomOut==4)
+                BlockArray cbs (4, 3, 2); // 3 zoom levels : 1, 0.5 (zoomOut==2) and 0.25 (zoomOut==4)
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
@@ -642,7 +642,7 @@ TEST_CASE ("ZoomOut", "[backend]")
 
         SECTION ("zoomOut by 4")
         {
-                BlockArray cbs (2, 4); // 2 zoom levels : 1 and 0.5 (zoomOut==2)
+                BlockArray cbs (4, 2, 4); // 2 zoom levels : 1 and 0.5 (zoomOut==2)
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
@@ -681,7 +681,9 @@ TEST_CASE ("size", "[backend]")
         static constexpr auto BITS_PER_SAMPLE = 1U;
         static constexpr auto GROUP = 0U;
 
-        Backend backend{1, 1}; // No zoom levels
+        Backend backend;
+        backend.addGroup ({.channelsNumber = 4, .maxZoomOutLevels = 1, .zoomOutPerLevel = 1});
+
         backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (0));
         REQUIRE (backend.channelLength (0) == 32);
 
