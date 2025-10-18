@@ -61,7 +61,7 @@ private:
         std::thread thread;
         /// Simulated USB transfer size (amount of data generated at once).
         size_t transferSize = DEFAULT_USB_TRANSFER_SIZE_B;
-        std::vector<Square> generators;
+        std::vector<Random> generators;
         /// Some statistics.
         size_t totalSizePerChan{};
 };
