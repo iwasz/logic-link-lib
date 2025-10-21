@@ -128,7 +128,7 @@ std::vector<Coord> toPolyPointsb2 (Collection const &data, PolyPointsCfg const &
 
         bool lastBit = *data.begin ();
 
-        Coord x = float (cfg.paddingS) * cfg.lineWidth;
+        Coord x = float (cfg.paddingS);
         std::vector<Coord> ret;
         // Just to be sure. there are 2 line segments for every sample for square wave.
         auto dataSize = data.size () - int (cfg.continuation);
@@ -151,7 +151,7 @@ std::vector<Coord> toPolyPointsb2 (Collection const &data, PolyPointsCfg const &
                 }
 
                 // level
-                x += 1 /* cfg.lineWidth */;
+                x += 1;
 
                 ret.push_back (x);
                 ret.push_back ((bit) ? (0) : (cfg.height));
