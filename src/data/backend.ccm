@@ -194,7 +194,7 @@ public:
         /**
          * Returns block range that includes sample numbers passed (inclusive).
          */
-        SubRange range (SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1, bool peek = false) const;
+        SubRange range (SampleIdx begin, SampleIdx end, size_t zoomOut = 1, bool peek = false) const;
 
         /**
          * Returns a Stream cut precisely down to the byte.
@@ -269,8 +269,7 @@ struct IBackend {
          * the `begin` sample and finish after the `end` sample, so you
          * have to trim it yourself (use std::span / BitSpan).
          */
-        virtual SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1, bool peek = false) const
-                = 0;
+        virtual SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, size_t zoomOut = 1, bool peek = false) const = 0;
 
         struct Config { // TODO change name to Group to reflect the qt counterpart
                 size_t channelsNumber{};
@@ -297,7 +296,7 @@ class Backend : public IBackend {
 public:
         void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) override;
         void clear () override;
-        SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples = -1, bool peek = false) const override;
+        SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, size_t zoomOut = 1, bool peek = false) const override;
 
         size_t addGroup (Config const &config) override;
         size_t groupsNumber () const override { return groups_.size (); }

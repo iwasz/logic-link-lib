@@ -107,7 +107,7 @@ export struct PolyPointsCfg {
         float lineWidth{};
 
         /// Empty space before thestart of the plot.
-        logic::SampleNum paddingS{};
+        double padding{};
 
         /// Maximum number of samples that can be displayed without blening one with another as a result of zoom-out.
         // size_t discernibleSamples{};
@@ -128,7 +128,7 @@ std::vector<Coord> toPolyPointsb2 (Collection const &data, PolyPointsCfg const &
 
         bool lastBit = *data.begin ();
 
-        Coord x = float (cfg.paddingS);
+        Coord x = float (cfg.padding);
         std::vector<Coord> ret;
         // Just to be sure. there are 2 line segments for every sample for square wave.
         auto dataSize = data.size () - int (cfg.continuation);

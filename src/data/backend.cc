@@ -185,22 +185,23 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 
 // TODO I confused end with length at least once. Maybe it's time to make SampleIdx "strongly typed" with explicit ctors?
 // TODO like here: https://www.fluentcpp.com/2016/12/08/strong-types-for-strong-interfaces/
-BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples, bool peek) const
+BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, size_t zoomOut, bool peek) const
 {
         if (begin == end) {
                 return {};
         }
 
-        size_t len = end - begin;
+        // size_t len = end - begin;
 
-        if (maxDiscernibleSamples < 0) {
-                maxDiscernibleSamples = len;
-        }
-        else {
-                maxDiscernibleSamples = std::min<SampleNum> (maxDiscernibleSamples, len);
-        }
+        // if (maxDiscernibleSamples < 0) {
+        //         maxDiscernibleSamples = len;
+        // }
+        // else {
+        //         maxDiscernibleSamples = std::min<SampleNum> (maxDiscernibleSamples, len);
+        // }
 
-        auto zoomOut = std::bit_floor (len / maxDiscernibleSamples);
+        // // The largest power-of-two not greater than `x`.
+        // auto zoomOut = std::bit_floor (len / maxDiscernibleSamples);
 
         auto lll = levels | std::views::reverse | std::views::filter ([zoomOut] (auto &lev) { return lev.zoomOut <= zoomOut; });
         auto const &level = (std::ranges::empty (lll)) ? (levels.front ()) : (lll.front ());
@@ -327,7 +328,7 @@ void Backend::clear ()
 
 /*--------------------------------------------------------------------------*/
 
-Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx end, SampleNum maxDiscernibleSamples, bool peek) const
+Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx end, size_t zoomOut, bool peek) const
 {
         ZoneScopedN ("BackendRange");
         /*
@@ -338,7 +339,7 @@ Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx en
          * device, there's no need to modifu it.
          */
         std::lock_guard lock{mutex};
-        return groups_.at (groupIdx).range (begin, end, maxDiscernibleSamples, peek);
+        return groups_.at (groupIdx).range (begin, end, zoomOut, peek);
 }
 
 /*--------------------------------------------------------------------------*/

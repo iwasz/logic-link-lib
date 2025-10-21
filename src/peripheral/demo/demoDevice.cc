@@ -68,7 +68,7 @@ void DemoDevice::start (IBackend *backend)
                         ZoneNamedN (append, "append", false);
                         backend->append (GROUP, BITS_PER_SAMPLE, std::move (channels));
 
-                        // if (totalSizePerChan >= 240'000'000 * 3) {
+                        // if (totalSizePerChan >= 1000000) {
                         //         notify (false, State::ok);
                         // }
 

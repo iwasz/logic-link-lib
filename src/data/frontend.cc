@@ -80,10 +80,10 @@ BlockRangeBitSpan<uint8_t const, BlockArray::Container> DigitalFrontend::channel
 
 /****************************************************************************/
 
-BlockArray::SubRange DigitalFrontend::range (size_t groupIdx, SampleIdx offset, SampleNum length, SampleNum maxDiscernibleSamples, bool peek)
+BlockArray::SubRange DigitalFrontend::range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek)
 {
         ZoneScoped;
-        return backend->range (groupIdx, offset, offset + length, maxDiscernibleSamples, peek);
+        return backend->range (groupIdx, offset, offset + length, zoomOut, peek);
 }
 
 /****************************************************************************/
