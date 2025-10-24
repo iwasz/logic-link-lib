@@ -68,3 +68,17 @@ BENCHMARK (Benchmark, Downsample4, 5, 1000)
         uint8_t s = 0;
         celero::DoNotOptimizeAway (downsample4 (data, &s));
 }
+
+BENCHMARK (Benchmark, Downsample2x2x2, 5, 1000)
+{
+        bool s1{};
+        bool s2{};
+        bool s3{};
+        celero::DoNotOptimizeAway (downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3));
+}
+
+BENCHMARK (Benchmark, Downsample8, 5, 1000)
+{
+        uint8_t s = 0;
+        celero::DoNotOptimizeAway (downsample8 (data, &s));
+}

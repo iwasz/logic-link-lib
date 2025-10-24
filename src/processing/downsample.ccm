@@ -34,6 +34,7 @@ template <> struct WordType<16UL> {
 
 export Bytes downsample2 (Bytes const &in, bool *state);
 export Bytes downsample4 (Bytes const &in, uint8_t *state);
+export Bytes downsample8 (Bytes const &in, uint8_t *state);
 
 /****************************************************************************/
 

@@ -15,6 +15,7 @@ using namespace logic;
 
 void lutD2_f ();
 void lutD4_f ();
+void lutD8_f ();
 
 TEST_CASE ("popcount", "[popcount]")
 {
@@ -154,7 +155,113 @@ TEST_CASE ("comparison", "[popcount]")
                 REQUIRE (a == b);
         }
 
-        // SECTION ("print") { lutD4_f (); }
+        /*--------------------------------------------------------------------------*/
+
+        SECTION ("/8 state=0")
+        {
+                bool s1 = 0;
+                bool s2 = 0;
+                bool s3 = 0;
+                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+
+                uint8_t s = 0b000;
+                auto b = downsample8 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=1")
+        {
+                bool s1 = 0;
+                bool s2 = 0;
+                bool s3 = 1;
+                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+
+                uint8_t s = 0b001;
+                auto b = downsample8 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=2")
+        {
+                bool s1 = 0;
+                bool s2 = 1;
+                bool s3 = 0;
+                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+
+                uint8_t s = 0b010;
+                auto b = downsample8 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=3")
+        {
+                bool s1 = 0;
+                bool s2 = 1;
+                bool s3 = 1;
+                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+
+                uint8_t s = 0b011;
+                auto b = downsample8 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=4")
+        {
+                bool s1 = 1;
+                bool s2 = 0;
+                bool s3 = 0;
+                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+
+                uint8_t s = 0b100;
+                auto b = downsample8 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=5")
+        {
+                bool s1 = 1;
+                bool s2 = 0;
+                bool s3 = 1;
+                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+
+                uint8_t s = 0b101;
+                auto b = downsample8 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=6")
+        {
+                bool s1 = 1;
+                bool s2 = 1;
+                bool s3 = 0;
+                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+
+                uint8_t s = 0b110;
+                auto b = downsample8 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=7")
+        {
+                bool s1 = 1;
+                bool s2 = 1;
+                bool s3 = 1;
+                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+
+                uint8_t s = 0b111;
+                auto b = downsample8 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("print") { lutD8_f (); }
 }
 
 /****************************************************************************/
@@ -230,5 +337,59 @@ void lutD4_f ()
                 // std::println ("{}, {:08b}. {:#x}, {:04b}, s: {}", ch, ch, o, o, int (state));
                 std::print ("{},", int (state0 << 1 | state1));
                 // std::print ("{},", int (p));
+        }
+}
+
+/**
+ * This is the function that perpared the LUT for downsample /8 function.
+ */
+void lutD8_f ()
+{
+        auto last = [] (bool *state, int bits) -> bool {
+                if (bits == 1) {
+                        bits = !(*state);
+                        *state = bits; // Flipping back and forth
+                }
+
+                return bool (bits);
+        };
+
+        bool state0{};
+        bool state1{};
+        bool state2{};
+
+        for (int i = 0; i < 8; ++i) {
+                std::println ("Lut0 {{");
+
+                for (uint8_t ch : std::views::iota (0, 256)) {
+                        state0 = (i & 4) >> 2;
+                        state1 = (i & 2) >> 1;
+                        state2 = i & 1;
+
+                        int bit3 = last (&state0, std::popcount (uint8_t (ch & 0b11000000)));
+                        int bit2 = last (&state0, std::popcount (uint8_t (ch & 0b00110000)));
+                        int bit1 = last (&state0, std::popcount (uint8_t (ch & 0b00001100)));
+                        int bit0 = last (&state0, std::popcount (uint8_t (ch & 0b00000011)));
+
+                        uint8_t o = bit3 << 3 | bit2 << 2 | bit1 << 1 | bit0 << 0;
+                        (void)o;
+
+                        int bit1n = last (&state1, std::popcount (uint8_t (o & 0b00001100)));
+                        int bit0n = last (&state1, std::popcount (uint8_t (o & 0b00000011)));
+
+                        uint8_t p = bit1n << 1 | bit0n << 0;
+                        (void)p;
+
+                        int bit0m = last (&state2, std::popcount (uint8_t (p & 0b00000011)));
+
+                        uint8_t q = bit0m;
+                        (void)q;
+
+                        // std::println ("{}, {:08b}. {:#x}, {:04b}, s: {}", ch, ch, o, o, int (state));
+                        std::print ("{},", int (state0 << 2 | state1 << 1 | state2));
+                        // std::print ("{},", int (q));
+                }
+
+                std::println ("}},");
         }
 }
