@@ -601,7 +601,7 @@ TEST_CASE ("ZoomOut", "[backend]")
 
                 SECTION ("zoomOut 2, 3 levels available")
                 {
-                        auto r = cbs.range (0, 96, 48);
+                        auto r = cbs.range (0, 96, 2);
                         REQUIRE (!r.empty ());
 
                         Block copy = BlockArrayUtHelper::makeBlock (r);
@@ -626,7 +626,7 @@ TEST_CASE ("ZoomOut", "[backend]")
 
                 SECTION ("zoomOut 4, 3 levels available")
                 {
-                        auto r = cbs.range (0, 96, 24);
+                        auto r = cbs.range (0, 96, 4);
                         REQUIRE (!r.empty ());
 
                         Block copy = BlockArrayUtHelper::makeBlock (r);
@@ -650,7 +650,7 @@ TEST_CASE ("ZoomOut", "[backend]")
                 SECTION ("lev 0")
                 {
                         // First request a range from the level 0 (level 1 is too compressed and we would loose details).
-                        auto r = cbs.range (0, 96, 48);
+                        auto r = cbs.range (0, 96, 2);
                         REQUIRE (!r.empty ());
                         Block copy = BlockArrayUtHelper::makeBlock (r);
                         REQUIRE (copy.channel (0).size () == 12);
@@ -658,7 +658,7 @@ TEST_CASE ("ZoomOut", "[backend]")
 
                 SECTION ("lev 1")
                 {
-                        auto r = cbs.range (0, 96, 24);
+                        auto r = cbs.range (0, 96, 4);
                         REQUIRE (!r.empty ());
 
                         Block copy = BlockArrayUtHelper::makeBlock (r);

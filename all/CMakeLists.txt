@@ -12,4 +12,5 @@ enable_testing()
 
 # add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../standalone ${CMAKE_BINARY_DIR}/standalone)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../test/unit ${CMAKE_BINARY_DIR}/test/unit)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../test/benchmark ${CMAKE_BINARY_DIR}/test/benchmark)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../doc ${CMAKE_BINARY_DIR}/doc)

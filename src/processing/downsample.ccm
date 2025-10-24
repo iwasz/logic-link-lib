@@ -7,7 +7,6 @@
  ****************************************************************************/
 
 module;
-#include <bitset>
 #include <climits>
 #include <cmath>
 #include <concepts>
@@ -30,6 +29,14 @@ template <> struct WordType<8UL> {
 template <> struct WordType<16UL> {
         using type = uint16_t;
 };
+
+/****************************************************************************/
+
+export Bytes downsample2 (Bytes const &in, bool * /* state */);
+export Bytes downsample3 (Bytes const &in, bool *state);
+export Bytes downsample4 (Bytes const &in, bool *state);
+
+/****************************************************************************/
 
 export {
         template <std::integral auto factor, byte_collection Collection> struct Downsample {};
@@ -92,17 +99,16 @@ export template <byte_collection Collection> Collection downsample (Collection c
 template <byte_collection Collection> Collection Downsample<2, Collection>::operator() (Collection const &in, bool *state)
 {
         if (in.size () % BITS) {
-                throw logic::Exception{std::format ("in.size () % {} != 0", BITS)};
+                throw logic::Exception{std::format ("in.size ()[{}] % {} != 0", in.size (), BITS)};
         }
 
         Collection out;
         out.reserve (in.size () / BITS);
 
         auto last = [state] (int bits) mutable -> bool {
-                if (bits == 1) {
+                if (bits == BITS / 2) {
                         bits = !(*state);
                         *state = bits; // Flipping back and forth
-                        // bits = std::rand () & 1; // TODO benchmark this https://stackoverflow.com/questions/26237419/faster-than-rand
                 }
 
                 return bool (bits);
@@ -127,40 +133,36 @@ template <byte_collection Collection> Collection Downsample<2, Collection>::oper
 
 /****************************************************************************/
 
-template <byte_collection Collection> Collection Downsample<4, Collection>::operator() (Collection const &in, bool * /* state */)
+template <byte_collection Collection> Collection Downsample<4, Collection>::operator() (Collection const &in, bool *state)
 {
         if (in.size () % BITS) {
-                throw logic::Exception{"in.size () % BITS"};
+                throw logic::Exception{std::format ("in.size ()[{}] % {} != 0", in.size (), BITS)};
         }
 
         Collection out;
         out.reserve (in.size () / BITS);
 
-        size_t cntOut = BITS - 1;
-        uint8_t outB{};
+        auto last = [state] (int bits) mutable -> bool {
+                if (bits == 3) {
+                        bits = !(*state);
+                        *state = bits; // Flipping back and forth
+                }
 
-        for (uint8_t b : in) {
-                std::bitset<8> b1{size_t (b & 0b11110000)};
-                std::bitset<8> b2{size_t (b & 0b00001111)};
+                return bool (bits);
+        };
 
-                if (cntOut == 3) {
-                        outB |= int (b1.count () > 2) << 7 | int (b2.count () > 2) << 6;
-                        --cntOut;
-                }
-                else if (cntOut == 2) {
-                        outB |= int (b1.count () > 2) << 5 | int (b2.count () > 2) << 4;
-                        --cntOut;
-                }
-                else if (cntOut == 1) {
-                        outB |= int (b1.count () > 2) << 3 | int (b2.count () > 2) << 2;
-                        --cntOut;
-                }
-                else {
-                        outB |= int (b1.count () > 2) << 1 | int (b2.count () > 2) << 0;
-                        out.push_back (outB);
-                        outB = 0;
-                        cntOut = BITS - 1;
-                }
+        for (auto [a, b, c, d] : in | std::views::adjacent<4> | std::views::stride (4)) {
+                int bit7 = last (std::popcount (uint8_t (a & 0b11110000)));
+                int bit6 = last (std::popcount (uint8_t (a & 0b00001111)));
+                int bit5 = last (std::popcount (uint8_t (b & 0b11110000)));
+                int bit4 = last (std::popcount (uint8_t (b & 0b00001111)));
+
+                int bit3 = last (std::popcount (uint8_t (c & 0b11110000)));
+                int bit2 = last (std::popcount (uint8_t (c & 0b00001111)));
+                int bit1 = last (std::popcount (uint8_t (d & 0b11110000)));
+                int bit0 = last (std::popcount (uint8_t (d & 0b00001111)));
+
+                out.push_back (bit7 << 7 | bit6 << 6 | bit5 << 5 | bit4 << 4 | bit3 << 3 | bit2 << 2 | bit1 << 1 | bit0 << 0);
         }
 
         return out;
@@ -173,7 +175,7 @@ template <std::integral auto factor, byte_collection Collection>
 Collection Downsample<factor, Collection>::operator() (Collection const &in, bool * /* state */)
 {
         if (in.size () % BITS) {
-                throw logic::Exception{"in.size () % BITS"};
+                throw logic::Exception{std::format ("in.size ()[{}] % {} != 0", in.size (), BITS)};
         }
 
         Collection out;
@@ -186,7 +188,7 @@ Collection Downsample<factor, Collection>::operator() (Collection const &in, boo
         for (WordT inB : inSp) {
                 outB |= int (std::popcount (inB) >= BITS / 2) << cnt;
 
-                if (--cnt == 0) {
+                if (cnt-- == 0) {
                         out.push_back (outB);
                         outB = 0;
                         cnt = CHAR_BIT - 1;
@@ -198,9 +200,8 @@ Collection Downsample<factor, Collection>::operator() (Collection const &in, boo
 
 /****************************************************************************/
 
-export struct State {
+export struct [[deprecated]] State {
         bool prevEvenAvg = false;
-
         void clear () { prevEvenAvg = false; }
 };
 
@@ -215,6 +216,7 @@ export struct State {
 export template <typename byte_collection>
         requires requires { typename byte_collection::value_type; }
 && std::same_as<std::remove_cv_t<typename byte_collection::value_type>, uint8_t>
+[[deprecated]]
 Bytes downsample (byte_collection const &in, SampleIdx begin, SampleNum inputSize, logic::SampleNum outSampleNum, State *state)
 {
         using BitHoldingT = Bytes::value_type;

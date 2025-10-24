@@ -87,7 +87,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBUSBX_LIBRARIES})
 
 # Enable warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  # add_definitions(-Wall -Wpedantic -Wextra -Werror)
   target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Werror -Wno-unused-function)
 elseif(MSVC)
   target_compile_options(${PROJECT_NAME} PUBLIC /W4 /WX)

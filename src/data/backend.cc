@@ -151,7 +151,7 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 
                 if (levels.size () - 1 > levNo) {
                         Block zoomed = downsample (block, zoomOutPerLevel, level.downSamplers);
-                        that (zoomed, levNo + 1, that);
+                        that (std::move (zoomed), levNo + 1, that);
                 }
 
                 if (level.data_.empty () || level.data_.back ().bytesUsed () >= chLenBytes) {
