@@ -14,6 +14,7 @@ import logic;
 using namespace logic;
 
 void lutD2_f ();
+void lutD4_f ();
 
 TEST_CASE ("popcount", "[popcount]")
 {
@@ -55,12 +56,12 @@ TEST_CASE ("popcount", "[popcount]")
         {
                 bool s{};
 
-                REQUIRE (downsample3 (Bytes{0x00, 0x00}, &s) == Bytes{0x00});
-                REQUIRE (downsample3 (Bytes{0x00, 0x00, 0x00, 0x00}, &s) == Bytes{0x00, 0x00});
-                REQUIRE (downsample3 (Bytes{0b11111111, 0b00000000}, &s) == Bytes{0xf0});
-                REQUIRE (downsample3 (Bytes{0b11001100, 0b11001100}, &s) == Bytes{0xaa});
-                REQUIRE (downsample3 (Bytes{0b11001100, 0b11001100, 0b11111111, 0b00000000}, &s) == Bytes{0xaa, 0xf0});
-                REQUIRE (downsample3 (Bytes{0b10101010, 0b10101010}, &s) == Bytes{0b10101010});
+                REQUIRE (downsample2 (Bytes{0x00, 0x00}, &s) == Bytes{0x00});
+                REQUIRE (downsample2 (Bytes{0x00, 0x00, 0x00, 0x00}, &s) == Bytes{0x00, 0x00});
+                REQUIRE (downsample2 (Bytes{0b11111111, 0b00000000}, &s) == Bytes{0xf0});
+                REQUIRE (downsample2 (Bytes{0b11001100, 0b11001100}, &s) == Bytes{0xaa});
+                REQUIRE (downsample2 (Bytes{0b11001100, 0b11001100, 0b11111111, 0b00000000}, &s) == Bytes{0xaa, 0xf0});
+                REQUIRE (downsample2 (Bytes{0b10101010, 0b10101010}, &s) == Bytes{0b10101010});
         }
 }
 
@@ -78,7 +79,7 @@ TEST_CASE ("comparison", "[popcount]")
                 auto a = downsample<2> (data, &s1);
 
                 bool s2{};
-                auto b = downsample3 (data, &s2);
+                auto b = downsample2 (data, &s2);
 
                 REQUIRE (a.size () == b.size ());
 
@@ -100,24 +101,60 @@ TEST_CASE ("comparison", "[popcount]")
                 auto a = downsample<2> (data, &s1);
 
                 bool s2 = true;
-                auto b = downsample3 (data, &s2);
+                auto b = downsample2 (data, &s2);
 
                 REQUIRE (a == b);
         }
 
-        // SECTION ("/4 state=0")
-        // {
-        //         bool s1{};
-        //         bool s2{};
-        //         auto a = downsample<2> (downsample<2> (data, &s1), &s2);
+        SECTION ("/4 state=0")
+        {
+                bool s1{};
+                bool s2{};
+                auto a = downsample<2> (downsample<2> (data, &s1), &s2);
 
-        //         bool s3{};
-        //         auto b = downsample3 (data, &s3);
+                uint8_t s = 0;
+                auto b = downsample4 (data, &s);
 
-        //         REQUIRE (a == b);
-        // }
+                REQUIRE (a == b);
+        }
 
-        // SECTION ("print") { lutD2_f (); }
+        SECTION ("/4 state=1")
+        {
+                bool s1{};
+                bool s2 = true;
+                auto a = downsample<2> (downsample<2> (data, &s1), &s2);
+
+                uint8_t s = 0b01;
+                auto b = downsample4 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/4 state=2")
+        {
+                bool s1 = true;
+                bool s2 = false;
+                auto a = downsample<2> (downsample<2> (data, &s1), &s2);
+
+                uint8_t s = 0b10;
+                auto b = downsample4 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/4 state=3")
+        {
+                bool s1 = true;
+                bool s2 = true;
+                auto a = downsample<2> (downsample<2> (data, &s1), &s2);
+
+                uint8_t s = 0b11;
+                auto b = downsample4 (data, &s);
+
+                REQUIRE (a == b);
+        }
+
+        // SECTION ("print") { lutD4_f (); }
 }
 
 /****************************************************************************/
@@ -152,5 +189,46 @@ void lutD2_f ()
                 // std::println ("{}, {:08b}. {:#x}, {:04b}, s: {}", ch, ch, o, o, int (state));
                 std::print ("{},", int (state));
                 // std::print ("{},", int (o));
+        }
+}
+
+/**
+ * This is the function that perpared the LUT for downsample /4 function.
+ */
+void lutD4_f ()
+{
+        auto last = [] (bool *state, int bits) -> bool {
+                if (bits == 1) {
+                        bits = !(*state);
+                        *state = bits; // Flipping back and forth
+                }
+
+                return bool (bits);
+        };
+
+        bool state0{};
+        bool state1{};
+
+        for (uint8_t ch : std::views::iota (0, 256)) {
+                state0 = true; // Change this from true to false in order to generate both tables.
+                state1 = true;
+
+                int bit3 = last (&state0, std::popcount (uint8_t (ch & 0b11000000)));
+                int bit2 = last (&state0, std::popcount (uint8_t (ch & 0b00110000)));
+                int bit1 = last (&state0, std::popcount (uint8_t (ch & 0b00001100)));
+                int bit0 = last (&state0, std::popcount (uint8_t (ch & 0b00000011)));
+
+                uint8_t o = bit3 << 3 | bit2 << 2 | bit1 << 1 | bit0 << 0;
+                (void)o;
+
+                int bit1n = last (&state1, std::popcount (uint8_t (o & 0b00001100)));
+                int bit0n = last (&state1, std::popcount (uint8_t (o & 0b00000011)));
+
+                uint8_t p = bit1n << 1 | bit0n << 0;
+                (void)p;
+
+                // std::println ("{}, {:08b}. {:#x}, {:04b}, s: {}", ch, ch, o, o, int (state));
+                std::print ("{},", int (state0 << 1 | state1));
+                // std::print ("{},", int (p));
         }
 }

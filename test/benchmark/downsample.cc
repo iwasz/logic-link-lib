@@ -38,32 +38,33 @@ Bytes baselineFunction (Bytes const &in)
 
 // BASELINE (Benchmark, Baseline, 10, 1000) { celero::DoNotOptimizeAway (baselineFunction (data)); }
 
-BASELINE (Benchmark, Downsample2, 10, 1000)
+BASELINE (Benchmark, DownsampleT2, 10, 1000)
 {
         bool s{};
         celero::DoNotOptimizeAway (downsample<2> (data, &s));
 }
 
-BENCHMARK (Benchmark, Downsample2_3, 10, 1000)
+BENCHMARK (Benchmark, Downsample2, 10, 1000)
 {
         bool s{};
-        celero::DoNotOptimizeAway (downsample3 (data, &s));
+        celero::DoNotOptimizeAway (downsample2 (data, &s));
 }
 
-BENCHMARK (Benchmark, Downsample4, 2, 1000)
+BENCHMARK (Benchmark, DownsampleT4, 5, 1000)
 {
         bool s{};
         celero::DoNotOptimizeAway (downsample<4> (data, &s));
 }
 
-BENCHMARK (Benchmark, Downsample8, 4, 1000)
+BENCHMARK (Benchmark, Downsample2x2, 5, 1000)
 {
-        bool s{};
-        celero::DoNotOptimizeAway (downsample<8> (data, &s));
+        bool s1{};
+        bool s2{};
+        celero::DoNotOptimizeAway (downsample<2> (downsample<2> (data, &s1), &s2));
 }
 
-BENCHMARK (Benchmark, Downsample16, 8, 1000)
+BENCHMARK (Benchmark, Downsample4, 5, 1000)
 {
-        bool s{};
-        celero::DoNotOptimizeAway (downsample<16> (data, &s));
+        uint8_t s = 0;
+        celero::DoNotOptimizeAway (downsample4 (data, &s));
 }
