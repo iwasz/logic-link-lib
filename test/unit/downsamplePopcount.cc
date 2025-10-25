@@ -21,7 +21,7 @@ TEST_CASE ("popcount", "[popcount]")
 {
         SECTION ("Downsample 2,4,8,16")
         {
-                bool s = false;
+                uint8_t s = 0;
                 REQUIRE (pop::downsample (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 8, &s) == Bytes{0x00});
                 REQUIRE (pop::downsample (Bytes{0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x00}, 8, &s) == Bytes{0xaa});
 
@@ -46,7 +46,7 @@ TEST_CASE ("popcount", "[popcount]")
                 SECTION ("16384") // Found by chance
                 {
                         auto data = std::views::repeat (0xcc, 16384) | std::ranges::to<Bytes> ();
-                        bool s{};
+                        uint8_t s{};
                         auto zoomedOut = pop::downsample (data, 8, &s);
                         REQUIRE (zoomedOut.size () == 2048);
                 }
@@ -75,7 +75,7 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/2 state=0")
         {
-                bool s1{};
+                uint8_t s1{};
                 auto a = pop::downsample (data, 2, &s1);
 
                 uint8_t s2 = 0;
@@ -97,7 +97,7 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/2 state=1")
         {
-                bool s1 = true;
+                uint8_t s1 = 1;
                 auto a = pop::downsample (data, 2, &s1);
 
                 uint8_t s2 = 1;
@@ -108,8 +108,8 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/4 state=0")
         {
-                bool s1{};
-                bool s2{};
+                uint8_t s1{};
+                uint8_t s2{};
                 auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
 
                 uint8_t s = 0;
@@ -120,8 +120,8 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/4 state=1")
         {
-                bool s1{};
-                bool s2 = true;
+                uint8_t s1 = 0;
+                uint8_t s2 = 1;
                 auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
 
                 uint8_t s = 0b01;
@@ -132,8 +132,8 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/4 state=2")
         {
-                bool s1 = true;
-                bool s2 = false;
+                uint8_t s1 = 1;
+                uint8_t s2 = 0;
                 auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
 
                 uint8_t s = 0b10;
@@ -144,8 +144,8 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/4 state=3")
         {
-                bool s1 = true;
-                bool s2 = true;
+                uint8_t s1 = 1;
+                uint8_t s2 = 1;
                 auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
 
                 uint8_t s = 0b11;
@@ -158,9 +158,9 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/8 state=0")
         {
-                bool s1 = 0;
-                bool s2 = 0;
-                bool s3 = 0;
+                uint8_t s1 = 0;
+                uint8_t s2 = 0;
+                uint8_t s3 = 0;
                 auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b000;
@@ -171,9 +171,9 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/8 state=1")
         {
-                bool s1 = 0;
-                bool s2 = 0;
-                bool s3 = 1;
+                uint8_t s1 = 0;
+                uint8_t s2 = 0;
+                uint8_t s3 = 1;
                 auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b001;
@@ -184,9 +184,9 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/8 state=2")
         {
-                bool s1 = 0;
-                bool s2 = 1;
-                bool s3 = 0;
+                uint8_t s1 = 0;
+                uint8_t s2 = 1;
+                uint8_t s3 = 0;
                 auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b010;
@@ -197,9 +197,9 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/8 state=3")
         {
-                bool s1 = 0;
-                bool s2 = 1;
-                bool s3 = 1;
+                uint8_t s1 = 0;
+                uint8_t s2 = 1;
+                uint8_t s3 = 1;
                 auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b011;
@@ -210,9 +210,9 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/8 state=4")
         {
-                bool s1 = 1;
-                bool s2 = 0;
-                bool s3 = 0;
+                uint8_t s1 = 1;
+                uint8_t s2 = 0;
+                uint8_t s3 = 0;
                 auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b100;
@@ -223,9 +223,9 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/8 state=5")
         {
-                bool s1 = 1;
-                bool s2 = 0;
-                bool s3 = 1;
+                uint8_t s1 = 1;
+                uint8_t s2 = 0;
+                uint8_t s3 = 1;
                 auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b101;
@@ -236,9 +236,9 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/8 state=6")
         {
-                bool s1 = 1;
-                bool s2 = 1;
-                bool s3 = 0;
+                uint8_t s1 = 1;
+                uint8_t s2 = 1;
+                uint8_t s3 = 0;
                 auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b110;
@@ -249,9 +249,9 @@ TEST_CASE ("comparison", "[popcount]")
 
         SECTION ("/8 state=7")
         {
-                bool s1 = 1;
-                bool s2 = 1;
-                bool s3 = 1;
+                uint8_t s1 = 1;
+                uint8_t s2 = 1;
+                uint8_t s3 = 1;
                 auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b111;

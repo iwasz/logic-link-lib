@@ -36,12 +36,12 @@ template <std::integral auto factor, byte_collection Collection> struct Downsamp
 
 template <byte_collection Collection> struct Downsample<2, Collection> {
         static constexpr size_t BITS = 2;
-        static Collection operator() (Collection const &in, bool *state);
+        static Collection operator() (Collection const &in, uint8_t *state);
 };
 
 template <byte_collection Collection> struct Downsample<4, Collection> {
         static constexpr size_t BITS = 4;
-        static Collection operator() (Collection const &in, bool *state);
+        static Collection operator() (Collection const &in, uint8_t *state);
 };
 
 template <std::integral auto factor, byte_collection Collection>
@@ -49,19 +49,19 @@ template <std::integral auto factor, byte_collection Collection>
 struct Downsample<factor, Collection> {
         static constexpr size_t BITS = factor;
         using WordT = WordType<BITS>::type;
-        static Collection operator() (Collection const &in, bool *state);
+        static Collection operator() (Collection const &in, uint8_t *state);
 };
 
 /**
  * Factory/helper function.
  */
-template <std::integral auto factor, byte_collection Collection> Collection downsample (Collection const &in, bool *state)
+template <std::integral auto factor, byte_collection Collection> Collection downsample (Collection const &in, uint8_t *state)
 {
         return Downsample<factor, Collection>::operator() (in, state);
 }
 
 namespace impl {
-        template <byte_collection Collection, int N, int... Ns> Collection downsample (Collection const &in, size_t zoomOut, bool *state)
+        template <byte_collection Collection, int N, int... Ns> Collection downsample (Collection const &in, size_t zoomOut, uint8_t *state)
         {
                 if (zoomOut == N) {
                         return logic::downsample<N> (in, state);
@@ -76,7 +76,7 @@ namespace impl {
 } // namespace impl
 
 export namespace pop {
-        template <byte_collection Collection> Collection downsample (Collection const &in, size_t zoomOut, bool *state)
+        template <byte_collection Collection> Collection downsample (Collection const &in, size_t zoomOut, uint8_t *state)
         {
                 static constexpr std::integer_sequence<int, 2, 4, 8, 16> allowedZoomLevels2;
 
@@ -98,7 +98,7 @@ export namespace lut {
 
 /****************************************************************************/
 
-template <byte_collection Collection> Collection Downsample<2, Collection>::operator() (Collection const &in, bool *state)
+template <byte_collection Collection> Collection Downsample<2, Collection>::operator() (Collection const &in, uint8_t *state)
 {
         if (in.size () % BITS) {
                 throw logic::Exception{std::format ("in.size ()[{}] % {} != 0", in.size (), BITS)};
@@ -109,7 +109,7 @@ template <byte_collection Collection> Collection Downsample<2, Collection>::oper
 
         auto last = [state] (int bits) mutable -> bool {
                 if (bits == BITS / 2) {
-                        bits = !(*state);
+                        bits = int (!bool (*state));
                         *state = bits; // Flipping back and forth
                 }
 
@@ -135,7 +135,7 @@ template <byte_collection Collection> Collection Downsample<2, Collection>::oper
 
 /****************************************************************************/
 
-template <byte_collection Collection> Collection Downsample<4, Collection>::operator() (Collection const &in, bool *state)
+template <byte_collection Collection> Collection Downsample<4, Collection>::operator() (Collection const &in, uint8_t *state)
 {
         if (in.size () % BITS) {
                 throw logic::Exception{std::format ("in.size ()[{}] % {} != 0", in.size (), BITS)};
@@ -146,7 +146,7 @@ template <byte_collection Collection> Collection Downsample<4, Collection>::oper
 
         auto last = [state] (int bits) mutable -> bool {
                 if (bits == 3) {
-                        bits = !(*state);
+                        bits = int (!bool (*state));
                         *state = bits; // Flipping back and forth
                 }
 
@@ -174,7 +174,7 @@ template <byte_collection Collection> Collection Downsample<4, Collection>::oper
 
 template <std::integral auto factor, byte_collection Collection>
         requires requires { requires factor == 8 || factor == 16; }
-Collection Downsample<factor, Collection>::operator() (Collection const &in, bool * /* state */)
+Collection Downsample<factor, Collection>::operator() (Collection const &in, uint8_t * /* state */)
 {
         if (in.size () % BITS) {
                 throw logic::Exception{std::format ("in.size ()[{}] % {} != 0", in.size (), BITS)};

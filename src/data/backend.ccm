@@ -49,7 +49,7 @@ public:
         Bytes operator() (Bytes const &block, size_t zoomOut) const override;
 
 private:
-        mutable bool state{};
+        mutable uint8_t state{};
 };
 
 /****************************************************************************/

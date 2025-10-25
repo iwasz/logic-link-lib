@@ -37,7 +37,7 @@ Bytes baselineFunction (Bytes const &in)
 
 BASELINE (Benchmark, DownsampleT2, 10, 1000)
 {
-        bool s{};
+        uint8_t s{};
         celero::DoNotOptimizeAway (pop::downsample (data, 2, &s));
 }
 
@@ -49,14 +49,14 @@ BENCHMARK (Benchmark, Downsample2, 10, 1000)
 
 BENCHMARK (Benchmark, DownsampleT4, 5, 1000)
 {
-        bool s{};
+        uint8_t s{};
         celero::DoNotOptimizeAway (pop::downsample (data, 4, &s));
 }
 
 BENCHMARK (Benchmark, Downsample2x2, 5, 1000)
 {
-        bool s1{};
-        bool s2{};
+        uint8_t s1{};
+        uint8_t s2{};
         celero::DoNotOptimizeAway (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2));
 }
 
@@ -68,9 +68,9 @@ BENCHMARK (Benchmark, Downsample4, 5, 1000)
 
 BENCHMARK (Benchmark, Downsample2x2x2, 5, 1000)
 {
-        bool s1{};
-        bool s2{};
-        bool s3{};
+        uint8_t s1{};
+        uint8_t s2{};
+        uint8_t s3{};
         celero::DoNotOptimizeAway (pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3));
 }
 
