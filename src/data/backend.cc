@@ -25,7 +25,7 @@ namespace logic {
 
 /****************************************************************************/
 
-Bytes DigitalDownSampler::operator() (Bytes const &block, size_t zoomOut) const { return logic::downsample (block, zoomOut, &state); }
+Bytes DigitalDownSampler::operator() (Bytes const &block, size_t zoomOut) const { return logic::pop::downsample (block, zoomOut, &state); }
 
 /****************************************************************************/
 

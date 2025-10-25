@@ -21,48 +21,47 @@ TEST_CASE ("popcount", "[popcount]")
 {
         SECTION ("Downsample 2,4,8,16")
         {
-                bool s{};
-                REQUIRE (downsample<8> (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, &s) == Bytes{0x00});
-                REQUIRE (downsample<8> (Bytes{0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x00}, &s) == Bytes{0xaa});
+                bool s = false;
+                REQUIRE (pop::downsample (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 8, &s) == Bytes{0x00});
+                REQUIRE (pop::downsample (Bytes{0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x00}, 8, &s) == Bytes{0xaa});
 
-                REQUIRE (downsample<16> (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-                                         &s)
+                REQUIRE (pop::downsample (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+                                          16, &s)
                          == Bytes{0x00});
-                REQUIRE (downsample<16> (Bytes{0xaa, 0xaa, 0x11, 0x11, 0xaa, 0xaa, 0x11, 0x00, 0xaa, 0xaa, 0x11, 0x11, 0xaa, 0xaa, 0x11, 0x00},
-                                         &s)
+                REQUIRE (pop::downsample (Bytes{0xaa, 0xaa, 0x11, 0x11, 0xaa, 0xaa, 0x11, 0x00, 0xaa, 0xaa, 0x11, 0x11, 0xaa, 0xaa, 0x11, 0x00},
+                                          16, &s)
                          == Bytes{0xaa});
 
-                REQUIRE (Downsample<2, Bytes>{}(Bytes{0x00, 0x00}, &s) == Bytes{0x00});
-                REQUIRE (Downsample<2, Bytes>{}(Bytes{0x00, 0x00, 0x00, 0x00}, &s) == Bytes{0x00, 0x00});
-                REQUIRE (Downsample<2, Bytes>{}(Bytes{0b11111111, 0b00000000}, &s) == Bytes{0xf0});
-                REQUIRE (Downsample<2, Bytes>{}(Bytes{0b11001100, 0b11001100}, &s) == Bytes{0xaa});
-                REQUIRE (Downsample<2, Bytes>{}(Bytes{0b11001100, 0b11001100, 0b11111111, 0b00000000}, &s) == Bytes{0xaa, 0xf0});
-                REQUIRE (Downsample<2, Bytes>{}(Bytes{0b10101010, 0b10101010}, &s) == Bytes{0b10101010});
-                // REQUIRE (test::Downsample<2, Bytes>{}(Bytes{0b10101010, 0b10101010, 0b10101010}, &s) == Bytes{0b10101010, 0b1010'0000});
+                REQUIRE (pop::downsample (Bytes{0x00, 0x00}, 2, &s) == Bytes{0x00});
+                REQUIRE (pop::downsample (Bytes{0x00, 0x00, 0x00, 0x00}, 2, &s) == Bytes{0x00, 0x00});
+                REQUIRE (pop::downsample (Bytes{0b11111111, 0b00000000}, 2, &s) == Bytes{0xf0});
+                REQUIRE (pop::downsample (Bytes{0b11001100, 0b11001100}, 2, &s) == Bytes{0xaa});
+                REQUIRE (pop::downsample (Bytes{0b11001100, 0b11001100, 0b11111111, 0b00000000}, 2, &s) == Bytes{0xaa, 0xf0});
+                REQUIRE (pop::downsample (Bytes{0b10101010, 0b10101010}, 2, &s) == Bytes{0b10101010});
 
-                REQUIRE (downsample<4> (Bytes{0x00, 0x00, 0x00, 0x00}, &s) == Bytes{0x00});
-                REQUIRE (downsample<4> (Bytes{0b11111111, 0b11111111, 0b00000000, 0b00000000}, &s) == Bytes{0xf0});
-                REQUIRE (downsample<4> (Bytes{0b11110000, 0b11110000, 0b11110000, 0b11110000}, &s) == Bytes{0xaa});
+                REQUIRE (pop::downsample (Bytes{0x00, 0x00, 0x00, 0x00}, 4, &s) == Bytes{0x00});
+                REQUIRE (pop::downsample (Bytes{0b11111111, 0b11111111, 0b00000000, 0b00000000}, 4, &s) == Bytes{0xf0});
+                REQUIRE (pop::downsample (Bytes{0b11110000, 0b11110000, 0b11110000, 0b11110000}, 4, &s) == Bytes{0xaa});
 
                 SECTION ("16384") // Found by chance
                 {
                         auto data = std::views::repeat (0xcc, 16384) | std::ranges::to<Bytes> ();
                         bool s{};
-                        auto zoomedOut = downsample<8> (data, &s);
+                        auto zoomedOut = pop::downsample (data, 8, &s);
                         REQUIRE (zoomedOut.size () == 2048);
                 }
         }
 
         SECTION ("Downsample look-up table")
         {
-                bool s{};
+                uint8_t s{};
 
-                REQUIRE (downsample2 (Bytes{0x00, 0x00}, &s) == Bytes{0x00});
-                REQUIRE (downsample2 (Bytes{0x00, 0x00, 0x00, 0x00}, &s) == Bytes{0x00, 0x00});
-                REQUIRE (downsample2 (Bytes{0b11111111, 0b00000000}, &s) == Bytes{0xf0});
-                REQUIRE (downsample2 (Bytes{0b11001100, 0b11001100}, &s) == Bytes{0xaa});
-                REQUIRE (downsample2 (Bytes{0b11001100, 0b11001100, 0b11111111, 0b00000000}, &s) == Bytes{0xaa, 0xf0});
-                REQUIRE (downsample2 (Bytes{0b10101010, 0b10101010}, &s) == Bytes{0b10101010});
+                REQUIRE (lut::downsample (Bytes{0x00, 0x00}, 2, &s) == Bytes{0x00});
+                REQUIRE (lut::downsample (Bytes{0x00, 0x00, 0x00, 0x00}, 2, &s) == Bytes{0x00, 0x00});
+                REQUIRE (lut::downsample (Bytes{0b11111111, 0b00000000}, 2, &s) == Bytes{0xf0});
+                REQUIRE (lut::downsample (Bytes{0b11001100, 0b11001100}, 2, &s) == Bytes{0xaa});
+                REQUIRE (lut::downsample (Bytes{0b11001100, 0b11001100, 0b11111111, 0b00000000}, 2, &s) == Bytes{0xaa, 0xf0});
+                REQUIRE (lut::downsample (Bytes{0b10101010, 0b10101010}, 2, &s) == Bytes{0b10101010});
         }
 }
 
@@ -77,10 +76,10 @@ TEST_CASE ("comparison", "[popcount]")
         SECTION ("/2 state=0")
         {
                 bool s1{};
-                auto a = downsample<2> (data, &s1);
+                auto a = pop::downsample (data, 2, &s1);
 
-                bool s2{};
-                auto b = downsample2 (data, &s2);
+                uint8_t s2 = 0;
+                auto b = lut::downsample (data, 2, &s2);
 
                 REQUIRE (a.size () == b.size ());
 
@@ -99,10 +98,10 @@ TEST_CASE ("comparison", "[popcount]")
         SECTION ("/2 state=1")
         {
                 bool s1 = true;
-                auto a = downsample<2> (data, &s1);
+                auto a = pop::downsample (data, 2, &s1);
 
-                bool s2 = true;
-                auto b = downsample2 (data, &s2);
+                uint8_t s2 = 1;
+                auto b = lut::downsample (data, 2, &s2);
 
                 REQUIRE (a == b);
         }
@@ -111,10 +110,10 @@ TEST_CASE ("comparison", "[popcount]")
         {
                 bool s1{};
                 bool s2{};
-                auto a = downsample<2> (downsample<2> (data, &s1), &s2);
+                auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
 
                 uint8_t s = 0;
-                auto b = downsample4 (data, &s);
+                auto b = lut::downsample (data, 4, &s);
 
                 REQUIRE (a == b);
         }
@@ -123,10 +122,10 @@ TEST_CASE ("comparison", "[popcount]")
         {
                 bool s1{};
                 bool s2 = true;
-                auto a = downsample<2> (downsample<2> (data, &s1), &s2);
+                auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
 
                 uint8_t s = 0b01;
-                auto b = downsample4 (data, &s);
+                auto b = lut::downsample (data, 4, &s);
 
                 REQUIRE (a == b);
         }
@@ -135,10 +134,10 @@ TEST_CASE ("comparison", "[popcount]")
         {
                 bool s1 = true;
                 bool s2 = false;
-                auto a = downsample<2> (downsample<2> (data, &s1), &s2);
+                auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
 
                 uint8_t s = 0b10;
-                auto b = downsample4 (data, &s);
+                auto b = lut::downsample (data, 4, &s);
 
                 REQUIRE (a == b);
         }
@@ -147,10 +146,10 @@ TEST_CASE ("comparison", "[popcount]")
         {
                 bool s1 = true;
                 bool s2 = true;
-                auto a = downsample<2> (downsample<2> (data, &s1), &s2);
+                auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
 
                 uint8_t s = 0b11;
-                auto b = downsample4 (data, &s);
+                auto b = lut::downsample (data, 4, &s);
 
                 REQUIRE (a == b);
         }
@@ -162,10 +161,10 @@ TEST_CASE ("comparison", "[popcount]")
                 bool s1 = 0;
                 bool s2 = 0;
                 bool s3 = 0;
-                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b000;
-                auto b = downsample8 (data, &s);
+                auto b = lut::downsample (data, 8, &s);
 
                 REQUIRE (a == b);
         }
@@ -175,10 +174,10 @@ TEST_CASE ("comparison", "[popcount]")
                 bool s1 = 0;
                 bool s2 = 0;
                 bool s3 = 1;
-                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b001;
-                auto b = downsample8 (data, &s);
+                auto b = lut::downsample (data, 8, &s);
 
                 REQUIRE (a == b);
         }
@@ -188,10 +187,10 @@ TEST_CASE ("comparison", "[popcount]")
                 bool s1 = 0;
                 bool s2 = 1;
                 bool s3 = 0;
-                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b010;
-                auto b = downsample8 (data, &s);
+                auto b = lut::downsample (data, 8, &s);
 
                 REQUIRE (a == b);
         }
@@ -201,10 +200,10 @@ TEST_CASE ("comparison", "[popcount]")
                 bool s1 = 0;
                 bool s2 = 1;
                 bool s3 = 1;
-                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b011;
-                auto b = downsample8 (data, &s);
+                auto b = lut::downsample (data, 8, &s);
 
                 REQUIRE (a == b);
         }
@@ -214,10 +213,10 @@ TEST_CASE ("comparison", "[popcount]")
                 bool s1 = 1;
                 bool s2 = 0;
                 bool s3 = 0;
-                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b100;
-                auto b = downsample8 (data, &s);
+                auto b = lut::downsample (data, 8, &s);
 
                 REQUIRE (a == b);
         }
@@ -227,10 +226,10 @@ TEST_CASE ("comparison", "[popcount]")
                 bool s1 = 1;
                 bool s2 = 0;
                 bool s3 = 1;
-                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b101;
-                auto b = downsample8 (data, &s);
+                auto b = lut::downsample (data, 8, &s);
 
                 REQUIRE (a == b);
         }
@@ -240,10 +239,10 @@ TEST_CASE ("comparison", "[popcount]")
                 bool s1 = 1;
                 bool s2 = 1;
                 bool s3 = 0;
-                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b110;
-                auto b = downsample8 (data, &s);
+                auto b = lut::downsample (data, 8, &s);
 
                 REQUIRE (a == b);
         }
@@ -253,10 +252,10 @@ TEST_CASE ("comparison", "[popcount]")
                 bool s1 = 1;
                 bool s2 = 1;
                 bool s3 = 1;
-                auto a = downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3);
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
 
                 uint8_t s = 0b111;
-                auto b = downsample8 (data, &s);
+                auto b = lut::downsample (data, 8, &s);
 
                 REQUIRE (a == b);
         }

@@ -17,7 +17,7 @@ namespace logic {
 /**
  * With flipping and LUT. Should work the same as the `Downsample<2, Collection>::operator()`
  */
-Bytes downsample2 (Bytes const &in, bool *state)
+Bytes downsample2 (Bytes const &in, uint8_t *state)
 {
         static constexpr size_t BITS = 2;
 
@@ -423,4 +423,23 @@ Bytes downsample8 (Bytes const &in, uint8_t *state)
         return out;
 }
 
+namespace lut {
+        Bytes downsample (Bytes const &in, size_t zoomOut, uint8_t *state)
+        {
+                switch (zoomOut) {
+                case 2:
+                        return downsample2 (in, state);
+
+                case 4:
+                        return downsample4 (in, state);
+
+                case 8:
+                        return downsample8 (in, state);
+
+                default:
+                        throw Exception{std::format ("Zoom level: {} not allowed.", zoomOut)};
+                }
+        }
+
+} // namespace lut
 } // namespace logic

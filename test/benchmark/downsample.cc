@@ -8,10 +8,7 @@
 
 import logic;
 using namespace logic;
-
 #include <celero/Celero.h>
-
-#include <cmath>
 #include <cstdlib>
 #include <random>
 
@@ -41,32 +38,32 @@ Bytes baselineFunction (Bytes const &in)
 BASELINE (Benchmark, DownsampleT2, 10, 1000)
 {
         bool s{};
-        celero::DoNotOptimizeAway (downsample<2> (data, &s));
+        celero::DoNotOptimizeAway (pop::downsample (data, 2, &s));
 }
 
 BENCHMARK (Benchmark, Downsample2, 10, 1000)
 {
-        bool s{};
-        celero::DoNotOptimizeAway (downsample2 (data, &s));
+        uint8_t s{};
+        celero::DoNotOptimizeAway (lut::downsample (data, 2, &s));
 }
 
 BENCHMARK (Benchmark, DownsampleT4, 5, 1000)
 {
         bool s{};
-        celero::DoNotOptimizeAway (downsample<4> (data, &s));
+        celero::DoNotOptimizeAway (pop::downsample (data, 4, &s));
 }
 
 BENCHMARK (Benchmark, Downsample2x2, 5, 1000)
 {
         bool s1{};
         bool s2{};
-        celero::DoNotOptimizeAway (downsample<2> (downsample<2> (data, &s1), &s2));
+        celero::DoNotOptimizeAway (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2));
 }
 
 BENCHMARK (Benchmark, Downsample4, 5, 1000)
 {
         uint8_t s = 0;
-        celero::DoNotOptimizeAway (downsample4 (data, &s));
+        celero::DoNotOptimizeAway (lut::downsample (data, 4, &s));
 }
 
 BENCHMARK (Benchmark, Downsample2x2x2, 5, 1000)
@@ -74,11 +71,11 @@ BENCHMARK (Benchmark, Downsample2x2x2, 5, 1000)
         bool s1{};
         bool s2{};
         bool s3{};
-        celero::DoNotOptimizeAway (downsample<2> (downsample<2> (downsample<2> (data, &s1), &s2), &s3));
+        celero::DoNotOptimizeAway (pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3));
 }
 
 BENCHMARK (Benchmark, Downsample8, 5, 1000)
 {
         uint8_t s = 0;
-        celero::DoNotOptimizeAway (downsample8 (data, &s));
+        celero::DoNotOptimizeAway (lut::downsample (data, 8, &s));
 }

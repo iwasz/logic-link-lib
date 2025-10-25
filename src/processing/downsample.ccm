@@ -32,40 +32,32 @@ template <> struct WordType<16UL> {
 
 /****************************************************************************/
 
-export Bytes downsample2 (Bytes const &in, bool *state);
-export Bytes downsample4 (Bytes const &in, uint8_t *state);
-export Bytes downsample8 (Bytes const &in, uint8_t *state);
+template <std::integral auto factor, byte_collection Collection> struct Downsample {};
 
-/****************************************************************************/
+template <byte_collection Collection> struct Downsample<2, Collection> {
+        static constexpr size_t BITS = 2;
+        static Collection operator() (Collection const &in, bool *state);
+};
 
-export {
-        template <std::integral auto factor, byte_collection Collection> struct Downsample {};
+template <byte_collection Collection> struct Downsample<4, Collection> {
+        static constexpr size_t BITS = 4;
+        static Collection operator() (Collection const &in, bool *state);
+};
 
-        template <byte_collection Collection> struct Downsample<2, Collection> {
-                static constexpr size_t BITS = 2;
-                static Collection operator() (Collection const &in, bool *state);
-        };
+template <std::integral auto factor, byte_collection Collection>
+        requires requires { requires factor == 8 || factor == 16; }
+struct Downsample<factor, Collection> {
+        static constexpr size_t BITS = factor;
+        using WordT = WordType<BITS>::type;
+        static Collection operator() (Collection const &in, bool *state);
+};
 
-        template <byte_collection Collection> struct Downsample<4, Collection> {
-                static constexpr size_t BITS = 4;
-                static Collection operator() (Collection const &in, bool *state);
-        };
-
-        template <std::integral auto factor, byte_collection Collection>
-                requires requires { requires factor == 8 || factor == 16; }
-        struct Downsample<factor, Collection> {
-                static constexpr size_t BITS = factor;
-                using WordT = WordType<BITS>::type;
-                static Collection operator() (Collection const &in, bool *state);
-        };
-
-        /**
-         * Factory/helper function.
-         */
-        template <std::integral auto factor, byte_collection Collection> Collection downsample (Collection const &in, bool *state)
-        {
-                return Downsample<factor, Collection>::operator() (in, state);
-        }
+/**
+ * Factory/helper function.
+ */
+template <std::integral auto factor, byte_collection Collection> Collection downsample (Collection const &in, bool *state)
+{
+        return Downsample<factor, Collection>::operator() (in, state);
 }
 
 namespace impl {
@@ -83,15 +75,25 @@ namespace impl {
         }
 } // namespace impl
 
-export template <byte_collection Collection> Collection downsample (Collection const &in, size_t zoomOut, bool *state)
-{
-        static constexpr std::integer_sequence<int, 2, 4, 8, 16> allowedZoomLevels2;
+export namespace pop {
+        template <byte_collection Collection> Collection downsample (Collection const &in, size_t zoomOut, bool *state)
+        {
+                static constexpr std::integer_sequence<int, 2, 4, 8, 16> allowedZoomLevels2;
 
-        auto lbd = [&in, zoomOut, state]<int... Ns> (std::integer_sequence<int, Ns...> const & /* alwd */) {
-                return impl::downsample<Collection, Ns...> (in, zoomOut, state);
-        };
+                auto lbd = [&in, zoomOut, state]<int... Ns> (std::integer_sequence<int, Ns...> const & /* alwd */) {
+                        return impl::downsample<Collection, Ns...> (in, zoomOut, state);
+                };
 
-        return lbd (allowedZoomLevels2);
+                return lbd (allowedZoomLevels2);
+        }
+} // namespace pop
+
+Bytes downsample2 (Bytes const &in, uint8_t *state);
+Bytes downsample4 (Bytes const &in, uint8_t *state);
+Bytes downsample8 (Bytes const &in, uint8_t *state);
+
+export namespace lut {
+        Bytes downsample (Bytes const &in, size_t zoomOut, uint8_t *state);
 }
 
 /****************************************************************************/
