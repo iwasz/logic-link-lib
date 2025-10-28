@@ -19,6 +19,7 @@ TEST_CASE ("Size, empty B", "[rangeWordSpan]")
         static constexpr auto BITS_PER_SAMPLE = 1U;
 
         BlockArray blockArray;
+        blockArray.setBlockSizeB (16);
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (3));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (2));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -85,6 +86,7 @@ TEST_CASE ("Advance 1 block B", "[rangeWordSpan]")
         SECTION ("One block")
         {
                 BlockArray blockArray;
+                blockArray.setBlockSizeB (16);
                 blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (3));
                 auto r = blockArray.range (0, 4);
 
@@ -137,6 +139,7 @@ TEST_CASE ("Advance 1 block B", "[rangeWordSpan]")
         SECTION ("4 blocks")
         {
                 BlockArray blockArray;
+                blockArray.setBlockSizeB (16);
                 blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (3));
                 blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (2));
                 blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -185,6 +188,7 @@ TEST_CASE ("Increment++", "[rangeWordSpan]")
         SECTION ("1 block")
         {
                 BlockArray blockArray;
+                blockArray.setBlockSizeB (16);
                 blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (3));
                 auto r = blockArray.range (0, 32);
 
@@ -211,6 +215,7 @@ TEST_CASE ("Increment++", "[rangeWordSpan]")
         SECTION ("4 blocks")
         {
                 BlockArray blockArray;
+                blockArray.setBlockSizeB (16);
                 blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (3));
                 blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (2));
                 blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (1));

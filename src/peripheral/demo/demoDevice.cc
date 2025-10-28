@@ -51,7 +51,7 @@ void DemoDevice::start (IBackend *backend)
                         std::vector<Bytes> channels;
                         channels.reserve (dc);
 
-                        auto sizePerChanBits = transferSize * CHAR_BIT /* / dc */;
+                        auto sizePerChanBits = transferSize * CHAR_BIT / dc;
                         totalSizePerChan += sizePerChanBits;
 
                         ZoneNamedN (pushBack, "generate", false);

@@ -12,20 +12,15 @@ import utils;
 
 using namespace logic;
 
-TEST_CASE ("size", "[backend]")
+TEST_CASE ("Block size", "[block]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
-        static constexpr auto GROUP = 0U;
 
-        Backend backend;
-        backend.addGroup ({.channelsNumber = 4, .maxZoomOutLevels = 1, .zoomOutPerLevel = 1, .blockSizeB = 16});
+        Block block{BITS_PER_SAMPLE, generateDemoDeviceBlock ()};
+        REQUIRE (block.channelLength () == 8192);
+        REQUIRE (block.channelsNumber () == 16);
 
-        backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (0));
-        REQUIRE (backend.channelLength (0) == 32);
-
-        backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (1));
-        REQUIRE (backend.channelLength (0) == 64);
-
-        backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (2));
-        REQUIRE (backend.channelLength (0) == 96);
+        block.clear ();
+        REQUIRE (block.channelLength () == 0);
+        REQUIRE (block.channelsNumber () == 16);
 }

@@ -19,6 +19,7 @@ TEST_CASE ("Size, empty", "[rangeBitSpan]")
         static constexpr auto BITS_PER_SAMPLE = 1U;
 
         BlockArray blockArray;
+        blockArray.setBlockSizeB (16);
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (3));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (2));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -101,6 +102,7 @@ TEST_CASE ("Advance 1 block", "[rangeBitSpan]")
         static constexpr auto BITS_PER_SAMPLE = 1U;
 
         BlockArray blockArray;
+        blockArray.setBlockSizeB (16);
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (3));
         auto r = blockArray.range (0, 1);
 
@@ -213,6 +215,7 @@ TEST_CASE ("Advance 3 blocks", "[rangeBitSpan]")
         static constexpr auto BITS_PER_SAMPLE = 1U;
 
         BlockArray blockArray;
+        blockArray.setBlockSizeB (16);
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (3));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (2));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -270,6 +273,7 @@ TEST_CASE ("Increment++ 1 block", "[rangeBitSpan]")
         static constexpr auto BITS_PER_SAMPLE = 1U;
 
         BlockArray blockArray;
+        blockArray.setBlockSizeB (16);
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (3));
         auto r = blockArray.range (0, 1);
 
@@ -311,6 +315,7 @@ TEST_CASE ("Increment++ 3 blocks", "[rangeBitSpan]")
         static constexpr auto BITS_PER_SAMPLE = 1U;
 
         BlockArray blockArray;
+        blockArray.setBlockSizeB (16);
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (3));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (2));
         blockArray.append (BITS_PER_SAMPLE, getChannelBlockData (1));

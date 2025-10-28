@@ -255,8 +255,8 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                  * BEFORE the h->singleTransfer was copied (actually moved) to the
                  * final queue.
                  */
-                RawCompressedBlock rcd{mbps, 0, h->singleTransfer}; // TODO resize blocks (if needed)
-                h->queue.push (std::move (rcd));                    // Lock protected
+                RawCompressedBlock rcd{mbps, 0, h->singleTransfer};
+                h->queue.push (std::move (rcd)); // Lock protected
                 h->singleTransfer.resize (transferLen);
         }
 

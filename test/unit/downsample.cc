@@ -132,6 +132,7 @@ TEST_CASE ("BlockArray", "[downsample]")
                 constexpr size_t OUTPUT_SIZE_BITS = 8 * 3;
 
                 BlockArray blockArray;
+                blockArray.setBlockSizeB (2);
                 blockArray.append (BITS_PER_SAMPLE, std::vector<Bytes>{Bytes{0b11111100, 0b11001100}});
                 blockArray.append (BITS_PER_SAMPLE, std::vector<Bytes>{Bytes{0b11001100, 0b11001100}});
                 blockArray.append (BITS_PER_SAMPLE, std::vector<Bytes>{Bytes{0b11001100, 0b11001111}});

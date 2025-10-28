@@ -99,6 +99,7 @@ TEST_CASE ("Join", "[backend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
         BlockArray cbs;
+        cbs.setBlockSizeB (16);
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
@@ -220,5 +221,40 @@ TEST_CASE ("Join", "[backend]")
                 REQUIRE (*i++ == 0);
 
                 REQUIRE (std::ranges::equal (span, std::vector<bool>{1, 0, 0, 0, 0, 0, 1, 0, 0}));
+        }
+}
+
+TEST_CASE ("Join multiplier", "[backend]")
+{
+        static constexpr auto BITS_PER_SAMPLE = 1U;
+        BlockArray cbs;
+        cbs.setBlockSizeB (16);
+        cbs.setBlockSizeMultiplier (2);
+
+        SECTION ("lazy, full blocks")
+        {
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (3));
+
+                auto r = cbs.range (0, 128);
+                REQUIRE (std::ranges::distance (r) == 2);
+
+                auto ch0 = r | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
+                REQUIRE (std::ranges::equal (ch0, Bytes{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xaa, 0xef, 0xdf, 0xcf}));
+        }
+
+        SECTION ("lazy, missing blocks")
+        {
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
+                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
+
+                auto r = cbs.range (0, 128);
+                REQUIRE (std::ranges::distance (r) == 2);
+
+                auto ch0 = r | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
+                REQUIRE (std::ranges::equal (ch0, Bytes{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xa, 0xb}));
         }
 }

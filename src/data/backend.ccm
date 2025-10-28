@@ -90,7 +90,7 @@ public:
 
         /// Length of the block in samples. Assumes that all channels are the same length.
         SampleNum channelLength () const;
-        size_t bytesUsed () const;
+        size_t channelBytes () const;
 
         uint8_t bitsPerSample () const { return bitsPerSample_; }
 
@@ -205,13 +205,23 @@ public:
         size_t channelsNumber () const { return (levels[0].data_.empty ()) ? (0) : (levels[0].data_.front ().channelsNumber ()); }
         SampleNum channelLength () const { return channelLength_; }
 
+        size_t blockSizeB () const { return blockSizeB_; } /// Returns the block size. Block size is the number of bytes `append` accepts.
+        void setBlockSizeB (size_t v) { blockSizeB_ = v; } /// Sets the block size.
+
+        size_t blockSizeMultiplier () const { return blockSizeMultiplier_; }
+        void setBlockSizeMultiplier (size_t v) { blockSizeMultiplier_ = v; }
+
 private:
         friend struct BlockArrayUtHelper; // Defined in UTs
         using DownSamplers = std::vector<std::unique_ptr<IDownSampler>>;
         Block downsample (Block const &block, size_t zoomOut, DownSamplers const &downSamplers) const;
 
-        StreamType type_{};
-        SampleRate sampleRate_{};
+        // StreamType type_{};
+        // SampleRate sampleRate_{};
+
+        /// Block that we append to to reach blockSizeB_ * blockSizeMultiplier_ bytes.
+        Block pendingBlock;
+
         using BlockIndex = std::map<SampleIdx, Container::const_iterator>;
 
         struct ZoomOutLevel {
@@ -227,6 +237,8 @@ private:
         size_t zoomOutPerLevel;
 
         SampleNum channelLength_{};
+        size_t blockSizeB_ = 0;
+        size_t blockSizeMultiplier_ = 1;
 };
 
 // Multiple BlockArray-s, each represeinging one channel-group
@@ -275,7 +287,8 @@ struct IBackend {
                 size_t channelsNumber{};
                 size_t maxZoomOutLevels = 1;
                 size_t zoomOutPerLevel = 1;
-                // SampleRate sampleRate{}; //?
+                size_t blockSizeB = 0;
+                size_t blockSizeMultiplier = 1;
         };
 
         /// Returns the added group index.

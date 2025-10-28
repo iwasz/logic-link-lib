@@ -39,6 +39,10 @@ void Block::append (Block &&d)
 
 void Block::append (Container &&d)
 {
+        if (channelsNumber () == 0) { // This lets us append to an empty block
+                data_.resize (d.size ());
+        }
+
         if (d.size () != channelsNumber ()) {
                 throw Exception{std::format ("Block::append: d.size ():{} != channelsNumber ():{}", d.size (), channelsNumber ())};
         }
@@ -73,12 +77,12 @@ SampleNum Block::channelLength () const
         }
 
         auto const SAMPLES_PER_BYTE = CHAR_BIT / bitsPerSample_;
-        return SampleNum (bytesUsed () * SAMPLES_PER_BYTE * zoomOut_);
+        return SampleNum (channelBytes () * SAMPLES_PER_BYTE * zoomOut_);
 }
 
 /*--------------------------------------------------------------------------*/
 
-size_t Block::bytesUsed () const
+size_t Block::channelBytes () const
 {
         if (data_.empty ()) {
                 return 0;
@@ -135,16 +139,19 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
                 return;
         }
 
-        size_t levNo = 0;
-        auto const chLenBytes = channels.front ().size ();
+        if (auto currentSize = channels.size () * channels.front ().size (); currentSize != blockSizeB_) {
+                throw Exception{std::format ("Block size mismatch. Allowed: {} != provided: {}", blockSizeB_, currentSize)};
+        }
+
+        auto const multiBlockBytes = blockSizeB_ * blockSizeMultiplier_;
         auto const SAMPLES_PER_BYTE = CHAR_BIT / bitsPerSample;
-        auto const chLenBits = chLenBytes * SAMPLES_PER_BYTE;
+        auto const chLenBits = channels.front ().size () * SAMPLES_PER_BYTE;
 
         if (chLenBits == 0) {
                 return;
         }
 
-        auto doAppend = [chLenBytes, this] (Block block, size_t levNo, auto &that) -> void {
+        auto doAppend = [multiBlockBytes, this] (Block block, size_t levNo, auto &that) -> void {
                 block.zoomOut_ = std::pow (zoomOutPerLevel, levNo);
 
                 auto &level = levels.at (levNo);
@@ -154,7 +161,7 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
                         that (std::move (zoomed), levNo + 1, that);
                 }
 
-                if (level.data_.empty () || level.data_.back ().bytesUsed () >= chLenBytes) {
+                if (level.data_.empty () || level.data_.back ().channelBytes () * level.data_.back ().channelsNumber () >= multiBlockBytes) {
                         level.data_.emplace_back (std::move (block));
                         level.data_.back ().firstSampleNo () = channelLength_;
                 }
@@ -175,10 +182,18 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
                 level.index_.insert (p);
         };
 
-        Block block{bitsPerSample, std::move (channels), 1};
-        doAppend (std::move (block), levNo, doAppend);
+        // Collect multiBlockBytes (blockSizeB_ * blockSizeMultiplier_) bytes of data, so the downsampling algorithms hev enough data to work on.
+        pendingBlock.append (Block{bitsPerSample, std::move (channels)});
 
-        channelLength_ += SampleNum (chLenBits);
+        if (pendingBlock.channelBytes () * pendingBlock.channelsNumber () >= multiBlockBytes) {
+                auto tmp = pendingBlock.channelLength ();
+                doAppend (std::move (pendingBlock), 0, doAppend);
+                // channelLength_ += SampleNum (chLenBits);
+                channelLength_ += tmp;
+                pendingBlock = Block{};
+        }
+
+        // channelLength_ += SampleNum (chLenBits);
 }
 
 /*--------------------------------------------------------------------------*/
@@ -348,6 +363,9 @@ size_t Backend::addGroup (Config const &config)
 {
         std::lock_guard lock{mutex};
         groups_.emplace_back (config.channelsNumber, config.maxZoomOutLevels, config.zoomOutPerLevel);
+        auto &g = groups_.back ();
+        g.setBlockSizeB (config.blockSizeB);
+        g.setBlockSizeMultiplier (config.blockSizeMultiplier);
         return groups_.size () - 1;
 }
 
