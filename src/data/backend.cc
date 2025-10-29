@@ -206,18 +206,6 @@ BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, size_t z
                 return {};
         }
 
-        // size_t len = end - begin;
-
-        // if (maxDiscernibleSamples < 0) {
-        //         maxDiscernibleSamples = len;
-        // }
-        // else {
-        //         maxDiscernibleSamples = std::min<SampleNum> (maxDiscernibleSamples, len);
-        // }
-
-        // // The largest power-of-two not greater than `x`.
-        // auto zoomOut = std::bit_floor (len / maxDiscernibleSamples);
-
         auto lll = levels | std::views::reverse | std::views::filter ([zoomOut] (auto &lev) { return lev.zoomOut <= zoomOut; });
         auto const &level = (std::ranges::empty (lll)) ? (levels.front ()) : (lll.front ());
 
@@ -248,58 +236,6 @@ BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, size_t z
         }
 
         return {b, e};
-}
-
-/*--------------------------------------------------------------------------*/
-
-Stream BlockArray::clipBytes (ByteIdx begin, ByteIdx end)
-{
-        /*
-         * This method was implemented only for 8 bit samples which makes it
-         * less universal and useful. It is not used anywhere (?).
-         */
-        auto subRangeBlocks = range (begin, end);
-
-        if (subRangeBlocks.empty ()) {
-                return {};
-        }
-
-        SampleNum totalLenToCopy = std::min<SampleNum> (end, subRangeBlocks.back ().lastSampleNo () + 1) - begin;
-        // Stream trimmedSubrange{subRangeBlocks.front ().bitsPerSample (), channelsNumber (), totalLenToCopy};
-        Block const &f = subRangeBlocks.front ();
-
-        std::vector<Bytes> tmp (f.channelsNumber ());
-        for (auto &ch : tmp) {
-                ch.resize (totalLenToCopy);
-        }
-
-        Stream trimmedSubrange{f.bitsPerSample (), std::move (tmp)};
-
-        size_t cnt{};
-        SampleNum outputStartOffset{};
-
-        for (auto const &subRangeBlock : subRangeBlocks) {
-                size_t channelNo{};
-                // If first block, then offset != 0. For every other block offset == 0.
-                auto inputStartOffset = (cnt++ == 0) ? (begin - subRangeBlock.firstSampleNo ()) : (0);
-
-                auto inputLenToCopy = std::min<SampleNum> (totalLenToCopy, subRangeBlock.data ().front ().size () - inputStartOffset);
-                totalLenToCopy -= inputLenToCopy;
-
-                for (auto const &channelInBlock : subRangeBlock.data ()) {
-                        auto begin = std::next (channelInBlock.cbegin (), inputStartOffset);
-                        auto end = std::next (begin, inputLenToCopy);
-                        std::copy (begin, end, std::next (trimmedSubrange.data_.at (channelNo++).begin (), outputStartOffset));
-                }
-
-                outputStartOffset += inputLenToCopy;
-        }
-
-        if (totalLenToCopy != 0) {
-                throw Exception{"BlockBackend::range internal problem."};
-        }
-
-        return trimmedSubrange;
 }
 
 /*--------------------------------------------------------------------------*/

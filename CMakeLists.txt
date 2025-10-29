@@ -37,61 +37,75 @@ else()
   CPMAddPackage(NAME common GIT_REPOSITORY "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/iwasz/logic-link-common.git" GIT_TAG v0.0.2)
 endif()
 
-# +--------------------------------------+
-# | Library target                       |
-# +--------------------------------------+
+# +------------------------------------------+
+# | Interface target (for common properties) |
+# +------------------------------------------+
 
-add_library(${PROJECT_NAME})
+add_library(interface INTERFACE)
 # add_compile_options("-fsanitize=address")
 # add_link_options("-fsanitize=address")
 
-# This is added only to set the BASE_DIRS once an for all. Without it, the first
-# target_sources instruction that adds to CXX_MODULES fileset would change the
-# BASE_DIRS (they are scaterred all over the place in various folders).
-target_sources(${PROJECT_NAME}
-  PUBLIC FILE_SET CXX_MODULES FILES
-    src/logiclink.ccm
-    src/session.ccm
-)
-
-# Some algoithms simply can't keep up when compiled with -O0. Will have to optimize them.
-set_source_files_properties(
-    src/processing/rearrange.cc
-    src/processing/processing.ccm
-    PROPERTIES
-    COMPILE_OPTIONS "-O3"
-)
-
-add_subdirectory(src)
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
-target_include_directories(${PROJECT_NAME} PUBLIC
+set_target_properties(interface PROPERTIES CXX_STANDARD 23)
+target_include_directories(interface INTERFACE
   ${GSL_SOURCE_DIR}/include
   ${common_SOURCE_DIR}
   ${tracy_SOURCE_DIR}/public/tracy
 )
 
 target_include_directories(
-  ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  interface INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
                          $<INSTALL_INTERFACE:include/link-${PROJECT_VERSION}>
 )
 
 # being a cross-platform target, we enforce standards conformance on MSVC
-target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
-target_compile_options(${PROJECT_NAME} PUBLIC "-fPIC")
+target_compile_options(interface INTERFACE "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
+target_compile_options(interface INTERFACE "-fPIC")
 
 include (FindPkgConfig)
 pkg_check_modules (LIBUSBX REQUIRED "libusb-1.0")
-target_include_directories (${PROJECT_NAME} PRIVATE ${LIBUSBX_INCLUDE_DIRS})
-target_link_directories(${PROJECT_NAME} PRIVATE ${LIBUSBX_LIBRARY_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBUSBX_LIBRARIES})
+target_include_directories (interface INTERFACE ${LIBUSBX_INCLUDE_DIRS})
+target_link_directories(interface INTERFACE ${LIBUSBX_LIBRARY_DIRS})
+target_link_libraries(interface INTERFACE ${LIBUSBX_LIBRARIES})
 
 # Enable warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Werror -Wno-unused-function)
+  target_compile_options(interface INTERFACE -Wall -Werror -Wno-unused-function)
 elseif(MSVC)
-  target_compile_options(${PROJECT_NAME} PUBLIC /W4 /WX)
-  target_compile_options(${PROJECT_NAME} PUBLIC PUBLIC DOCTEST_CONFIG_USE_STD_HEADERS)
+  target_compile_options(interface INTERFACE /W4 /WX)
+  target_compile_options(interface INTERFACE PUBLIC DOCTEST_CONFIG_USE_STD_HEADERS)
 endif()
+
+# +--------------------------------------+
+# | Library target                       |
+# +--------------------------------------+
+
+# Some algoithms simply can't keep up when compiled with -O0. Will have to optimize them.
+set_source_files_properties(
+      src/processing/analysis.cc
+      src/processing/decompress.cc
+      src/processing/downsample.cc
+      src/processing/downsample.ccm
+      src/processing/generate.cc
+      src/processing/generate.ccm
+      src/processing/polyPoints.ccm
+      src/processing/processing.ccm
+      src/processing/rearrange.cc
+    PROPERTIES
+    COMPILE_OPTIONS "-O3"
+)
+
+# add_library (processing STATIC)
+# set_target_properties(processing PROPERTIES COMPILE_OPTIONS "-O3")
+# target_link_libraries (processing PUBLIC interface)
+
+add_library(${PROJECT_NAME})
+target_sources(${PROJECT_NAME}
+  PUBLIC FILE_SET CXX_MODULES FILES
+    src/logiclink.ccm
+    src/session.ccm
+)
+target_link_libraries (${PROJECT_NAME} PUBLIC interface)
+add_subdirectory(src)
 
 # +--------------------------------------+
 # | Installable target                   |

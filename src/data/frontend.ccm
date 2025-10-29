@@ -14,7 +14,6 @@ module;
 export module logic.data:frontend;
 import :types;
 import :backend;
-import :range.span;
 
 export namespace logic {
 
@@ -59,8 +58,8 @@ struct IFrontend {
 
         // virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, TimePoint const &begin, TimePoint const &end) = 0;
         // TODO following interface works only for the binary data
-        virtual BlockRangeBitSpan<uint8_t const, BlockArray::Container> channel (size_t groupIdx, size_t channelIdx, SampleIdx offset,
-                                                                                 SampleNum length) = 0;
+        // virtual BlockRangeBitSpan<uint8_t const, BlockArray::Container> channel (size_t groupIdx, size_t channelIdx, SampleIdx offset,
+        //                                                                          SampleNum length) = 0;
 
         virtual BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek) = 0;
 
@@ -83,9 +82,9 @@ public:
         SampleNum size (size_t groupIdx) const override { return backend->channelLength (groupIdx); }
         // Stream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
 
-        // TODO remove dependency on BlockArray::Container.
-        BlockRangeBitSpan<uint8_t const, BlockArray::Container> channel (size_t groupIdx, size_t channelIdx, SampleIdx begin,
-                                                                         SampleNum length) override;
+        // // TODO remove dependency on BlockArray::Container.
+        // BlockRangeBitSpan<uint8_t const, BlockArray::Container> channel (size_t groupIdx, size_t channelIdx, SampleIdx begin,
+        //                                                                  SampleNum length) override;
 
         BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek) override;
 

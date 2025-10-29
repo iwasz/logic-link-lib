@@ -8,142 +8,387 @@
 
 import logic;
 #include <catch2/catch_test_macros.hpp>
-
+#include <print>
+#include <random>
+#include <ranges>
 using namespace logic;
 
-TEST_CASE ("64 -> 8", "[downsample]")
+void lutD2_f ();
+void lutD4_f ();
+void lutD8_f ();
+
+TEST_CASE ("popcount", "[popcount]")
 {
-        SECTION ("0 bits")
+        SECTION ("Downsample 2,4,8,16")
         {
-                Bytes input{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-                State state;
-                auto result = downsample (input, 0, 64, 8, &state);
-                REQUIRE (result == Bytes{0x00});
+                uint8_t s = 0;
+                REQUIRE (pop::downsample (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 8, &s) == Bytes{0x00});
+                REQUIRE (pop::downsample (Bytes{0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x11, 0xaa, 0x00}, 8, &s) == Bytes{0xaa});
+
+                REQUIRE (pop::downsample (Bytes{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+                                          16, &s)
+                         == Bytes{0x00});
+                REQUIRE (pop::downsample (Bytes{0xaa, 0xaa, 0x11, 0x11, 0xaa, 0xaa, 0x11, 0x00, 0xaa, 0xaa, 0x11, 0x11, 0xaa, 0xaa, 0x11, 0x00},
+                                          16, &s)
+                         == Bytes{0xaa});
+
+                REQUIRE (pop::downsample (Bytes{0x00, 0x00}, 2, &s) == Bytes{0x00});
+                REQUIRE (pop::downsample (Bytes{0x00, 0x00, 0x00, 0x00}, 2, &s) == Bytes{0x00, 0x00});
+                REQUIRE (pop::downsample (Bytes{0b11111111, 0b00000000}, 2, &s) == Bytes{0xf0});
+                REQUIRE (pop::downsample (Bytes{0b11001100, 0b11001100}, 2, &s) == Bytes{0xaa});
+                REQUIRE (pop::downsample (Bytes{0b11001100, 0b11001100, 0b11111111, 0b00000000}, 2, &s) == Bytes{0xaa, 0xf0});
+                REQUIRE (pop::downsample (Bytes{0b10101010, 0b10101010}, 2, &s) == Bytes{0b10101010});
+
+                REQUIRE (pop::downsample (Bytes{0x00, 0x00, 0x00, 0x00}, 4, &s) == Bytes{0x00});
+                REQUIRE (pop::downsample (Bytes{0b11111111, 0b11111111, 0b00000000, 0b00000000}, 4, &s) == Bytes{0xf0});
+                REQUIRE (pop::downsample (Bytes{0b11110000, 0b11110000, 0b11110000, 0b11110000}, 4, &s) == Bytes{0xaa});
+
+                SECTION ("16384") // Found by chance
+                {
+                        auto data = std::views::repeat (0xcc, 16384) | std::ranges::to<Bytes> ();
+                        uint8_t s{};
+                        auto zoomedOut = pop::downsample (data, 8, &s);
+                        REQUIRE (zoomedOut.size () == 2048);
+                }
         }
 
-        SECTION ("1 bit")
+        SECTION ("Downsample look-up table")
         {
-                Bytes input{0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
-                State state;
-                auto result = downsample (input, 0, 64, 8, &state);
-                REQUIRE (result == Bytes{0x00});
-        }
+                uint8_t s{};
 
-        SECTION ("2 bits")
-        {
-                Bytes input{0x03, 0x30, 0x03, 0x30, 0x03, 0x30, 0x03, 0x30};
-                State state;
-                auto result = downsample (input, 0, 64, 8, &state);
-                REQUIRE (result == Bytes{0x00});
-        }
-
-        SECTION ("3 and 5 bits")
-        {
-                Bytes input{0x03, 0x30, 0x03, 0x30, 0x1f, 0xf1, 0x1f, 0xf1};
-                State state;
-                auto result = downsample (input, 0, 64, 8, &state);
-                REQUIRE (result == Bytes{0x0f});
-        }
-
-        SECTION ("6 bits")
-        {
-                Bytes input{0xf3, 0x3f, 0xf3, 0x3f, 0x3f, 0xf3, 0x3f, 0xf3};
-                State state;
-                auto result = downsample (input, 0, 64, 8, &state);
-                REQUIRE (result == Bytes{0xff});
-        }
-
-        SECTION ("Half bits set 0xf0")
-        {
-                Bytes input{0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0};
-                State state;
-                auto result = downsample (input, 0, 64, 8, &state);
-                REQUIRE (result == Bytes{0xaa});
-        }
-
-        SECTION ("Half bits set 0xaa")
-        {
-                Bytes input{0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa};
-                State state;
-                auto result = downsample (input, 0, 64, 8, &state);
-                REQUIRE (result == Bytes{0xaa});
+                REQUIRE (lut::downsample (Bytes{0x00, 0x00}, 2, &s) == Bytes{0x00});
+                REQUIRE (lut::downsample (Bytes{0x00, 0x00, 0x00, 0x00}, 2, &s) == Bytes{0x00, 0x00});
+                REQUIRE (lut::downsample (Bytes{0b11111111, 0b00000000}, 2, &s) == Bytes{0xf0});
+                REQUIRE (lut::downsample (Bytes{0b11001100, 0b11001100}, 2, &s) == Bytes{0xaa});
+                REQUIRE (lut::downsample (Bytes{0b11001100, 0b11001100, 0b11111111, 0b00000000}, 2, &s) == Bytes{0xaa, 0xf0});
+                REQUIRE (lut::downsample (Bytes{0b10101010, 0b10101010}, 2, &s) == Bytes{0b10101010});
         }
 }
 
-TEST_CASE ("3 -> 2", "[downsample]")
+/****************************************************************************/
+
+TEST_CASE ("comparison", "[popcount]")
 {
-        SECTION ("0 bits")
+        std::random_device rd;
+        std::uniform_int_distribution uni (0, 255);
+        auto data = std::views::iota (0, 16384) | std::views::transform ([&uni, &rd] (auto) { return uni (rd); }) | std::ranges::to<Bytes> ();
+
+        SECTION ("/2 state=0")
         {
-                Bytes input{0b10010010, 0b01001001, 0b00100100, 0b10010011};
-                State state;
-                auto result = downsample (input, 0, 30, 20, &state);
-                REQUIRE (result == Bytes{0b10001000, 0b10001000});
+                uint8_t s1{};
+                auto a = pop::downsample (data, 2, &s1);
+
+                uint8_t s2 = 0;
+                auto b = lut::downsample (data, 2, &s2);
+
+                REQUIRE (a.size () == b.size ());
+
+                auto words = data | std::views::adjacent_transform<2> ([] (uint8_t a, uint8_t b) -> uint16_t { return a << 8 | b; })
+                        | std::views::stride (2) | std::ranges::to<std::vector> ();
+
+                REQUIRE (words.size () == a.size ());
+
+                // for (auto const &[src, a, b] : std::views::zip (words, a, b)) {
+                //         std::println ("src: {:016b}, d<2>: {:08b}, d3: {:08b} {}", src, a, b, (a != b) ? ("*") : (""));
+                // }
+
+                REQUIRE (a == b);
         }
 
-        SECTION ("1 bits")
+        SECTION ("/2 state=1")
         {
-                Bytes input{0b11011011, 0b01101101, 0b10110110, 0b11011000};
-                State state;
-                auto result = downsample (input, 0, 30, 20, &state);
-                REQUIRE (result == Bytes{0xaa, 0xaa});
+                uint8_t s1 = 1;
+                auto a = pop::downsample (data, 2, &s1);
+
+                uint8_t s2 = 1;
+                auto b = lut::downsample (data, 2, &s2);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/4 state=0")
+        {
+                uint8_t s1{};
+                uint8_t s2{};
+                auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
+
+                uint8_t s = 0;
+                auto b = lut::downsample (data, 4, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/4 state=1")
+        {
+                uint8_t s1 = 0;
+                uint8_t s2 = 1;
+                auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
+
+                uint8_t s = 0b01;
+                auto b = lut::downsample (data, 4, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/4 state=2")
+        {
+                uint8_t s1 = 1;
+                uint8_t s2 = 0;
+                auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
+
+                uint8_t s = 0b10;
+                auto b = lut::downsample (data, 4, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/4 state=3")
+        {
+                uint8_t s1 = 1;
+                uint8_t s2 = 1;
+                auto a = pop::downsample (pop::downsample (data, 2, &s1), 2, &s2);
+
+                uint8_t s = 0b11;
+                auto b = lut::downsample (data, 4, &s);
+
+                REQUIRE (a == b);
+        }
+
+        /*--------------------------------------------------------------------------*/
+
+        SECTION ("/8 state=0")
+        {
+                uint8_t s1 = 0;
+                uint8_t s2 = 0;
+                uint8_t s3 = 0;
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
+
+                uint8_t s = 0b000;
+                auto b = lut::downsample (data, 8, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=1")
+        {
+                uint8_t s1 = 0;
+                uint8_t s2 = 0;
+                uint8_t s3 = 1;
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
+
+                uint8_t s = 0b001;
+                auto b = lut::downsample (data, 8, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=2")
+        {
+                uint8_t s1 = 0;
+                uint8_t s2 = 1;
+                uint8_t s3 = 0;
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
+
+                uint8_t s = 0b010;
+                auto b = lut::downsample (data, 8, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=3")
+        {
+                uint8_t s1 = 0;
+                uint8_t s2 = 1;
+                uint8_t s3 = 1;
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
+
+                uint8_t s = 0b011;
+                auto b = lut::downsample (data, 8, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=4")
+        {
+                uint8_t s1 = 1;
+                uint8_t s2 = 0;
+                uint8_t s3 = 0;
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
+
+                uint8_t s = 0b100;
+                auto b = lut::downsample (data, 8, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=5")
+        {
+                uint8_t s1 = 1;
+                uint8_t s2 = 0;
+                uint8_t s3 = 1;
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
+
+                uint8_t s = 0b101;
+                auto b = lut::downsample (data, 8, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=6")
+        {
+                uint8_t s1 = 1;
+                uint8_t s2 = 1;
+                uint8_t s3 = 0;
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
+
+                uint8_t s = 0b110;
+                auto b = lut::downsample (data, 8, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("/8 state=7")
+        {
+                uint8_t s1 = 1;
+                uint8_t s2 = 1;
+                uint8_t s3 = 1;
+                auto a = pop::downsample (pop::downsample (pop::downsample (data, 2, &s1), 2, &s2), 2, &s3);
+
+                uint8_t s = 0b111;
+                auto b = lut::downsample (data, 8, &s);
+
+                REQUIRE (a == b);
+        }
+
+        SECTION ("print") { lutD8_f (); }
+}
+
+/****************************************************************************/
+
+/**
+ * This is the function that perpared the LUT for downsample /2 function.
+ */
+void lutD2_f ()
+{
+        bool state{};
+
+        auto last = [&state] (int bits) mutable -> bool {
+                if (bits == 1) {
+                        bits = !state;
+                        state = bits; // Flipping back and forth
+                }
+
+                return bool (bits);
+        };
+
+        for (uint8_t ch : std::views::iota (0, 256)) {
+                state = false; // Change this from true to false in order to generate both tables.
+                int bit3 = last (std::popcount (uint8_t (ch & 0b11000000)));
+                int bit2 = last (std::popcount (uint8_t (ch & 0b00110000)));
+                int bit1 = last (std::popcount (uint8_t (ch & 0b00001100)));
+                int bit0 = last (std::popcount (uint8_t (ch & 0b00000011)));
+
+                uint8_t o = bit3 << 3 | bit2 << 2 | bit1 << 1 | bit0 << 0;
+                (void)o;
+                // std::println ("ch: {}, o: {}", ch, o);
+
+                // std::println ("{}, {:08b}. {:#x}, {:04b}, s: {}", ch, ch, o, o, int (state));
+                std::print ("{},", int (state));
+                // std::print ("{},", int (o));
         }
 }
 
-TEST_CASE ("4 -> 2 offset", "[downsample]")
+/**
+ * This is the function that perpared the LUT for downsample /4 function.
+ */
+void lutD4_f ()
 {
-        SECTION ("offset 0")
-        {
-                Bytes input{0b11111100, 0b11001100, 0b11001100, 0b11001100};
-                State state;
-                auto result = downsample (input, 0, 32, 16, &state);
-                REQUIRE (result == Bytes{0b11101010, 0b10101010});
-        }
+        auto last = [] (bool *state, int bits) -> bool {
+                if (bits == 1) {
+                        bits = !(*state);
+                        *state = bits; // Flipping back and forth
+                }
 
-        SECTION ("offset 4")
-        {
-                Bytes input{
-                        0b11111100, 0b11001100, 0b11001100, 0b11001100, 0b11001111,
-                };
-                State state;
-                auto result = downsample (input, 4, 32, 16, &state);
-                REQUIRE (result == Bytes{0b10101010, 0b10101010});
-        }
+                return bool (bits);
+        };
 
-        SECTION ("offset 8")
-        {
-                Bytes input{
-                        0b11111100, 0b11001100, 0b11001100, 0b11001100, 0b11001111,
-                };
-                State state;
-                auto result = downsample (input, 8, 32, 16, &state);
-                REQUIRE (result == Bytes{0b10101010, 0b10101011});
+        bool state0{};
+        bool state1{};
+
+        for (uint8_t ch : std::views::iota (0, 256)) {
+                state0 = true; // Change this from true to false in order to generate both tables.
+                state1 = true;
+
+                int bit3 = last (&state0, std::popcount (uint8_t (ch & 0b11000000)));
+                int bit2 = last (&state0, std::popcount (uint8_t (ch & 0b00110000)));
+                int bit1 = last (&state0, std::popcount (uint8_t (ch & 0b00001100)));
+                int bit0 = last (&state0, std::popcount (uint8_t (ch & 0b00000011)));
+
+                uint8_t o = bit3 << 3 | bit2 << 2 | bit1 << 1 | bit0 << 0;
+                (void)o;
+
+                int bit1n = last (&state1, std::popcount (uint8_t (o & 0b00001100)));
+                int bit0n = last (&state1, std::popcount (uint8_t (o & 0b00000011)));
+
+                uint8_t p = bit1n << 1 | bit0n << 0;
+                (void)p;
+
+                // std::println ("{}, {:08b}. {:#x}, {:04b}, s: {}", ch, ch, o, o, int (state));
+                std::print ("{},", int (state0 << 1 | state1));
+                // std::print ("{},", int (p));
         }
 }
 
-TEST_CASE ("BlockArray", "[downsample]")
+/**
+ * This is the function that perpared the LUT for downsample /8 function.
+ */
+void lutD8_f ()
 {
-        SECTION ("offset 0")
-        {
-                constexpr auto BITS_PER_SAMPLE = 1U;
-                constexpr size_t CHANNEL = 0;
-                constexpr size_t INPUT_SIZE_BYTES = 6;
-                constexpr size_t INPUT_SIZE_BITS = INPUT_SIZE_BYTES * 8;
-                constexpr size_t INPUT_OFFSET_BITS = 0;
-                constexpr size_t OUTPUT_SIZE_BITS = 8 * 3;
+        auto last = [] (bool *state, int bits) -> bool {
+                if (bits == 1) {
+                        bits = !(*state);
+                        *state = bits; // Flipping back and forth
+                }
 
-                BlockArray blockArray;
-                blockArray.setBlockSizeB (2);
-                blockArray.append (BITS_PER_SAMPLE, std::vector<Bytes>{Bytes{0b11111100, 0b11001100}});
-                blockArray.append (BITS_PER_SAMPLE, std::vector<Bytes>{Bytes{0b11001100, 0b11001100}});
-                blockArray.append (BITS_PER_SAMPLE, std::vector<Bytes>{Bytes{0b11001100, 0b11001111}});
+                return bool (bits);
+        };
 
-                auto r = blockArray.range (0, INPUT_SIZE_BITS);
-                REQUIRE (std::ranges::distance (r) == 3);
+        bool state0{};
+        bool state1{};
+        bool state2{};
 
-                State state;
-                BlockRangeWordSpan<uint8_t const, BlockArray::Container> rbs{r, CHANNEL, 0, INPUT_SIZE_BYTES};
-                auto result = downsample (rbs, INPUT_OFFSET_BITS, INPUT_SIZE_BITS, OUTPUT_SIZE_BITS, &state);
+        for (int i = 0; i < 8; ++i) {
+                std::println ("Lut0 {{");
 
-                REQUIRE (result == Bytes{0b11101010, 0b10101010, 0b10101011});
+                for (uint8_t ch : std::views::iota (0, 256)) {
+                        state0 = (i & 4) >> 2;
+                        state1 = (i & 2) >> 1;
+                        state2 = i & 1;
+
+                        int bit3 = last (&state0, std::popcount (uint8_t (ch & 0b11000000)));
+                        int bit2 = last (&state0, std::popcount (uint8_t (ch & 0b00110000)));
+                        int bit1 = last (&state0, std::popcount (uint8_t (ch & 0b00001100)));
+                        int bit0 = last (&state0, std::popcount (uint8_t (ch & 0b00000011)));
+
+                        uint8_t o = bit3 << 3 | bit2 << 2 | bit1 << 1 | bit0 << 0;
+                        (void)o;
+
+                        int bit1n = last (&state1, std::popcount (uint8_t (o & 0b00001100)));
+                        int bit0n = last (&state1, std::popcount (uint8_t (o & 0b00000011)));
+
+                        uint8_t p = bit1n << 1 | bit0n << 0;
+                        (void)p;
+
+                        int bit0m = last (&state2, std::popcount (uint8_t (p & 0b00000011)));
+
+                        uint8_t q = bit0m;
+                        (void)q;
+
+                        // std::println ("{}, {:08b}. {:#x}, {:04b}, s: {}", ch, ch, o, o, int (state));
+                        std::print ("{},", int (state0 << 2 | state1 << 1 | state2));
+                        // std::print ("{},", int (q));
+                }
+
+                std::println ("}},");
         }
 }

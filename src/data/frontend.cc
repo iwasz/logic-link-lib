@@ -50,33 +50,33 @@ DigitalFrontend::~DigitalFrontend () { backend->removeObserver (this); }
 
 /****************************************************************************/
 
-BlockRangeBitSpan<uint8_t const, BlockArray::Container> DigitalFrontend::channel (size_t groupIdx, size_t channelIdx, SampleIdx begin,
-                                                                                  SampleNum length)
-{
-        ZoneScoped;
-        if (int (channelIdx) > int (backend->channelsNumber (groupIdx)) - 1) {
-                return {};
-        }
+// BlockRangeBitSpan<uint8_t const, BlockArray::Container> DigitalFrontend::channel (size_t groupIdx, size_t channelIdx, SampleIdx begin,
+//                                                                                   SampleNum length)
+// {
+//         ZoneScoped;
+//         if (int (channelIdx) > int (backend->channelsNumber (groupIdx)) - 1) {
+//                 return {};
+//         }
 
-        // Stream const &grp = group (groupIdx, begin, begin + length);
-        auto grp = backend->range (groupIdx, begin, begin + length);
+//         // Stream const &grp = group (groupIdx, begin, begin + length);
+//         auto grp = backend->range (groupIdx, begin, begin + length);
 
-        if (grp.empty ()) {
-                return {};
-        }
+//         if (grp.empty ()) {
+//                 return {};
+//         }
 
-        // auto joined = grp |
+//         // auto joined = grp |
 
-        ZoneNamedN (z1, "bitSpanPrepare", true);
-        auto grpStart = grp.front ().firstSampleNo ();
-        auto off = begin - grpStart;
+//         ZoneNamedN (z1, "bitSpanPrepare", true);
+//         auto grpStart = grp.front ().firstSampleNo ();
+//         auto off = begin - grpStart;
 
-        if (off < 0) {
-                throw Exception{"Frontend internal error. Offset < 0."};
-        }
+//         if (off < 0) {
+//                 throw Exception{"Frontend internal error. Offset < 0."};
+//         }
 
-        return {grp, channelIdx, size_t (off), size_t (length)};
-}
+//         return {grp, channelIdx, size_t (off), size_t (length)};
+// }
 
 /****************************************************************************/
 

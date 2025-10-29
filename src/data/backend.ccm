@@ -196,12 +196,6 @@ public:
          */
         SubRange range (SampleIdx begin, SampleIdx end, size_t zoomOut = 1, bool peek = false) const;
 
-        /**
-         * Returns a Stream cut precisely down to the byte.
-         * @deprecated Use more fine grained methods. To be removed.
-         */
-        Stream clipBytes (ByteIdx begin, ByteIdx end);
-
         size_t channelsNumber () const { return (levels[0].data_.empty ()) ? (0) : (levels[0].data_.front ().channelsNumber ()); }
         SampleNum channelLength () const { return channelLength_; }
 

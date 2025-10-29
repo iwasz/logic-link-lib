@@ -61,10 +61,7 @@ target_sources(${PROJECT_NAME}
     queue.cc
     rearrange.cc
     uart.cc
-    rangeBitSpan.cc
     downsample.cc
-    rangeWordSpan.cc
-    downsamplePopcount.cc
     types.cc
 
   PUBLIC FILE_SET CXX_MODULES FILES

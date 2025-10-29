@@ -80,11 +80,14 @@ TEST_CASE ("square wave integration test usecase", "[frontend]")
 
         DigitalFrontend frontend{&backend};
 
+        auto extractChannel
+                = std::views::transform ([] (auto const &block) { return block.channel (15); }) | std::views::join | std::ranges::to<Bytes> ();
+
         // Simulate how the GUI gets the data to render first 3 tiles of channel 15
         // Offsets and lengths taken from the GUI app itself
-        auto tileAData = frontend.channel (0, 15, 0, 750);
-        auto tileBData = frontend.channel (0, 15, 750, 750);
-        auto tileCData = frontend.channel (0, 15, 1500, 750);
+        auto tileAData = frontend.range (0, 0, 750, 1, false) | extractChannel;
+        auto tileBData = frontend.range (0, 750, 750, 1, false) | extractChannel;
+        auto tileCData = frontend.range (0, 1500, 750, 1, false) | extractChannel;
 
         /// TODO! cross the blocks! i.e. past 8192 like:
         // auto tileCData = frontend.channel (0, 15, 8000, 750);
@@ -95,15 +98,16 @@ TEST_CASE ("square wave integration test usecase", "[frontend]")
                 | std::views::join | std::views::take (3 * 750);
 
         // In C++26's STL we could concat tileA, B and C.
-        for (auto [expected, actual] : std::views::zip (expectedData, tileAData)) {
+        for (auto [expected, actual] : std::views::zip (expectedData, OwningBitSpan{tileAData, 0, 750})) {
                 REQUIRE (expected == actual);
         }
 
-        for (auto [expected, actual] : std::views::zip (expectedData | std::views::drop (750), tileBData)) {
+        for (auto [expected, actual] : std::views::zip (expectedData | std::views::drop (750), OwningBitSpan{tileBData, 750, 750})) {
                 REQUIRE (expected == actual);
         }
 
-        for (auto [expected, actual] : std::views::zip (expectedData | std::views::drop (1500), tileCData)) {
+        // TODO make OwningBitSpan a view and simply pipe the data to it as all other views do.
+        for (auto [expected, actual] : std::views::zip (expectedData | std::views::drop (1500), OwningBitSpan{tileCData, 1500, 750})) {
                 REQUIRE (expected == actual);
         }
 }
