@@ -3,6 +3,9 @@ target_sources(${PROJECT_NAME}
     backend.cc
     frontend.cc
     types.cc
+    block.cc
+    downSampler.cc
+    blockArray.cc
 
   PUBLIC FILE_SET CXX_MODULES FILES
     acqParams.ccm
@@ -13,4 +16,7 @@ target_sources(${PROJECT_NAME}
     queue.ccm
     bitSpan.ccm
     owningBitSpan.ccm
+    block.ccm
+    downSampler.ccm
+    blockArray.ccm
 )

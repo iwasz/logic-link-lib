@@ -9,9 +9,6 @@
 module;
 #include "common/constants.hh"
 #include <Tracy.hpp>
-#include <climits>
-
-#include <print>
 module logic.data;
 import logic.core;
 import logic.processing;
@@ -20,7 +17,7 @@ namespace logic {
 
 // auto binaryToGray (auto num) { return num ^ (num >> 1); };
 
-DigitalFrontend::DigitalFrontend (IBackend *backend) : backend{backend}, cache (1) { backend->addObserver (this); }
+DigitalFrontend::DigitalFrontend (IBackend *backend) : backend{backend} { backend->addObserver (this); }
 
 /****************************************************************************/
 

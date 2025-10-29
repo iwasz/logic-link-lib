@@ -9,8 +9,6 @@
 module;
 #include "common/constants.hh"
 #include <atomic>
-#include <climits>
-
 export module logic.data:frontend;
 import :types;
 import :backend;
@@ -41,26 +39,6 @@ struct IFrontend {
         /// Number of samples so far.
         virtual SampleNum size (size_t groupIdx) const = 0;
 
-        /**
-         * All available new data, that was not read before. This is intrusive operation,
-         * meaning that you get the data only once. It works like Java Iterator, but if there's
-         * no new data, it will wait on a conditional_variable.
-         */
-        // virtual ChannelStreams next () = 0; // TODO this will go to a separate interface for Sequential access.
-
-        /**
-         * Returns all available data from a range of sample numbers.
-         */
-        // virtual ChannelStreams const &range (TimePoint const &begin, TimePoint const &end) = 0;
-
-        // virtual ChannelStream const &group (size_t groupIdx, TimePoint const &begin, TimePoint const &end) = 0;
-        // virtual Stream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) = 0;
-
-        // virtual Bytes const &channel (size_t groupIdx, size_t channelIdx, TimePoint const &begin, TimePoint const &end) = 0;
-        // TODO following interface works only for the binary data
-        // virtual BlockRangeBitSpan<uint8_t const, BlockArray::Container> channel (size_t groupIdx, size_t channelIdx, SampleIdx offset,
-        //                                                                          SampleNum length) = 0;
-
         virtual BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek) = 0;
 
         /// Says if there's new data since last called. Warning! Clears on read!
@@ -80,48 +58,8 @@ public:
         ~DigitalFrontend ();
 
         SampleNum size (size_t groupIdx) const override { return backend->channelLength (groupIdx); }
-        // Stream const &group (size_t groupIdx, SampleIdx const &begin, SampleIdx const &end) override;
-
-        // // TODO remove dependency on BlockArray::Container.
-        // BlockRangeBitSpan<uint8_t const, BlockArray::Container> channel (size_t groupIdx, size_t channelIdx, SampleIdx begin,
-        //                                                                  SampleNum length) override;
 
         BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek) override;
-
-        // ChannelStreams next () override { return {}; }
-        // ChannelStreams const &range (TimePoint const &begin, TimePoint const &end) override { return current; }
-
-        // ChannelStream const &group (size_t groupIdx, TimePoint const &begin, TimePoint const &end) override
-        // {
-        //         return range (begin, end).at (groupIdx);
-        // }
-
-        // Bytes const &channel (size_t groupIdx, size_t channelIdx, TimePoint const &begin, TimePoint const &end) override
-        // {
-        //         (void)backend;
-        //         return group (groupIdx, begin, end).data.at (channelIdx);
-        // }
-
-        // std::span<uint8_t const> channel (size_t groupIdx, size_t channelIdx, SampleIdx const &begin, SampleIdx const &end)
-        // override
-        // {
-        //         (void)backend;
-        //         Bytes const &currentData = group (groupIdx, begin, end).data.at (channelIdx);
-        //         auto offset = begin / CHAR_BIT;
-
-        //         if (offset >= currentData.size ()) {
-        //                 return {};
-        //         }
-
-        //         auto size = (end - begin) / CHAR_BIT;
-
-        //         if (offset + size > currentData.size ()) {
-        //                 size = currentData.size () - offset;
-        //         }
-
-        //         // std::println ("offset: {}, size: {}", offset, size);
-        //         return {std::next (currentData.cbegin (), offset), size};
-        // }
 
         void onNewData () override { newData.store (true); };
 
@@ -130,16 +68,9 @@ public:
 
 private:
         IBackend *backend;
-        Streams cache;
         SampleIdx cachedBegin{};
         SampleIdx cachedEnd{};
         std::atomic_bool newData;
 };
-
-/**
- * @brief
- *
- */
-class SequentialAccessFrontend {};
 
 } // namespace logic

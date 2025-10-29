@@ -1,0 +1,42 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include "common/constants.hh"
+#include <Tracy.hpp>
+export module logic.data:downSampler;
+import :types;
+
+export namespace logic {
+
+/**
+ *
+ */
+struct IDownSampler {
+        IDownSampler () = default;
+        IDownSampler (IDownSampler const &) = default;
+        IDownSampler &operator= (IDownSampler const &) = default;
+        IDownSampler (IDownSampler &&) noexcept = default;
+        IDownSampler &operator= (IDownSampler &&) noexcept = default;
+        virtual ~IDownSampler () = default;
+
+        virtual Bytes operator() (Bytes const &in, size_t zoomOut) const = 0;
+};
+
+/**
+ * Class preservig the "even bit" state.
+ */
+class DigitalDownSampler : public IDownSampler {
+public:
+        Bytes operator() (Bytes const &block, size_t zoomOut) const;
+
+private:
+        mutable uint8_t state{};
+};
+
+} // namespace logic

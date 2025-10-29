@@ -1,0 +1,133 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include "common/constants.hh"
+#include <Tracy.hpp>
+#include <list>
+#include <map>
+#include <memory>
+#include <ranges>
+#include <vector>
+export module logic.data:blockArray;
+import :block;
+import :types;
+import :downSampler;
+
+export namespace logic {
+
+/**
+ * Multiple blocks one after another.
+ */
+class BlockArray {
+public:
+        /*
+         * TODO The container first was a std::deque, but deque uses 2 vectors inside and
+         * invalidates (it may) it's iterators on push_back and my app crashed (I store
+         * these iterators and pass them around). I temporarily switched to pre-allocated
+         * std::vector and all was fine but then as a final solution I opted for std::list.
+         * And it started to crash again (search Obsidian for `deque`). Albeit I believe,
+         * this time the culprit are not invalidated iters, EVEN THOUGH switching back to
+         * pre-allocated vector seems to make the problem go away.
+         * After introducing levels, the `reserve` call doesn't get called when BlockArray
+         * gets copied / moved, and thus I moved yet another time do std::list.
+         */
+        // using Container = std::vector<Block>;
+        using Container = std::list<Block>;
+        using SubRange = std::ranges::subrange<Container::const_iterator>;
+
+        BlockArray (size_t channelsNumber = 1, size_t maxZoomOutLevels = 1, size_t zoomOutPerLevel = 1);
+        void append (uint8_t bitsPerSample, std::vector<Bytes> &&channels);
+        void clear ();
+
+        /**
+         * Returns block range that includes sample numbers passed (inclusive).
+         */
+        SubRange range (SampleIdx begin, SampleIdx end, size_t zoomOut = 1, bool peek = false) const;
+
+        size_t channelsNumber () const { return (levels[0].data_.empty ()) ? (0) : (levels[0].data_.front ().channelsNumber ()); }
+        SampleNum channelLength () const { return channelLength_; }
+
+        size_t blockSizeB () const { return blockSizeB_; } /// Returns the block size. Block size is the number of bytes `append` accepts.
+        void setBlockSizeB (size_t v) { blockSizeB_ = v; } /// Sets the block size.
+
+        size_t blockSizeMultiplier () const { return blockSizeMultiplier_; }
+        void setBlockSizeMultiplier (size_t v) { blockSizeMultiplier_ = v; }
+
+private:
+        friend struct BlockArrayUtHelper; // Defined in UTs
+        using DownSamplers = std::vector<std::unique_ptr<IDownSampler>>;
+        Block downsample (Block const &block, size_t zoomOut, DownSamplers const &downSamplers) const;
+
+        // StreamType type_{};
+        // SampleRate sampleRate_{};
+
+        /// Block that we append to to reach blockSizeB_ * blockSizeMultiplier_ bytes.
+        Block pendingBlock;
+
+        using BlockIndex = std::map<SampleIdx, Container::const_iterator>;
+
+        struct ZoomOutLevel {
+                // ZoomOutLevel () { data_.reserve (2000000); }
+                Container data_;   // Grows horizontally.
+                BlockIndex index_; // Like DB index SampleIndex -> block.
+                size_t zoomOut = 1;
+                Container::const_iterator zoomedEnd = data_.cbegin ();
+                std::vector<std::unique_ptr<IDownSampler>> downSamplers;
+        };
+
+        std::vector<ZoomOutLevel> levels;
+        size_t zoomOutPerLevel_;
+
+        SampleNum channelLength_{};
+        size_t blockSizeB_ = 0;
+        size_t blockSizeMultiplier_ = 1;
+};
+
+// Multiple BlockArray-s, each represeinging one channel-group
+using BlockArrays = std::vector<BlockArray>;
+
+/****************************************************************************/
+
+template <typename Range>
+concept block_range = std::ranges::range<Range> && std::convertible_to<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, Block>;
+
+template <block_range Range> SampleIdx firstSampleNo (Range const &r)
+{
+        return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->firstSampleNo ());
+}
+
+template <block_range Range> SampleIdx lastSampleNo (Range const &r) { return (std::ranges::empty (r)) ? (0) : (r.back ().lastSampleNo ()); }
+
+template <block_range Range> size_t channelsNumber (Range const &r)
+{
+        return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->channelsNumber ());
+}
+
+template <block_range Range> SampleNum channelLength (Range const &r)
+{
+        // I assume all channels (except the last) have equal length.
+        SampleNum size{};
+
+        if (auto rsize = std::ranges::distance (r); rsize > 1) {
+                size = std::ranges::begin (r)->channelLength () * (rsize - 1);
+        }
+
+        // This imposes some restricions.
+        size += r.back ().channelLength ();
+        return size;
+}
+
+template <block_range Range> uint8_t bitsPerSample (Range const &r)
+{
+        return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->bitsPerSample ());
+}
+
+template <block_range Range> size_t zoomOut (Range const &r) { return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->zoomOut ()); }
+
+} // namespace logic

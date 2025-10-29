@@ -252,7 +252,7 @@ TEST_CASE ("Join multiplier", "[backend]")
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
 
                 auto r = cbs.range (0, 128);
-                REQUIRE (std::ranges::distance (r) == 2);
+                REQUIRE (std::ranges::distance (r) == 2); // TODO
 
                 auto ch0 = r | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
                 REQUIRE (std::ranges::equal (ch0, Bytes{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xa, 0xb}));

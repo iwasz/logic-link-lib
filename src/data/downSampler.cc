@@ -6,14 +6,14 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-export module logic.data;
-export import :acqParams;
-export import :block;
-export import :backend;
-export import :frontend;
-export import :queue;
-export import :types;
-export import :span;
-export import :span.owning;
-export import :downSampler;
-export import :blockArray;
+module;
+#include "common/constants.hh"
+#include <Tracy.hpp>
+module logic.data;
+import logic.processing;
+
+namespace logic {
+
+Bytes DigitalDownSampler::operator() (Bytes const &block, size_t zoomOut) const { return logic::lut::downsample (block, zoomOut, &state); }
+
+} // namespace logic
