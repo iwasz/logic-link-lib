@@ -54,7 +54,7 @@ Block BlockArray::downsample (Block const &block, size_t zoomOut, DownSamplers c
 
 void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 {
-        if (channels.empty ()) {
+        if (channels.empty () || channels.front ().empty ()) {
                 return;
         }
 
@@ -62,39 +62,35 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
                 throw Exception{std::format ("Block size mismatch. Allowed: {} != provided: {}", blockSizeB_, currentSize)};
         }
 
-        auto const multiBlockBytes = blockSizeB_ * blockSizeMultiplier_;
-        auto const SAMPLES_PER_BYTE = CHAR_BIT / bitsPerSample;
-        auto const chLenBits = channels.front ().size () * SAMPLES_PER_BYTE;
+        // Number of bytes that can be safely digested by a downsample algorithm.
+        auto const multiBlockSizeB = blockSizeB_ * blockSizeMultiplier_;
+        static auto blockB = [] (Block const &blk) { return blk.channelBytes () * blk.channelsNumber (); };
 
-        if (chLenBits == 0) {
-                return;
-        }
-
-        auto doAppend = [multiBlockBytes, this] (Block block, size_t levNo, auto &that) -> void {
-                block.zoomOut_ = std::pow (zoomOutPerLevel_, levNo);
-
+        auto doAppend = [multiBlockSizeB, this] (Block block, size_t levNo, auto &that) -> void {
+                block.zoomOut_ = size_t (std::pow (zoomOutPerLevel_, levNo));
                 auto &level = levels.at (levNo);
+                auto &data = level.data_;
 
                 if (levels.size () - 1 > levNo) {
                         Block zoomed = downsample (block, zoomOutPerLevel_, level.downSamplers);
                         that (std::move (zoomed), levNo + 1, that);
                 }
-
-                if (level.data_.empty () || level.data_.back ().channelBytes () * level.data_.back ().channelsNumber () >= multiBlockBytes) {
-                        level.data_.emplace_back (std::move (block));
-                        level.data_.back ().firstSampleNo () = channelLength_;
+                // We start fresh, OR last block in this level is `multiBlockSizeB` bytes.
+                if (data.empty () || blockB (data.back ()) >= multiBlockSizeB) {
+                        data.emplace_back (std::move (block));
+                        data.back ().firstSampleNo () = channelLength_;
                 }
                 else {
-                        level.data_.back ().append (std::move (block));
+                        data.back ().append (std::move (block));
                 }
 
-                auto p = BlockIndex::value_type{level.data_.back ().lastSampleNo (), std::next (level.data_.cend (), -1)};
+                auto p = BlockIndex::value_type{data.back ().lastSampleNo (), std::next (data.cend (), -1)};
 
                 /*
-                 * index_ size and deta_ sizes have to be the same. So if index_ already
+                 * index_ size and data_ sizes have to be the same. So if index_ already
                  * contains the same number of entries, it means we have to modify it.
                  */
-                if (level.index_.size () >= level.data_.size ()) {
+                if (level.index_.size () >= data.size ()) {
                         level.index_.erase (std::next (level.index_.end (), -1)); // Last element has the highest key (lastSampleNo)
                 }
 
@@ -104,15 +100,12 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
         // Collect multiBlockBytes (blockSizeB_ * blockSizeMultiplier_) bytes of data, so the downsampling algorithms hev enough data to work on.
         pendingBlock.append (Block{bitsPerSample, std::move (channels)});
 
-        if (pendingBlock.channelBytes () * pendingBlock.channelsNumber () >= multiBlockBytes) {
+        if (blockB (pendingBlock) >= multiBlockSizeB) {
                 auto tmp = pendingBlock.channelLength ();
                 doAppend (std::move (pendingBlock), 0, doAppend);
-                // channelLength_ += SampleNum (chLenBits);
                 channelLength_ += tmp;
                 pendingBlock = Block{};
         }
-
-        // channelLength_ += SampleNum (chLenBits);
 }
 
 /****************************************************************************/

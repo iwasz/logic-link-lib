@@ -38,7 +38,8 @@ void DemoDevice::start (IBackend *backend)
         }
 
         thread = std::thread{[backend, this] {
-                double delay = double (transferSize) * CHAR_BIT / acquisitionParams.digitalSampleRate;
+                auto dc = acquisitionParams.digitalChannels;
+                double delay = double (transferSize) * CHAR_BIT / (acquisitionParams.digitalSampleRate * dc);
                 auto chDelay = std::chrono::round<std::chrono::microseconds> (std::chrono::duration<double> (delay));
                 setThreadName ("DemoDev");
 
@@ -46,8 +47,6 @@ void DemoDevice::start (IBackend *backend)
                         ZoneNamedN (demoDev, "demoDev", true);
 
                         auto now = std::chrono::steady_clock::now ();
-
-                        auto dc = acquisitionParams.digitalChannels;
                         std::vector<Bytes> channels;
                         channels.reserve (dc);
 
