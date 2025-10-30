@@ -31,6 +31,12 @@ public:
         {
         }
 
+        Block (Block const &) = delete;
+        Block &operator= (Block const &) = delete;
+        Block (Block &&) = default;
+        Block &operator= (Block &&) = default;
+        ~Block () = default;
+
         void append (Container &&d);
         void append (Block &&d);
         void reserve (size_t channels, SampleNum bits);

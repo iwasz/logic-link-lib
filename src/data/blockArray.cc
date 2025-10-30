@@ -40,7 +40,7 @@ BlockArray::BlockArray (size_t channelsNumber, size_t maxZoomOutLevels, size_t z
 Block BlockArray::downsample (Block const &block, size_t zoomOut, DownSamplers const &downSamplers) const
 {
         if (zoomOut == 1) {
-                return block;
+                throw Exception{"`downsample` with `zoomOut == 1` is not supported"};
         }
 
         return {block.bitsPerSample (),
