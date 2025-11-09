@@ -70,6 +70,7 @@ UsbAsyncInput::~UsbAsyncInput () noexcept
 
         {
                 std::lock_guard lock{mutex};
+                // TODO would be great if this alone deleted all the USB devices. But they are shared between the lib and the user code.
                 handles.clear ();
         }
 

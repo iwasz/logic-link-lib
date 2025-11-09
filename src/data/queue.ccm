@@ -7,6 +7,7 @@
  ****************************************************************************/
 
 module;
+#include <chrono>
 #include <condition_variable>
 #include <deque>
 #include <mutex>
@@ -57,13 +58,14 @@ template <typename Elem> template <typename... T> void Queue<Elem>::push (T &&..
 template <typename Elem> std::unique_ptr<Elem> Queue<Elem>::pop ()
 {
         std::unique_lock lock{mutex};
-        cVar.wait (lock, [this] { return !data.empty () || closed_; });
+        // Wait while data is empty OR 10ms elapses. We don't wan't to block for too long.
+        cVar.wait_for (lock, std::chrono::milliseconds (10), [this] { return !data.empty () || closed_; });
 
-        if (closed_) {
+        if (closed_ || data.empty ()) {
                 return {};
         }
 
-        auto p = std::make_unique<Elem> (std::move (data.front ())); // TODO Why not to move?
+        auto p = std::make_unique<Elem> (std::move (data.front ()));
         data.pop_front ();
         return p;
 }

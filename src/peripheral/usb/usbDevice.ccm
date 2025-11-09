@@ -92,7 +92,6 @@ export struct UsbInterface {
  * Speciffic for **libusb**. Responsible for:
  * - Holds the internal representation (libusb_device_handle *)
  * - Can configure USb class / interface and app-logic stuff (using USB requests).
- * TODO In the future it will also decode received data.
  */
 export class UsbDevice : public AbstractDevice {
 public:
