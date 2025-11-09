@@ -30,7 +30,7 @@ DemoDevice::DemoDevice (EventQueue *eventQueue) : eventQueue_{eventQueue}
 
 void DemoDevice::start (IBackend *backend)
 {
-        notify (true, State::ok);
+        notify (true, Health::ok);
         totalSizePerChan = 0;
 
         if (thread.joinable ()) {
@@ -43,7 +43,7 @@ void DemoDevice::start (IBackend *backend)
                 auto chDelay = std::chrono::round<std::chrono::microseconds> (std::chrono::duration<double> (delay));
                 setThreadName ("DemoDev");
 
-                while (running ()) {
+                while (acquiring ()) {
                         ZoneNamedN (demoDev, "demoDev", true);
 
                         auto now = std::chrono::steady_clock::now ();
@@ -83,7 +83,7 @@ void DemoDevice::stop ()
 {
         try {
                 spdlog::info ("DemoDevice stopped. Samples generated per channel: {}", totalSizePerChan);
-                notify (false, State::ok);
+                notify (false, Health::ok);
 
                 if (thread.joinable ()) {
                         thread.join ();

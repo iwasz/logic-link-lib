@@ -68,11 +68,11 @@ export struct IDevice {
         virtual void run () = 0;
 
         /// Simply if it's running the acquisition or not.
-        virtual bool running () const = 0;
+        virtual bool acquiring () const = 0;
 
         /// Separate method, because we can heve an error while running, or when stoped.
-        enum class State : uint8_t { ok, error };
-        virtual State state () const = 0;
+        enum class Health : uint8_t { ok, error };
+        virtual Health health () const = 0;
 
         /**
          * Get device statistics - speciffic to the device itself and the USB interface.
@@ -93,10 +93,10 @@ export struct IDevice {
  */
 export class AbstractDevice : public IDevice {
 public:
-        bool running () const override { return running_; }
-        State state () const override { return state_; }
+        bool acquiring () const override { return acquiring_; }
+        Health health () const override { return health_; }
 
-        void notify (std::optional<bool> running, std::optional<State> state);
+        void notify (std::optional<bool> running, std::optional<Health> state);
 
         /*--------------------------------------------------------------------------*/
 
@@ -108,8 +108,8 @@ protected:
 
 private:
         /// It's sole purpose is to indicate the status to the outside world.
-        mutable std::atomic<State> state_;
-        mutable std::atomic_bool running_;
+        mutable std::atomic<Health> health_;
+        mutable std::atomic_bool acquiring_;
 };
 
 /**
@@ -128,8 +128,6 @@ public:
 
         std::size_t hash () const override { return std::hash<std::size_t>{}(size_t (device_.get ())); }
 
-        // std::shared_ptr<IDevice> device () const { return device_; };
-
 private:
         /*
          * Pointer is shared because internal factories can delete an IDevice instance
@@ -143,11 +141,11 @@ private:
  */
 export class DeviceStatusAlarm : public AbstractAlarm<DeviceStatusAlarm> {
 public:
-        DeviceStatusAlarm (IDevice const *device, bool running, IDevice::State status) : device_{device}, running_{running}, status_{status} {}
+        DeviceStatusAlarm (IDevice const *device, bool running, IDevice::Health status) : device_{device}, running_{running}, status_{status} {}
 
         void execute (std::any const &func) const override
         {
-                auto f = std::any_cast<std::function<void (IDevice const *device, bool running, IDevice::State status)>> (func);
+                auto f = std::any_cast<std::function<void (IDevice const *device, bool running, IDevice::Health status)>> (func);
                 f (device_, running_, status_);
         }
 
@@ -156,6 +154,6 @@ public:
 private:
         IDevice const *device_;
         bool running_;
-        IDevice::State status_;
+        IDevice::Health status_;
 };
 } // namespace logic

@@ -48,7 +48,7 @@ public:
         void run () override;
         void kill () override
         {
-                kill_.store (true);
+                running_.store (false);
                 handlesCVar.notify_all ();
         }
 
@@ -58,7 +58,7 @@ private:
 
         static int hotplugCallback (struct libusb_context * /* ctx */, struct libusb_device *dev, libusb_hotplug_event event, void *userData);
         libusb_hotplug_callback_handle hotplugCallbackHandle{};
-        std::atomic_bool kill_;
+        std::atomic_bool running_ = true;
 
         using UsbHandles = std::unordered_map<libusb_device const *, std::pair<libusb_device_handle *, std::shared_ptr<UsbDevice>>>;
         UsbHandles handles;

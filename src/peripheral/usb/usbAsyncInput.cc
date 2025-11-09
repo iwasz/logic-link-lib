@@ -171,7 +171,7 @@ void UsbAsyncInput::acquireLoop ()
         setThreadName ("Acquire");
 
         while (true) {
-                if (kill_.load ()) {
+                if (!running_.load ()) {
                         break;
                 }
 
@@ -201,7 +201,7 @@ void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBacken
         setThreadName ("Analyze");
 
         while (true) {
-                if (kill_.load ()) {
+                if (!running_.load ()) {
                         break;
                 }
 
@@ -219,7 +219,7 @@ void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBacken
                          * is acquiring.
                          */
                         std::unique_lock lock{mutex};
-                        handlesCVar.wait (lock, [this] { return !handles.empty () || kill_; });
+                        handlesCVar.wait (lock, [this] { return !handles.empty () || !running_; });
 
                         for (auto &[deviceP, entryPair] : handles) {
                                 entryPair.second->run ();

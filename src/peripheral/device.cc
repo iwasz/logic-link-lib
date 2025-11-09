@@ -15,24 +15,24 @@ namespace logic {
 
 /****************************************************************************/
 
-void AbstractDevice::notify (std::optional<bool> running, std::optional<State> state)
+void AbstractDevice::notify (std::optional<bool> running, std::optional<Health> state)
 {
         if (running != std::nullopt) {
-                running_ = *running;
+                acquiring_ = *running;
         }
 
         if (state != std::nullopt) {
-                state_ = *state;
+                health_ = *state;
         }
 
-        eventQueue ()->addEvent<DeviceStatusAlarm> (this, running_, state_);
+        eventQueue ()->addEvent<DeviceStatusAlarm> (this, acquiring_, health_);
 }
 
 /****************************************************************************/
 
 void AbstractDevice::writeAcquisitionParams (common::acq::Params const &params, bool /* legacy */)
 {
-        if (running ()) {
+        if (acquiring ()) {
                 throw Exception{"UsbDevice::writeAcquisitionParams called on a running device."};
         }
 

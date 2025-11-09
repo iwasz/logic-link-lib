@@ -157,7 +157,7 @@ private:
         IBackend *backend{};
 
         /// Used to stop re-issuing the transfer.
-        std::atomic_bool stopRequest;
+        std::atomic_bool acquisitionStopRequest;
 };
 
 } // namespace logic
