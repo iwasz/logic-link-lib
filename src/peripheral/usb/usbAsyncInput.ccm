@@ -60,7 +60,7 @@ private:
         libusb_hotplug_callback_handle hotplugCallbackHandle{};
         std::atomic_bool kill_;
 
-        using UsbHandles = std::unordered_map<libusb_device const *, std::shared_ptr<UsbDevice>>;
+        using UsbHandles = std::unordered_map<libusb_device const *, std::pair<libusb_device_handle *, std::shared_ptr<UsbDevice>>>;
         UsbHandles handles;
         std::mutex mutex; // Protects the `handles` collection.
         std::condition_variable handlesCVar;

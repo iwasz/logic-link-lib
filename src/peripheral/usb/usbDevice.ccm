@@ -11,7 +11,6 @@ module;
 #include "common/params.hh"
 #include "common/stats.hh"
 #include <algorithm>
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <cstdint>
@@ -39,7 +38,7 @@ public:
         template <std::integral T> UsbRequest &integer (T u)
         {
                 data_.resize (data_.size () + sizeof (u));
-                uint8_t const *p = reinterpret_cast<uint8_t *> (&u);
+                uint8_t const *p = std::bit_cast<uint8_t *> (&u);
                 std::copy (p, std::next (p, sizeof (u)), std::prev (data_.end (), sizeof (u)));
                 return *this;
         }
@@ -113,6 +112,9 @@ public:
         void start (IBackend *backend) override;
         void stop () override;
         void run () override;
+
+        // Called by the controling input on disconnect or destroy.
+        void resetDeviceHandle () { deviceHandle_ = nullptr; }
 
 protected:
         libusb_device_handle *deviceHandle () { return deviceHandle_; };

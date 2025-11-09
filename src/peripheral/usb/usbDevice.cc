@@ -27,7 +27,7 @@ namespace logic {
 UsbDevice::~UsbDevice ()
 {
         libusb_free_transfer (transfer);
-        libusb_close (deviceHandle_);
+        // Device handles are closed in in the UsbAbstractInput which owns them.
 }
 
 /****************************************************************************/

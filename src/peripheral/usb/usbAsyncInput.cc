@@ -70,7 +70,13 @@ UsbAsyncInput::~UsbAsyncInput () noexcept
 
         {
                 std::lock_guard lock{mutex};
-                // TODO would be great if this alone deleted all the USB devices. But they are shared between the lib and the user code.
+
+                for (auto &[p, ent] : handles) {
+                        auto &[ph, dev] = ent;
+                        dev->resetDeviceHandle ();
+                        libusb_close (ph);
+                }
+
                 handles.clear ();
         }
 
@@ -107,7 +113,9 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
                                 std::shared_ptr<UsbDevice> device = input->usbFactory.create (desc.idVendor, desc.idProduct, devHandle);
                                 {
                                         std::lock_guard lock{input->mutex};
-                                        input->handles[dev] = device;
+                                        auto &entry = input->handles[dev];
+                                        entry.first = devHandle;
+                                        entry.second = device;
                                 }
 
                                 input->handlesCVar.notify_all ();
@@ -117,8 +125,13 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
                 else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
                         {
                                 std::lock_guard lock{input->mutex};
-                                auto &intDevice = input->handles.at (dev);
+                                auto &entry = input->handles.at (dev);
+
+                                auto &intDevice = entry.second;
+                                intDevice->resetDeviceHandle ();
                                 eventQueue->clearAlarm<DeviceAlarm> (intDevice);
+
+                                libusb_close (entry.first);
                                 /*
                                  * Remove from the `handles` set. This releases (or prepares to release)
                                  * all the resources. Removes the InternalHandle, deletes the shared_ptr
@@ -208,8 +221,8 @@ void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBacken
                         std::unique_lock lock{mutex};
                         handlesCVar.wait (lock, [this] { return !handles.empty () || kill_; });
 
-                        for (auto &h : handles) {
-                                h.second->run ();
+                        for (auto &[deviceP, entryPair] : handles) {
+                                entryPair.second->run ();
                         }
                 }
         }
