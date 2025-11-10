@@ -6,14 +6,11 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-export module logic.peripheral;
+#include "common/params.hh"
+#include <catch2/catch_test_macros.hpp>
+import logic.processing;
+import logic.data;
 
-export import :device;
-export import :device.demo;
-export import :device.factory;
-export import :device.factory.usb;
-export import :device.link;
-export import :input;
-export import :input.usb.async;
-export import :usbDevice;
-export import :device.rigA;
+using namespace logic;
+
+TEST_CASE ("test generate", "[testRigA]") {}

@@ -40,21 +40,22 @@ void UsbDevice::start (IBackend *backend)
 
         {
                 // std::lock_guard lock{mutex};
-                this->backend = backend;
+                setBackend (backend);
 
-                if (!transmissionParams.discardRaw) {
-                        queue.start ();
+                if (!transmissionParams_.discardRaw) {
+                        queue_.start ();
                 }
 
-                if (transmissionParams.singleTransferLenB == 0) {
+                if (transmissionParams_.singleTransferLenB == 0) {
                         notify (false, Health::error);
                         throw Exception{"Can't send an USB transfer of length 0."};
                 }
 
-                singleTransfer.resize (transmissionParams.singleTransferLenB);
+                singleTransfer.resize (transmissionParams_.singleTransferLenB);
         }
 
         acquisitionStopRequest = false;
+        totalSizePerChan = 0;
 
         if (transfer = libusb_alloc_transfer (0); transfer == nullptr) {
                 /*
@@ -96,8 +97,8 @@ void UsbDevice::run ()
          *
          * queue->start () called in UsbDevice::start
          */
-        TracyPlot ("rawQueueSize", int64_t (queue.size ()));
-        auto rcd = (transmissionParams.discardRaw) ? (queue.pop ()) : (queue.next ());
+        TracyPlot ("rawQueueSize", int64_t (queue ().size ()));
+        auto rcd = (transmissionParams_.discardRaw) ? (queue ().pop ()) : (queue ().next ());
 
         if (!rcd) {
                 return;
@@ -105,7 +106,7 @@ void UsbDevice::run ()
 
         RawData rd;
 
-        if (transmissionParams.decompress) {
+        if (transmissionParams_.decompress) {
                 rd = decompress (*rcd);
                 rcd->clear ();
         }
@@ -124,8 +125,6 @@ void UsbDevice::run ()
                 ZoneScopedN ("rearrange");
                 digitalChannels = rearrange (rd, acquisitionParams);
         }
-        // ChannelBlock digitalChannels{0, {}};
-        // std::vector<Bytes> digitalChannels;
 
         /*
          * Consider locking granularity. But even if it is too coarse, the move operation
@@ -135,7 +134,12 @@ void UsbDevice::run ()
                 ZoneScopedN ("append");
                 static constexpr auto BITS_PER_SAMPLE = 1U;
                 static constexpr auto GROUP = 0U;
-                backend->append (GROUP, BITS_PER_SAMPLE, std::move (digitalChannels));
+                totalSizePerChan += digitalChannels.front ().size () * (CHAR_BIT / BITS_PER_SAMPLE);
+                backend_->append (GROUP, BITS_PER_SAMPLE, std::move (digitalChannels));
+        }
+
+        if (acquisitionParams.samplesPerChannelLimit > 0 && totalSizePerChan >= acquisitionParams.samplesPerChannelLimit) {
+                notify (false, Health::ok);
         }
 
         // if (strategy != nullptr) {
@@ -198,7 +202,7 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
 
         auto *h = reinterpret_cast<UsbDevice *> (transfer->user_data);
         // We assume transmisionParams are already set.
-        auto transferLen = h->transmissionParams.singleTransferLenB;
+        auto transferLen = h->transmissionParams_.singleTransferLenB;
 
         if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
                 /*
@@ -256,7 +260,7 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                  * final queue.
                  */
                 RawCompressedBlock rcd{mbps, 0, h->singleTransfer};
-                h->queue.push (std::move (rcd)); // Lock protected
+                h->queue_.push (std::move (rcd)); // Lock protected
                 h->singleTransfer.resize (transferLen);
         }
 
@@ -329,7 +333,7 @@ void UsbDevice::writeTransmissionParams (UsbTransmissionParams const &params)
         }
 
         // std::lock_guard lock{mutex};
-        transmissionParams = params;
+        transmissionParams_ = params;
 }
 
 } // namespace logic

@@ -134,7 +134,12 @@ protected:
         virtual std::vector<uint8_t> controlIn (size_t len) const;
         virtual std::string getString (uint32_t clazz, uint32_t verb, size_t len) const;
 
-        size_t singleTransferLenB () const { return transmissionParams.singleTransferLenB; };
+        size_t singleTransferLenB () const { return transmissionParams_.singleTransferLenB; };
+
+        UsbTransmissionParams &transmissionParams () { return transmissionParams_; }
+        Queue<RawCompressedBlock> &queue () { return queue_; }
+        IBackend *backend () { return backend_; }
+        void setBackend (IBackend *b) { backend_ = b; }
 
 private:
         mutable libusb_device_handle *deviceHandle_{};
@@ -146,18 +151,19 @@ private:
          * We keep some defaults global (like compress == false) and some
          * speciffic to the device like singleTransferLenB below.
          */
-        UsbTransmissionParams transmissionParams = {.singleTransferLenB = DEFAULT_USB_TRANSFER_SIZE_B};
+        UsbTransmissionParams transmissionParams_ = {.singleTransferLenB = DEFAULT_USB_TRANSFER_SIZE_B};
         EventQueue *eventQueue_;
 
         /// Data received during the last transfer.
         Bytes singleTransfer;
 
         /// Current output, destination of the acquired data.
-        Queue<RawCompressedBlock> queue{};
-        IBackend *backend{};
+        Queue<RawCompressedBlock> queue_{};
+        IBackend *backend_{};
 
         /// Used to stop re-issuing the transfer.
         std::atomic_bool acquisitionStopRequest;
+        SampleNum totalSizePerChan;
 };
 
 } // namespace logic

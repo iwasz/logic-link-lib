@@ -1,0 +1,37 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
+module;
+#include "common/error.hh"
+#include "common/params.hh"
+#include "common/stats.hh"
+#include <chrono>
+#include <libusb.h>
+#include <random>
+export module logic.peripheral:device.rigA;
+import :usbDevice;
+import :device.link;
+
+namespace logic {
+
+export class TestRigA : public LogicLink {
+public:
+        TestRigA (EventQueue *eventQueue, libusb_device_handle *dev) : LogicLink{eventQueue, dev} {}
+        std::string name () const override { return "TestRigA"; }
+
+        void start (IBackend *backend) override;
+        void stop () override;
+        void run () override;
+
+private:
+        size_t totalSizePerChan{}; // Already transferred
+        std::minstd_rand lce;
+        std::chrono::steady_clock::time_point nextTick;
+};
+
+} // namespace logic

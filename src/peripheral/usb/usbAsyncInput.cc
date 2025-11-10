@@ -199,32 +199,39 @@ void UsbAsyncInput::acquireLoop ()
 void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBackend *backend */)
 {
         setThreadName ("Analyze");
+        try {
+                while (true) {
+                        if (!running_.load ()) {
+                                break;
+                        }
 
-        while (true) {
-                if (!running_.load ()) {
-                        break;
-                }
+                        {
+                                /*
+                                 * Locking for the whole time prevents `handles` collection modification,
+                                 * specifficaly prevents element removal which can happen when you disconnect
+                                 * a device.
+                                 *
+                                 * TODO But this is inefficient because this would block the whole USB thread
+                                 * when a device (possibly other than the currently running one) gets deisconnected.
+                                 * And that would result in a timeout, since we are very tight on bandwidth.
+                                 *
+                                 * TODO Though... I could un-register the hot-plug callback if at least one device
+                                 * is acquiring.
+                                 */
+                                std::unique_lock lock{mutex};
+                                handlesCVar.wait (lock, [this] { return !handles.empty () || !running_; });
 
-                {
-                        /*
-                         * Locking for the whole time prevents `handles` collection modification,
-                         * specifficaly prevents element removal which can happen when you disconnect
-                         * a device.
-                         *
-                         * TODO But this is inefficient because this would block the whole USB thread
-                         * when a device (possibly other than the currently running one) gets deisconnected.
-                         * And that would result in a timeout, since we are very tight on bandwidth.
-                         *
-                         * TODO Though... I could un-register the hot-plug callback if at least one device
-                         * is acquiring.
-                         */
-                        std::unique_lock lock{mutex};
-                        handlesCVar.wait (lock, [this] { return !handles.empty () || !running_; });
-
-                        for (auto &[deviceP, entryPair] : handles) {
-                                entryPair.second->run ();
+                                for (auto &[deviceP, entryPair] : handles) {
+                                        entryPair.second->run ();
+                                }
                         }
                 }
+        }
+        catch (std::exception const &e) {
+                eventQueue ()->addEvent<ErrorEvent> (std::format ("Exception caught in `UsbAsyncInput::analyzeLoop`: {}", e.what ()));
+        }
+        catch (...) {
+                eventQueue ()->addEvent<ErrorEvent> (std::format ("Unknown (...) exception caught in `UsbAsyncInput::analyzeLoop`"));
         }
 }
 

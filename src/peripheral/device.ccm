@@ -104,7 +104,7 @@ public:
 
 protected:
         virtual EventQueue *eventQueue () = 0;
-        common::acq::Params acquisitionParams{};
+        common::acq::Params acquisitionParams{}; // TODO protected getter
 
 private:
         /// It's sole purpose is to indicate the status to the outside world.
