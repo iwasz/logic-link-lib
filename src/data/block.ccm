@@ -63,7 +63,7 @@ public:
 
         Bytes const &channel (size_t idx) const { return data_.at (idx); }
         Container const &data () const { return data_; }
-        Container &&data () /* && */ { return std::move (data_); }
+        // Container &&data () /* && */ { return std::move (data_); }
 
         size_t zoomOut () const { return zoomOut_; }
 

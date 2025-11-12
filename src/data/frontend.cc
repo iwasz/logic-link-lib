@@ -77,7 +77,7 @@ DigitalFrontend::~DigitalFrontend () { backend->removeObserver (this); }
 
 /****************************************************************************/
 
-BlockArray::SubRange DigitalFrontend::range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek)
+BlockArray::SubRange DigitalFrontend::range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek) const
 {
         ZoneScoped;
         return backend->range (groupIdx, offset, offset + length, zoomOut, peek);
@@ -85,7 +85,7 @@ BlockArray::SubRange DigitalFrontend::range (size_t groupIdx, SampleIdx offset, 
 
 /****************************************************************************/
 
-bool DigitalFrontend::isNewData ()
+bool DigitalFrontend::isNewData () const
 {
         if (newData) {
                 newData = false;

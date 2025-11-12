@@ -39,10 +39,10 @@ struct IFrontend {
         /// Number of samples so far.
         virtual SampleNum size (size_t groupIdx) const = 0;
 
-        virtual BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek) = 0;
+        virtual BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek) const = 0;
 
         /// Says if there's new data since last called. Warning! Clears on read!
-        virtual bool isNewData () = 0;
+        virtual bool isNewData () const = 0;
 };
 
 /**
@@ -59,18 +59,18 @@ public:
 
         SampleNum size (size_t groupIdx) const override { return backend->channelLength (groupIdx); }
 
-        BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek) override;
+        BlockArray::SubRange range (size_t groupIdx, SampleIdx offset, SampleNum length, size_t zoomOut, bool peek) const override;
 
         void onNewData () override { newData.store (true); };
 
         /// Warning! Clears on read!
-        bool isNewData () override;
+        bool isNewData () const override;
 
 private:
         IBackend *backend;
         SampleIdx cachedBegin{};
         SampleIdx cachedEnd{};
-        std::atomic_bool newData;
+        mutable std::atomic_bool newData;
 };
 
 } // namespace logic

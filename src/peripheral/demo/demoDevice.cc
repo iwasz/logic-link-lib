@@ -10,7 +10,6 @@ module;
 #include "common/constants.hh"
 #include "common/params.hh"
 #include <Tracy.hpp>
-#include <spdlog/spdlog.h>
 #include <thread>
 module logic.peripheral;
 import logic.processing;
@@ -68,8 +67,8 @@ void DemoDevice::start (IBackend *backend)
                                 backend->append (GROUP, BITS_PER_SAMPLE, std::move (channels));
 
                                 totalSizePerChan += sizePerChanBits;
-                                if (acquisitionParams.samplesPerChannelLimit > 0
-                                    && totalSizePerChan >= acquisitionParams.samplesPerChannelLimit) {
+                                if (acquisitionParams.digitalSamplesPerChannelLimit > 0
+                                    && totalSizePerChan >= acquisitionParams.digitalSamplesPerChannelLimit) {
                                         notify (false, Health::ok);
                                 }
 
@@ -91,7 +90,7 @@ void DemoDevice::start (IBackend *backend)
 void DemoDevice::stop ()
 {
         try {
-                spdlog::info ("DemoDevice stopped. Samples generated per channel: {}", totalSizePerChan);
+                // std::println ("DemoDevice stopped. Samples generated per channel: {}", totalSizePerChan);
                 notify (false, Health::ok);
 
                 if (thread.joinable ()) {
