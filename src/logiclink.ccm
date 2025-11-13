@@ -10,9 +10,6 @@
  * Common library for cli and gui.
  */
 export module logic;
-
-export import :session;
-
 export import logic.analysis;
 export import logic.core;
 export import logic.data;
