@@ -66,6 +66,11 @@ void LogicLink::writeAcquisitionParams (common::acq::Params const &params, bool 
 {
         UsbDevice::writeAcquisitionParams (params, legacy);
 
+        // TODO uncomment. For some reason it crashes my current clangd server.
+        // if (params.groups.size () != 2 || params.groups[0] == params.groups[1]) {
+        //         throw Exception {"Incorrect group assignment."};
+        // }
+
         using enum common::acq::Mode;
 
         if (legacy) {

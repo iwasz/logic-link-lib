@@ -77,7 +77,9 @@ public:
 
         /// Visits all alarms of type T. NOTE! callbacks called under a LOCK!
         template <typename T, typename Call> void visitAlarms (Call &&clbk, size_t limit = 0) const;
-        template <typename T, typename Call> void waitAlarms (Call &&clbk, size_t limit = 0) const;
+
+        /// Waits for the first alarm of type T for whichi clbk returns true.
+        template <typename T, typename Call> void waitAlarm (Call &&clbk) const;
 
 private:
         void runImpl (Events const &evts);
@@ -251,31 +253,21 @@ template <typename T, typename Call> void EventQueue::visitAlarms (Call &&clbk, 
 
 /****************************************************************************/
 
-template <typename T, typename Call> void EventQueue::waitAlarms (Call &&clbk, size_t limit) const
+template <typename T, typename Call> void EventQueue::waitAlarm (Call &&clbk) const
 {
         std::any callback{std::function{std::forward<Call> (clbk)}};
-
         std::unique_lock lock{mutex};
-        alarmCv.wait (lock, [this] {
+
+        alarmCv.wait (lock, [this, &callback] () -> bool {
                 return std::ranges::find_if (alarms,
-                                             [] (auto const &p) {
+                                             [&callback] (auto const &p) {
                                                      auto const &r = *p;
-                                                     return (typeid (r) == typeid (const T));
+                                                     return (typeid (r) == typeid (const T) && r.execute (callback));
                                              })
                         != alarms.cend ();
+
+                return false;
         });
-
-        size_t cnt{};
-        for (auto const &p : alarms) {
-                auto const &r = *p;
-                if (typeid (r) == typeid (const T)) {
-                        p->execute (callback);
-
-                        if (limit > 0 && ++cnt >= limit) {
-                                break;
-                        }
-                }
-        }
 }
 
 } // namespace logic

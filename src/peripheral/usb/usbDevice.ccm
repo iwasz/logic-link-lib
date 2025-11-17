@@ -163,7 +163,7 @@ private:
 
         /// Used to stop re-issuing the transfer.
         std::atomic_bool acquisitionStopRequest;
-        SampleNum totalSizePerChan;
+        SampleNum totalSizePerChan{};
 };
 
 } // namespace logic

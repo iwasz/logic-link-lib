@@ -133,9 +133,8 @@ void UsbDevice::run ()
         {
                 ZoneScopedN ("append");
                 static constexpr auto BITS_PER_SAMPLE = 1U;
-                static constexpr auto GROUP = 0U;
                 totalSizePerChan += digitalChannels.front ().size () * (CHAR_BIT / BITS_PER_SAMPLE);
-                backend_->append (GROUP, BITS_PER_SAMPLE, std::move (digitalChannels));
+                backend_->append (acquisitionParams.groups.front (), BITS_PER_SAMPLE, std::move (digitalChannels));
         }
 
         if (acquisitionParams.digitalSamplesPerChannelLimit > 0 && totalSizePerChan >= acquisitionParams.digitalSamplesPerChannelLimit) {

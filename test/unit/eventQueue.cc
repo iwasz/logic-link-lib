@@ -21,10 +21,11 @@ class TestConnectedAlarm : public AbstractAlarm<TestConnectedAlarm> {
 public:
         explicit TestConnectedAlarm (std::string const &name) : name{name} {}
 
-        void execute (std::any const &func) const override
+        bool execute (std::any const &func) const override
         {
                 auto f = std::any_cast<std::function<void (std::string const &name)>> (func);
                 f (name);
+                return true;
         }
 
         std::size_t hash () const override { return std::hash<std::string>{}(name); }
@@ -86,10 +87,11 @@ TEST_CASE ("Event queue threads", "[eventQueue]")
 
 class TestAlarm : public AbstractAlarm<TestAlarm> {
 public:
-        void execute (std::any const &func) const override
+        bool execute (std::any const &func) const override
         {
                 auto f = std::any_cast<std::function<void ()>> (func);
                 f ();
+                return true;
         }
 
         std::size_t hash () const override { return 0; }

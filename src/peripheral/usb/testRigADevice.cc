@@ -79,8 +79,7 @@ void TestRigA::run ()
                 }
         }
         static constexpr auto BITS_PER_SAMPLE = 1U;
-        static constexpr auto GROUP = 0U;
-        backend ()->append (GROUP, BITS_PER_SAMPLE, std::move (channels));
+        backend ()->append (acquisitionParams.groups[0], BITS_PER_SAMPLE, std::move (channels));
 
         totalSizePerChan += sizePerChanWords * sizeof (uint32_t) * CHAR_BIT;
         if (acquisitionParams.digitalSamplesPerChannelLimit > 0 && totalSizePerChan >= acquisitionParams.digitalSamplesPerChannelLimit) {

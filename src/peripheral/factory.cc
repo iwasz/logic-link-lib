@@ -20,10 +20,13 @@ std::shared_ptr<IDevice> Factory::create (std::string const &name) const
         }
 
         std::shared_ptr<IDevice> ret;
-        eventQueue_->waitAlarms<DeviceAlarm> ([&ret, &name] (std::shared_ptr<IDevice> const &dev) {
+        eventQueue_->waitAlarm<DeviceAlarm> ([&ret, &name] (std::shared_ptr<IDevice> const &dev) {
                 if (dev->name () == name) {
                         ret = dev;
+                        return true;
                 }
+
+                return false;
         });
 
         return ret;
@@ -34,7 +37,11 @@ std::shared_ptr<IDevice> Factory::create (std::string const &name) const
 std::shared_ptr<IDevice> Factory::create () const
 {
         std::shared_ptr<IDevice> ret;
-        eventQueue_->waitAlarms<DeviceAlarm> ([&ret] (std::shared_ptr<IDevice> const &dev) { ret = dev; }, 1);
+        eventQueue_->waitAlarm<DeviceAlarm> ([&ret] (std::shared_ptr<IDevice> const &dev) {
+                ret = dev;
+                return true;
+        });
+
         return ret;
 }
 

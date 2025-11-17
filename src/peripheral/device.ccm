@@ -120,10 +120,10 @@ export class DeviceAlarm : public AbstractAlarm<DeviceAlarm> {
 public:
         explicit DeviceAlarm (std::shared_ptr<IDevice> const &device) : device_{device} {}
 
-        void execute (std::any const &func) const override
+        bool execute (std::any const &func) const override
         {
-                auto f = std::any_cast<std::function<void (std::shared_ptr<IDevice> const &)>> (func);
-                f (device_);
+                auto f = std::any_cast<std::function<bool (std::shared_ptr<IDevice> const &)>> (func);
+                return f (device_);
         }
 
         std::size_t hash () const override { return std::hash<std::size_t>{}(size_t (device_.get ())); }
@@ -143,10 +143,11 @@ export class DeviceStatusAlarm : public AbstractAlarm<DeviceStatusAlarm> {
 public:
         DeviceStatusAlarm (IDevice const *device, bool running, IDevice::Health status) : device_{device}, running_{running}, status_{status} {}
 
-        void execute (std::any const &func) const override
+        bool execute (std::any const &func) const override
         {
                 auto f = std::any_cast<std::function<void (IDevice const *device, bool running, IDevice::Health status)>> (func);
                 f (device_, running_, status_);
+                return true;
         }
 
         std::size_t hash () const override { return size_t (device_) ^ (size_t (status_) << 1) ^ (size_t (running_) << 3); }

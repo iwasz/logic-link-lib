@@ -62,9 +62,8 @@ void DemoDevice::start (IBackend *backend)
                                 }
 
                                 static constexpr auto BITS_PER_SAMPLE = 1U;
-                                static constexpr auto GROUP = 0U;
                                 ZoneNamedN (append, "append", false);
-                                backend->append (GROUP, BITS_PER_SAMPLE, std::move (channels));
+                                backend->append (acquisitionParams.groups[0], BITS_PER_SAMPLE, std::move (channels));
 
                                 totalSizePerChan += sizePerChanBits;
                                 if (acquisitionParams.digitalSamplesPerChannelLimit > 0
