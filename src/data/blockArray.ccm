@@ -41,7 +41,7 @@ public:
         using Container = std::list<Block>;
         using SubRange = std::ranges::subrange<Container::const_iterator>;
 
-        BlockArray (size_t channelsNumber = 1, size_t maxZoomOutLevels = 1, size_t zoomOutPerLevel = 1);
+        BlockArray (size_t channelsNumber, SampleRate sampleRate, size_t maxZoomOutLevels = 1, size_t zoomOutPerLevel = 1);
         void append (uint8_t bitsPerSample, std::vector<Bytes> &&channels);
         void clear ();
 
@@ -51,6 +51,7 @@ public:
         SubRange range (SampleIdx begin, SampleIdx end, size_t zoomOut = 1, bool peek = false) const;
 
         size_t channelsNumber () const { return (levels[0].data_.empty ()) ? (0) : (levels[0].data_.front ().channelsNumber ()); }
+        SampleRate sampleRate () const { return sampleRate_; }
         SampleNum channelLength () const { return channelLength_; }
 
         size_t blockSizeB () const { return blockSizeB_; } /// Returns the block size. Block size is the number of bytes `append` accepts.
@@ -65,7 +66,8 @@ private:
         Block downsample (Block const &block, size_t zoomOut, DownSamplers const &downSamplers) const;
 
         // StreamType type_{};
-        // SampleRate sampleRate_{};
+        // SampleNo sampleOffset??? - for separate devices starting at different time points?
+        SampleRate sampleRate_{};
 
         /// Block that we append to to reach blockSizeB_ * blockSizeMultiplier_ bytes.
         Block pendingBlock;

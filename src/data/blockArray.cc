@@ -15,14 +15,15 @@ module;
 #include <memory>
 #include <ranges>
 #include <vector>
+#include "common/constants.hh"
 module logic.data;
 import logic.core;
 import logic.processing;
 
 namespace logic {
 
-BlockArray::BlockArray (size_t channelsNumber, size_t maxZoomOutLevels, size_t zoomOutPerLevel)
-    : levels (std::max (maxZoomOutLevels, 1uz)), zoomOutPerLevel_{zoomOutPerLevel}
+BlockArray::BlockArray (size_t channelsNumber, SampleRate sampleRate, size_t maxZoomOutLevels, size_t zoomOutPerLevel)
+    : sampleRate_{sampleRate}, levels (std::max (maxZoomOutLevels, 1uz)), zoomOutPerLevel_{zoomOutPerLevel}
 {
         for (size_t curZoomOut = 1; auto &lev : levels) {
                 lev.zoomOut = curZoomOut;

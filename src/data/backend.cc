@@ -59,10 +59,10 @@ Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx en
 
 /*--------------------------------------------------------------------------*/
 
-size_t Backend::addGroup (Config const &config)
+size_t Backend::addGroup (Group const &config)
 {
         std::lock_guard lock{mutex};
-        groups_.emplace_back (config.channelsNumber, config.maxZoomOutLevels, config.zoomOutPerLevel);
+        groups_.emplace_back (config.channelsNumber, config.sampleRate, config.maxZoomOutLevels, config.zoomOutPerLevel);
         auto &g = groups_.back ();
         g.setBlockSizeB (config.blockSizeB);
         g.setBlockSizeMultiplier (config.blockSizeMultiplier);
