@@ -70,7 +70,7 @@ TEST_CASE ("BlockArray size", "[blockArray]")
 
         SECTION ("no multiply")
         {
-                BlockArray cbs{16};
+                BlockArray cbs{16, 1};
                 cbs.setBlockSizeB (2 * 8192);
                 cbs.append (BITS_PER_SAMPLE, generateDemoDeviceBlock ());
                 REQUIRE (cbs.channelLength () == 8192);
@@ -91,7 +91,7 @@ TEST_CASE ("BlockArray size", "[blockArray]")
 
         SECTION ("multiply by 2")
         {
-                BlockArray cbs{16};
+                BlockArray cbs{16, 1};
                 cbs.setBlockSizeB (16);
                 cbs.setBlockSizeMultiplier (2);
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
@@ -115,7 +115,7 @@ TEST_CASE ("BlockArray size", "[blockArray]")
 TEST_CASE ("Block from range", "[blockArray]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
-        BlockArray cbs;
+        BlockArray cbs{1, 1};
         cbs.setBlockSizeB (16);
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -153,7 +153,7 @@ TEST_CASE ("Block from range", "[blockArray]")
         SECTION ("empty block added")
         {
                 static constexpr auto BITS_PER_SAMPLE = 1U;
-                BlockArray cbs;
+                BlockArray cbs{1, 1};
                 cbs.append (BITS_PER_SAMPLE, std::vector<Bytes>{{}, {}});
 
                 auto r = cbs.range (32, 96);
@@ -169,7 +169,7 @@ TEST_CASE ("Block from range", "[blockArray]")
         SECTION ("with multiplier")
         {
                 static constexpr auto BITS_PER_SAMPLE = 1U;
-                BlockArray cbs;
+                BlockArray cbs{1, 1};
                 cbs.setBlockSizeB (16);
                 cbs.setBlockSizeMultiplier (2);
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
@@ -202,7 +202,7 @@ TEST_CASE ("one block 8bit", "[blockArray]")
 {
         static constexpr auto BITS_PER_SAMPLE = 8U;
 
-        BlockArray cbs;
+        BlockArray cbs{1, 1};
         cbs.setBlockSizeB (16);
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
         auto const &data = BlockArrayUtHelper::data (cbs);
@@ -250,7 +250,7 @@ TEST_CASE ("many blocks 8bit", "[blockArray]")
 {
         static constexpr auto BITS_PER_SAMPLE = 8U;
 
-        BlockArray cbs;
+        BlockArray cbs{1, 1};
         cbs.setBlockSizeB (16);
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -305,7 +305,7 @@ TEST_CASE ("one block 1bit", "[blockArray]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
 
-        BlockArray cbs;
+        BlockArray cbs{1, 1};
         cbs.setBlockSizeB (16);
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
         auto const &data = BlockArrayUtHelper::data (cbs);
@@ -365,7 +365,7 @@ TEST_CASE ("many blocks 1bit", "[blockArray]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
 
-        BlockArray cbs;
+        BlockArray cbs{1, 1};
         cbs.setBlockSizeB (16);
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -426,7 +426,7 @@ TEST_CASE ("huge blocks 1bit", "[blockArray]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
         static constexpr auto SAMPLES_PER_BLOCK = 16384;
-        BlockArray cbs;
+        BlockArray cbs{1, 1};
         cbs.setBlockSizeB (2048);
         auto const &data = BlockArrayUtHelper::data (cbs);
 
@@ -456,7 +456,7 @@ TEST_CASE ("ZoomOut", "[blockArray]")
 
         SECTION ("zoomOut 0")
         {
-                BlockArray cbs; // Only 1 zoomLevel, so no zooming is possible.
+                BlockArray cbs{1, 1}; // Only 1 zoomLevel, so no zooming is possible.
                 cbs.setBlockSizeB (16);
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -477,7 +477,7 @@ TEST_CASE ("ZoomOut", "[blockArray]")
 
         SECTION ("zoomOut 2")
         {
-                BlockArray cbs (4, 2, 2); // 4 channels, 2 zoom levels : 1 and 0.5 (zoomOut==2)
+                BlockArray cbs{4, 1, 2, 2}; // 4 channels, 1sps, 2 zoom levels : 1 and 0.5 (zoomOut==2)
                 cbs.setBlockSizeB (16);
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -504,7 +504,7 @@ TEST_CASE ("ZoomOut", "[blockArray]")
 
         SECTION ("zoomOut 4")
         {
-                BlockArray cbs (4, 3, 2); // 3 zoom levels : 1, 0.5 (zoomOut==2) and 0.25 (zoomOut==4)
+                BlockArray cbs (4, 1, 3, 2); // 3 zoom levels : 1, 0.5 (zoomOut==2) and 0.25 (zoomOut==4)
                 cbs.setBlockSizeB (16);
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -553,7 +553,7 @@ TEST_CASE ("ZoomOut", "[blockArray]")
 
         SECTION ("zoomOut by 4")
         {
-                BlockArray cbs (4, 2, 4); // 2 zoom levels : 1 and 0.5 (zoomOut==2)
+                BlockArray cbs (4, 1, 2, 4); // 2 zoom levels : 1 and 0.5 (zoomOut==2)
                 cbs.setBlockSizeB (16);
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));

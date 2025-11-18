@@ -98,7 +98,7 @@ TEST_CASE ("Owning Basic", "[bitSpan]")
 TEST_CASE ("Join", "[backend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
-        BlockArray cbs;
+        BlockArray cbs{1, 1};
         cbs.setBlockSizeB (16);
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -227,7 +227,7 @@ TEST_CASE ("Join", "[backend]")
 TEST_CASE ("Join multiplier", "[backend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
-        BlockArray cbs;
+        BlockArray cbs{1, 1};
         cbs.setBlockSizeB (16);
         cbs.setBlockSizeMultiplier (2);
 
