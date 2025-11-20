@@ -51,18 +51,19 @@ struct IBackend {
 
         /**
          * Returns a stream made of concatenated blocks containing the
-         * begin and end samples. Returned stream may start long before
-         * the `begin` sample and finish after the `end` sample, so you
-         * have to trim it yourself (use std::span / BitSpan).
+         * begin and end samples (including both). Returned stream may
+         * start long before the `begin` sample and finish after the `end`
+         * sample, so you have to trim it yourself (use std::span / BitSpan).
          */
         virtual SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, size_t zoomOut = 1, bool peek = false) const = 0;
+        virtual SubRange range (size_t groupIdx, SampleIdx begin, SampleNum len, size_t zoomOut = 1, bool peek = false) const = 0;
 
         struct Group {
                 size_t channelsNumber{};
-                SampleRate sampleRate{};
+                SampleRate sampleRate = 1_Sps;
                 size_t maxZoomOutLevels = 1;
                 size_t zoomOutPerLevel = 1;
-                size_t blockSizeB = 0;
+                size_t blockSizeB = 16; // For UT
                 size_t blockSizeMultiplier = 1;
         };
 
@@ -71,8 +72,18 @@ struct IBackend {
         virtual size_t groupsNumber () const = 0;
 
         virtual size_t channelsNumber (size_t groupIdx) const = 0;
-        virtual SampleRate sampleRate (size_t groupIdx) const = 0;
+
+        /**
+         * Channel length in the `smallest sample` unit i.e. most fine grained samples
+         * this backend holds. Assuming all groups start and stop at the sasme time.
+         * Assume a backend has 2 groups: digital at 1 Msps and analog at 1 ksps and
+         * the device acquired data for 1s. This method will return SampleNum {1000'000, 1000'000}
+         */
+        virtual SampleNum channelLength () const = 0;
         virtual SampleNum channelLength (size_t groupIdx) const = 0;
+
+        virtual SampleRate sampleRate () const = 0; /// Max from all the groups.
+        virtual SampleRate sampleRate (size_t groupIdx) const = 0;
 
         virtual void addObserver (IBackendObserver *observer) = 0;
         virtual void removeObserver (IBackendObserver *observer) = 0;
@@ -85,14 +96,20 @@ class Backend : public IBackend {
 public:
         void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) override;
         void clear () override;
+
         SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, size_t zoomOut = 1, bool peek = false) const override;
+        SubRange range (size_t groupIdx, SampleIdx begin, SampleNum len, size_t zoomOut = 1, bool peek = false) const override;
 
         size_t addGroup (Group const &config) override;
         size_t groupsNumber () const override { return groups_.size (); }
 
         size_t channelsNumber (size_t groupIdx) const override { return groups_.at (groupIdx).channelsNumber (); }
-        SampleRate sampleRate (size_t groupIdx) const override { return groups_.at (groupIdx).sampleRate (); }
+
+        SampleNum channelLength () const override { return channelLength (fastestGroup_); }
         SampleNum channelLength (size_t groupIdx) const override;
+
+        SampleRate sampleRate () const override { return sampleRate (fastestGroup_); }
+        SampleRate sampleRate (size_t groupIdx) const override { return groups_.at (groupIdx).sampleRate (); }
 
         void addObserver (IBackendObserver *observer) override { observers.insert (observer); }
         void removeObserver (IBackendObserver *observer) override { observers.erase (observer); }
@@ -103,6 +120,7 @@ private:
         BlockArrays groups_;
         mutable TracyLockable (std::mutex, mutex);
         std::unordered_set<IBackendObserver *> observers;
+        size_t fastestGroup_{};
 };
 
 } // namespace logic

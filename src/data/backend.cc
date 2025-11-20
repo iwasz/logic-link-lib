@@ -9,7 +9,9 @@
 module;
 #include "common/constants.hh"
 #include <Tracy.hpp>
+#include <algorithm>
 #include <mutex>
+#include <ranges>
 #include <vector>
 module logic.data;
 import logic.core;
@@ -54,7 +56,18 @@ Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleIdx en
          * device, there's no need to modifu it.
          */
         std::lock_guard lock{mutex};
-        return groups_.at (groupIdx).range (begin, end, zoomOut, peek);
+        auto mysr = sampleRate (groupIdx);
+        return groups_.at (groupIdx).range (resample (begin, mysr), resample (end, mysr), zoomOut, peek);
+}
+
+/*--------------------------------------------------------------------------*/
+
+Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleNum len, size_t zoomOut, bool peek) const
+{
+        ZoneScopedN ("BackendRange");
+        std::lock_guard lock{mutex};
+        auto mysr = sampleRate (groupIdx);
+        return groups_.at (groupIdx).range (resample (begin, mysr), resample (begin + len, mysr), zoomOut, peek);
 }
 
 /*--------------------------------------------------------------------------*/
@@ -66,6 +79,14 @@ size_t Backend::addGroup (Group const &config)
         auto &g = groups_.back ();
         g.setBlockSizeB (config.blockSizeB);
         g.setBlockSizeMultiplier (config.blockSizeMultiplier);
+
+        auto res = std::ranges::max (groups_ | std::views::transform ([] (auto const &blockArray) { return blockArray.sampleRate ().get (); })
+                                             | std::views::enumerate,
+                                     [] (auto const &a, auto const &b) { return std::get<1> (a) < std::get<1> (b); });
+
+        fastestGroup_ = std::get<0> (res);
+        // maxSampleRate_ = SampleRate{std::get<1> (res)};
+
         return groups_.size () - 1;
 }
 

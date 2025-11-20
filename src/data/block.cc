@@ -23,6 +23,7 @@ namespace logic {
 void Block::append (Block &&d)
 {
         bitsPerSample_ = d.bitsPerSample_;
+        sampleRate_ = d.sampleRate_;
         append (std::move (d).data_);
 }
 
@@ -50,12 +51,12 @@ void Block::append (Container &&d)
 
 /****************************************************************************/
 
-void Block::reserve (size_t channels, SampleNum numberOfSampl)
+void Block::reserve (size_t channels, size_t numberOfSampl) // TODO numberOfSamplesPerChannel?
 {
         data_.resize (std::max (channels, data_.size ()));
 
         for (auto &ch : data_) {
-                ch.reserve (numberOfSampl);
+                ch.reserve (numberOfSampl); // TODO divide by CHAR_BIT ???
         }
 }
 
@@ -64,11 +65,11 @@ void Block::reserve (size_t channels, SampleNum numberOfSampl)
 SampleNum Block::channelLength () const
 {
         if (data_.empty ()) {
-                return 0;
+                return 0_Sn;
         }
 
         auto const SAMPLES_PER_BYTE = CHAR_BIT / bitsPerSample_;
-        return SampleNum (channelBytes () * SAMPLES_PER_BYTE * zoomOut_);
+        return SampleNum (channelBytes () * SAMPLES_PER_BYTE * zoomOut_, sampleRate ());
 }
 
 /****************************************************************************/

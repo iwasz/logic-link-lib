@@ -27,7 +27,8 @@ public:
         /**
          * Construct from vector of bytes.
          */
-        Block (uint8_t bitsPerSample, Container &&d, size_t zoomOut = 1) : bitsPerSample_{bitsPerSample}, data_{std::move (d)}, zoomOut_{zoomOut}
+        Block (SampleRate sampleRate, uint8_t bitsPerSample, Container &&d, size_t zoomOut = 1)
+            : sampleRate_{sampleRate}, bitsPerSample_{bitsPerSample}, data_{std::move (d)}, zoomOut_{zoomOut}
         {
         }
 
@@ -39,17 +40,22 @@ public:
 
         void append (Container &&d);
         void append (Block &&d);
-        void reserve (size_t channels, SampleNum bits);
+        void reserve (size_t channels, size_t numberOfSampl);
 
         /// First valid sample index that can be referenced.
-        SampleIdx firstSampleNo () const { return firstSampleNo_; }
-        SampleIdx &firstSampleNo () { return firstSampleNo_; }
+        SampleIdx firstSampleNo () const { return {firstSampleNo_, sampleRate_}; }
+
+        void setFirstSampleNo (SampleIdx const &f)
+        {
+                srcheck (firstSampleNo (), f);
+                firstSampleNo_ = f.get ();
+        }
 
         /// Last valid sample index that can be referenced (do not confuse with "past-the-end" semantics).
         SampleIdx lastSampleNo () const
         {
-                auto s = firstSampleNo_ + channelLength ();
-                return (s > 0) ? (s - 1) : (0);
+                auto s = firstSampleNo_ + channelLength ().get ();
+                return SampleIdx{(s > 0) ? (s - 1) : (0), sampleRate_};
         }
 
         /// Number of channels in the block.
@@ -60,10 +66,10 @@ public:
         size_t channelBytes () const;
 
         uint8_t bitsPerSample () const { return bitsPerSample_; }
+        SampleRate sampleRate () const { return sampleRate_; }
 
         Bytes const &channel (size_t idx) const { return data_.at (idx); }
         Container const &data () const { return data_; }
-        // Container &&data () /* && */ { return std::move (data_); }
 
         size_t zoomOut () const { return zoomOut_; }
 
@@ -74,8 +80,9 @@ private:
         friend class BlockArray;          // Only for BlockArray::clipBytes which is not used anywhere, so....
         friend struct BlockArrayUtHelper; // Defined in UTs
 
+        SampleRate sampleRate_;
         uint8_t bitsPerSample_{};
-        SampleIdx firstSampleNo_{};
+        ssize_t firstSampleNo_{};
         // For now only Bytes are supported.
         Container data_; // Horizontal
         size_t zoomOut_ = 1;

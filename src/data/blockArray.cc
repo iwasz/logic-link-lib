@@ -7,15 +7,14 @@
  ****************************************************************************/
 
 module;
+#include "common/constants.hh"
 #include <Tracy.hpp>
 #include <algorithm>
-#include <climits>
 #include <cmath>
 #include <format>
 #include <memory>
 #include <ranges>
 #include <vector>
-#include "common/constants.hh"
 module logic.data;
 import logic.core;
 import logic.processing;
@@ -44,7 +43,7 @@ Block BlockArray::downsample (Block const &block, size_t zoomOut, DownSamplers c
                 throw Exception{"`downsample` with `zoomOut == 1` is not supported"};
         }
 
-        return {block.bitsPerSample (),
+        return {sampleRate_, block.bitsPerSample (),
                 std::views::zip_transform ([zoomOut] (Bytes const &channel, std::unique_ptr<IDownSampler> const &downSampler)
                                                    -> Bytes { return (*downSampler) (channel, zoomOut); },
                                            block.data (), downSamplers)
@@ -79,7 +78,7 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
                 // We start fresh, OR last block in this level is `multiBlockSizeB` bytes.
                 if (data.empty () || blockB (data.back ()) >= multiBlockSizeB) {
                         data.emplace_back (std::move (block));
-                        data.back ().firstSampleNo () = channelLength_;
+                        data.back ().setFirstSampleNo ({channelLength_, sampleRate_});
                 }
                 else {
                         data.back ().append (std::move (block));
@@ -99,10 +98,10 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
         };
 
         // Collect multiBlockBytes (blockSizeB_ * blockSizeMultiplier_) bytes of data, so the downsampling algorithms hev enough data to work on.
-        pendingBlock.append (Block{bitsPerSample, std::move (channels)});
+        pendingBlock.append (Block{sampleRate_, bitsPerSample, std::move (channels)});
 
         if (blockB (pendingBlock) >= multiBlockSizeB) {
-                auto tmp = pendingBlock.channelLength ();
+                auto tmp = pendingBlock.channelLength ().get ();
                 doAppend (std::move (pendingBlock), 0, doAppend);
                 channelLength_ += tmp;
                 pendingBlock = Block{};
@@ -111,8 +110,6 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
 
 /****************************************************************************/
 
-// TODO I confused end with length at least once. Maybe it's time to make SampleIdx "strongly typed" with explicit ctors?
-// TODO like here: https://www.fluentcpp.com/2016/12/08/strong-types-for-strong-interfaces/
 BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, size_t zoomOut, bool peek) const
 {
         if (begin == end) {
@@ -123,7 +120,7 @@ BlockArray::SubRange BlockArray::range (SampleIdx begin, SampleIdx end, size_t z
         auto const &level = (std::ranges::empty (lll)) ? (levels.front ()) : (lll.front ());
 
         if (peek) {
-                begin -= level.zoomOut;
+                begin.get () -= long (level.zoomOut);
         }
 
         ZoneScoped;

@@ -52,7 +52,7 @@ public:
 
         size_t channelsNumber () const { return (levels[0].data_.empty ()) ? (0) : (levels[0].data_.front ().channelsNumber ()); }
         SampleRate sampleRate () const { return sampleRate_; }
-        SampleNum channelLength () const { return channelLength_; }
+        SampleNum channelLength () const { return SampleNum{channelLength_, sampleRate_}; }
 
         size_t blockSizeB () const { return blockSizeB_; } /// Returns the block size. Block size is the number of bytes `append` accepts.
         void setBlockSizeB (size_t v) { blockSizeB_ = v; } /// Sets the block size.
@@ -67,7 +67,7 @@ private:
 
         // StreamType type_{};
         // SampleNo sampleOffset??? - for separate devices starting at different time points?
-        SampleRate sampleRate_{};
+        SampleRate sampleRate_ = 1_Sps;
 
         /// Block that we append to to reach blockSizeB_ * blockSizeMultiplier_ bytes.
         Block pendingBlock;
@@ -86,7 +86,7 @@ private:
         std::vector<ZoomOutLevel> levels;
         size_t zoomOutPerLevel_;
 
-        SampleNum channelLength_{};
+        int64_t channelLength_{};
         size_t blockSizeB_ = 0;
         size_t blockSizeMultiplier_ = 1;
 };
@@ -101,10 +101,13 @@ concept block_range = std::ranges::range<Range> && std::convertible_to<std::remo
 
 template <block_range Range> SampleIdx firstSampleNo (Range const &r)
 {
-        return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->firstSampleNo ());
+        return (std::ranges::empty (r)) ? (SampleIdx (0)) : (std::ranges::begin (r)->firstSampleNo ());
 }
 
-template <block_range Range> SampleIdx lastSampleNo (Range const &r) { return (std::ranges::empty (r)) ? (0) : (r.back ().lastSampleNo ()); }
+template <block_range Range> SampleIdx lastSampleNo (Range const &r)
+{
+        return (std::ranges::empty (r)) ? (SampleIdx (0)) : (r.back ().lastSampleNo ());
+}
 
 template <block_range Range> size_t channelsNumber (Range const &r)
 {
@@ -113,21 +116,26 @@ template <block_range Range> size_t channelsNumber (Range const &r)
 
 template <block_range Range> SampleNum channelLength (Range const &r)
 {
-        // I assume all channels (except the last) have equal length.
-        SampleNum size{};
+        // I assume all blocks (except the last) have equal length.
+        int64_t size{};
 
         if (auto rsize = std::ranges::distance (r); rsize > 1) {
-                size = std::ranges::begin (r)->channelLength () * (rsize - 1);
+                size = std::ranges::begin (r)->channelLength ().get () * (rsize - 1);
         }
 
         // This imposes some restricions.
-        size += r.back ().channelLength ();
-        return size;
+        size += r.back ().channelLength ().get ();
+        return SampleNum{size, r.back ().sampleRate ()};
 }
 
 template <block_range Range> uint8_t bitsPerSample (Range const &r)
 {
         return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->bitsPerSample ());
+}
+
+template <block_range Range> SampleRate sampleRate (Range const &r)
+{
+        return (std::ranges::empty (r)) ? (0_Sps) : (std::ranges::begin (r)->sampleRate ());
 }
 
 template <block_range Range> size_t zoomOut (Range const &r) { return (std::ranges::empty (r)) ? (0) : (std::ranges::begin (r)->zoomOut ()); }

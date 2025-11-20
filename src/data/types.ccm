@@ -8,13 +8,12 @@
 
 module;
 #include "common/constants.hh"
+#include <cassert>
 #include <chrono>
-#include <condition_variable>
-#include <deque>
-#include <mutex>
 #include <variant>
 #include <vector>
 export module logic.data:types;
+import logic.core;
 
 export namespace logic {
 
@@ -39,7 +38,7 @@ concept digital_sample_collection = sample_collection<T> && requires (T t) {
 
 /****************************************************************************/
 
-using TimePoint = std::chrono::high_resolution_clock::time_point;
+// using TimePoint = std::chrono::high_resolution_clock::time_point;
 
 using Bytes = std::vector<uint8_t>;
 using Words = std::vector<uint32_t>;
@@ -48,15 +47,148 @@ using Buffer = std::variant<Bytes, Words, Numbers>;
 
 enum class StreamType : uint8_t { digital, analog };
 
-using SampleIdx = int64_t;
-using SampleNum = int64_t;
-using ByteIdx = int64_t;
-using ByteNum = int64_t;
+template <typename T, typename Parameter> class NamedType {
+public:
+        NamedType () = default;
+        explicit NamedType (T value) : value_ (std::move (value)) {}
 
-SampleIdx relativeBegin (SampleIdx index, SampleIdx rangeBegin, size_t zoomOut) { return (index - rangeBegin) / zoomOut; }
+        NamedType (NamedType const &) = default;
+        NamedType &operator= (NamedType const &) = default;
+        NamedType (NamedType &&) noexcept = default;
+        NamedType &operator= (NamedType &&) noexcept = default;
+        ~NamedType () = default;
+
+        T &get () { return value_; }
+        T const &get () const { return value_; }
+
+private:
+        T value_{};
+};
+
+/*--------------------------------------------------------------------------*/
+
+using SampleRate = NamedType<uint32_t, struct MySampleRate>;
+SampleRate operator""_Sps (unsigned long long x) { return SampleRate (x); }
+
+bool operator== (SampleRate a, SampleRate b) { return a.get () == b.get (); }
+
+/*--------------------------------------------------------------------------*/
+
+template <typename Parameter> class SampleLike : public NamedType<int64_t, Parameter> {
+public:
+        using Base = NamedType<int64_t, Parameter>;
+        using Base::Base;
+        SampleLike (int64_t value, SampleRate sampleRate) : Base{value}, sampleRate_{sampleRate} {}
+
+        SampleRate sampleRate () const { return sampleRate_; }
+
+private:
+        // Sample rate in samples per second.
+        SampleRate sampleRate_ = 1_Sps;
+};
+
+template <typename P1, typename P2> void srcheck (SampleLike<P1> const &a, SampleLike<P2> const &b)
+{
+        if (a.sampleRate () != b.sampleRate ()) {
+                throw Exception{"Sample rate mismatch"};
+        }
+}
+
+// template <typename T> struct IsSampleLike : public std::bool_constant<false> {};
+template <template <typename Param> typename S> struct IsSampleLike : public std::bool_constant<false> {};
+template <> struct IsSampleLike<SampleLike> : public std::bool_constant<true> {};
+
+template <template <typename Param> typename S>
+concept sample_like = IsSampleLike<S>::value;
+
+/*--------------------------------------------------------------------------*/
+
+template <typename P1, typename P2> SampleLike<P1> operator- (SampleLike<P1> const &a, SampleLike<P2> const &b)
+{
+        srcheck (a, b);
+        return SampleLike<P1> (a.get () - b.get (), a.sampleRate ());
+}
+
+template <typename P1, typename P2> SampleLike<P1> operator+ (SampleLike<P1> const &a, SampleLike<P2> const &b)
+{
+        srcheck (a, b);
+        return SampleLike<P1> (a.get () + b.get (), a.sampleRate ());
+}
+
+template <typename P1, typename P2> SampleLike<P1> &operator+= (SampleLike<P1> &a, SampleLike<P2> const &b)
+{
+        srcheck (a, b);
+        a.get () += b.get ();
+        return a;
+}
+
+template <typename P1, typename P2> SampleLike<P1> &operator-= (SampleLike<P1> &a, SampleLike<P2> const &b)
+{
+        srcheck (a, b);
+        a.get () -= b.get ();
+        return a;
+}
+
+/*--------------------------------------------------------------------------*/
+
+using SampleIdx = SampleLike<struct MySampleIdx>;
+SampleIdx operator""_SI (unsigned long long value) { return SampleIdx (value); }
+
+using SampleNum = SampleLike<struct MySampleNum>;
+SampleNum operator""_Sn (unsigned long long value) { return SampleNum (value); }
+
+/*--------------------------------------------------------------------------*/
+
+template <typename P1, typename P2> bool operator== (SampleLike<P1> const &a, SampleLike<P2> const &b)
+{
+        return (a.get () == 0 && b.get () == 0) || (a.get () == b.get () && a.sampleRate () == b.sampleRate ());
+}
+
+template <typename P1, typename P2> bool operator< (SampleLike<P1> const &a, SampleLike<P2> const &b)
+{
+        srcheck (a, b);
+        return a.get () < b.get ();
+}
+
+SampleIdx operator* (SampleIdx const &a, SampleRate b) { return SampleIdx{a.get (), SampleRate (a.sampleRate ().get () * b.get ())}; }
+SampleNum operator* (SampleNum const &a, SampleRate b) { return SampleNum{a.get (), SampleRate (a.sampleRate ().get () * b.get ())}; }
+
+template <typename Param> SampleLike<Param> resample (SampleLike<Param> const &a, SampleRate b)
+{
+        if (a.sampleRate () == b) {
+                return a;
+        }
+
+        if (a.sampleRate ().get () > b.get ()) {
+                uint32_t ratio = a.sampleRate ().get () / b.get ();
+
+                if (a.sampleRate ().get () % b.get ()) {
+                        throw Exception{"Resample error"};
+                }
+
+                return SampleLike<Param>{a.get () / ratio, b};
+        }
+
+        uint32_t ratio = b.get () / a.sampleRate ().get ();
+
+        if (b.get () % a.sampleRate ().get ()) {
+                throw Exception{"Resample error"};
+        }
+
+        return SampleLike<Param>{a.get () * ratio, b};
+}
+
+/*--------------------------------------------------------------------------*/
+
+SampleIdx relativeBegin (SampleIdx index, SampleIdx rangeBegin, size_t zoomOut)
+{
+        return SampleIdx ((index.get () - rangeBegin.get ()) / zoomOut);
+}
+
 SampleIdx relativeEnd (SampleIdx index, SampleIdx rangeBegin, size_t zoomOut)
 {
-        return ((index - rangeBegin) / zoomOut) - 1 + (((index - rangeBegin) % zoomOut == zoomOut - 1) ? (1) : (0));
+        return SampleIdx (((index.get () - rangeBegin.get ()) / zoomOut) - 1
+                          + (((index.get () - rangeBegin.get ()) % zoomOut == zoomOut - 1) ? (1) : (0)));
 }
 
 /**

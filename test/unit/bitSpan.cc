@@ -98,7 +98,7 @@ TEST_CASE ("Owning Basic", "[bitSpan]")
 TEST_CASE ("Join", "[backend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
-        BlockArray cbs{1, 1};
+        BlockArray cbs{1, 1_Sps};
         cbs.setBlockSizeB (16);
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
         cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
@@ -106,7 +106,7 @@ TEST_CASE ("Join", "[backend]")
 
         SECTION ("copy")
         {
-                auto r = cbs.range (0, 96);
+                auto r = cbs.range (0_SI, 96_SI);
 
                 auto x = r | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join
                         | std::ranges::to<Bytes> ();
@@ -125,7 +125,7 @@ TEST_CASE ("Join", "[backend]")
 
         SECTION ("lazy")
         {
-                auto r = cbs.range (0, 96);
+                auto r = cbs.range (0_SI, 96_SI);
                 REQUIRE (std::ranges::distance (r) == 3);
 
                 auto x = r | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
@@ -144,7 +144,7 @@ TEST_CASE ("Join", "[backend]")
 
         SECTION ("bit-wise all")
         {
-                auto x = cbs.range (0, 96) | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
+                auto x = cbs.range (0_SI, 96_SI) | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
                 auto span = OwningBitSpan{x, 0, 96};
 
                 static_assert (std::is_same_v<decltype (span)::BitCarrierT, uint8_t>);
@@ -169,8 +169,8 @@ TEST_CASE ("Join", "[backend]")
 
         SECTION ("bit-wise 2nd and 3rd block")
         {
-                auto range = cbs.range (32, 64);
-                REQUIRE (logic::firstSampleNo (range) == 32);
+                auto range = cbs.range (32_SI, 64_SI);
+                REQUIRE (logic::firstSampleNo (range) == 32_SI);
                 auto x = range | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
                 auto span = OwningBitSpan{x, 0, 64};
 
@@ -202,9 +202,9 @@ TEST_CASE ("Join", "[backend]")
 
         SECTION ("bit-wise 9 bits")
         {
-                auto range = cbs.range (31, 31 + 9);
+                auto range = cbs.range (31_SI, SampleIdx (31 + 9));
                 REQUIRE (std::ranges::distance (range) == 2); // 2 blocks
-                REQUIRE (range.front ().firstSampleNo () == 0);
+                REQUIRE (range.front ().firstSampleNo () == 0_SI);
 
                 auto x = range | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
                 auto span = OwningBitSpan{x, 31, 9};
@@ -227,7 +227,7 @@ TEST_CASE ("Join", "[backend]")
 TEST_CASE ("Join multiplier", "[backend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
-        BlockArray cbs{1, 1};
+        BlockArray cbs{1, 1_Sps};
         cbs.setBlockSizeB (16);
         cbs.setBlockSizeMultiplier (2);
 
@@ -238,7 +238,7 @@ TEST_CASE ("Join multiplier", "[backend]")
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (3));
 
-                auto r = cbs.range (0, 128);
+                auto r = cbs.range (0_SI, 128_SI);
                 REQUIRE (std::ranges::distance (r) == 2);
 
                 auto ch0 = r | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
@@ -251,7 +251,7 @@ TEST_CASE ("Join multiplier", "[backend]")
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
 
-                auto r = cbs.range (0, 128);
+                auto r = cbs.range (0_SI, 128_SI);
                 REQUIRE (std::ranges::distance (r) == 1); // Returns 1 block, becuase it is still waiting for 16*2 bytes
 
                 auto ch0 = r | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;
@@ -269,7 +269,7 @@ TEST_CASE ("Join multiplier", "[backend]")
                 /*--------------------------------------------------------------------------*/
 
                 cbs.append (BITS_PER_SAMPLE, getChannelBlockData (3));
-                r = cbs.range (0, 128);
+                r = cbs.range (0_SI, 128_SI);
                 REQUIRE (std::ranges::distance (r) == 2);
 
                 auto ch00 = r | std::views::transform ([] (Block const &b) { return b.channel (0); }) | std::views::join;

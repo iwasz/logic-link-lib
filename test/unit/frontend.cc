@@ -47,19 +47,19 @@ TEST_CASE ("size", "[frontend]")
         backend.addGroup ({.channelsNumber = 4, .blockSizeB = 16384});
         DigitalFrontend frontend{&backend};
 
-        REQUIRE (frontend.size (0) == 0);
+        REQUIRE (frontend.size (0) == 0_Sn);
 
         backend.append (0, 1, generateDemoDeviceBlock ());
-        REQUIRE (frontend.size (0) == 8192);
+        REQUIRE (frontend.size (0) == 8192_Sn);
 
         backend.append (0, 1, generateDemoDeviceBlock ());
-        REQUIRE (frontend.size (0) == 2 * 8192);
+        REQUIRE (frontend.size (0) == SampleNum (2 * 8192));
 
         backend.append (0, 1, generateDemoDeviceBlock ());
-        REQUIRE (frontend.size (0) == 3 * 8192);
+        REQUIRE (frontend.size (0) == SampleNum (3 * 8192));
 
         backend.clear ();
-        REQUIRE (frontend.size (0) == 0);
+        REQUIRE (frontend.size (0) == 0_Sn);
 }
 
 /**
@@ -85,9 +85,9 @@ TEST_CASE ("square wave integration test usecase", "[frontend]")
 
         // Simulate how the GUI gets the data to render first 3 tiles of channel 15
         // Offsets and lengths taken from the GUI app itself
-        auto tileAData = frontend.range (0, 0, 750, 1, false) | extractChannel;
-        auto tileBData = frontend.range (0, 750, 750, 1, false) | extractChannel;
-        auto tileCData = frontend.range (0, 1500, 750, 1, false) | extractChannel;
+        auto tileAData = frontend.range (0, 0_SI, 750_Sn, 1, false) | extractChannel;
+        auto tileBData = frontend.range (0, 750_SI, 750_Sn, 1, false) | extractChannel;
+        auto tileCData = frontend.range (0, 1500_SI, 750_Sn, 1, false) | extractChannel;
 
         /// TODO! cross the blocks! i.e. past 8192 like:
         // auto tileCData = frontend.channel (0, 15, 8000, 750);
