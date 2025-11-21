@@ -19,15 +19,16 @@ import logic.processing;
 
 namespace logic {
 
-void Backend::append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s)
+void Backend::append (size_t groupIdx, std::vector<Bytes> &&s)
 {
         {
                 std::lock_guard lock{mutex};
-                groups_.at (groupIdx).append (bitsPerSample, std::move (s));
+                groups_.at (groupIdx).append (std::move (s));
         }
 
         notifyObservers ();
 }
+
 /*--------------------------------------------------------------------------*/
 
 void Backend::clear ()
@@ -75,7 +76,7 @@ Backend::SubRange Backend::range (size_t groupIdx, SampleIdx begin, SampleNum le
 size_t Backend::addGroup (Group const &config)
 {
         std::lock_guard lock{mutex};
-        groups_.emplace_back (config.channelsNumber, config.sampleRate, config.maxZoomOutLevels, config.zoomOutPerLevel);
+        groups_.emplace_back (config.channelsNumber, config.sampleRate, config.bitsPerSample, config.maxZoomOutLevels, config.zoomOutPerLevel);
         auto &g = groups_.back ();
         g.setBlockSizeB (config.blockSizeB);
         g.setBlockSizeMultiplier (config.blockSizeMultiplier);

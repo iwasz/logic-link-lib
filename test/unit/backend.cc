@@ -15,24 +15,22 @@ import logic;
 import utils;
 
 using namespace logic;
-static constexpr auto BITS_PER_SAMPLE = 1U;
 static constexpr auto DEFAULT_BLOKC_SIZE = 16U;
 
 TEST_CASE ("size", "[backend]")
 {
-        static constexpr auto BITS_PER_SAMPLE = 1U;
         static constexpr auto GROUP = 0U;
 
         Backend backend;
         backend.addGroup ({.channelsNumber = 4, .maxZoomOutLevels = 1, .zoomOutPerLevel = 1, .blockSizeB = 16});
 
-        backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (0));
+        backend.append (GROUP, getChannelBlockData (0));
         REQUIRE (backend.channelLength (0) == 32_Sn);
 
-        backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (1));
+        backend.append (GROUP, getChannelBlockData (1));
         REQUIRE (backend.channelLength (0) == 64_Sn);
 
-        backend.append (GROUP, BITS_PER_SAMPLE, getChannelBlockData (2));
+        backend.append (GROUP, getChannelBlockData (2));
         REQUIRE (backend.channelLength (0) == 96_Sn);
 }
 
@@ -57,7 +55,7 @@ TEST_CASE ("universal SampleNum and IDX", "[backend]")
                 REQUIRE (backend.sampleRate () == 10_Sps);
 
                 for (int i = 0; i < 10; ++i) {
-                        backend.append (analogGroup, BITS_PER_SAMPLE,
+                        backend.append (analogGroup,
                                         std::views::repeat (std::views::iota (0UZ, DEFAULT_BLOKC_SIZE / 4) | std::ranges::to<Bytes> (), 4)
                                                 | std::ranges::to<std::vector<Bytes>> ());
                 }
@@ -72,7 +70,7 @@ TEST_CASE ("universal SampleNum and IDX", "[backend]")
                 REQUIRE (backend.sampleRate () == 100_Sps);
 
                 for (int i = 0; i < 100; ++i) {
-                        backend.append (digitalGroup, BITS_PER_SAMPLE,
+                        backend.append (digitalGroup,
                                         std::views::repeat (std::views::iota (0UZ, DEFAULT_BLOKC_SIZE / 4) | std::ranges::to<Bytes> (), 4)
                                                 | std::ranges::to<std::vector<Bytes>> ());
                 }
@@ -88,7 +86,7 @@ TEST_CASE ("universal SampleNum and IDX", "[backend]")
                 REQUIRE (backend.sampleRate () == 100_Sps);
 
                 for (int i = 0; i < 100; ++i) {
-                        backend.append (digitalGroup, BITS_PER_SAMPLE,
+                        backend.append (digitalGroup,
                                         std::views::repeat (std::views::iota (0UZ, DEFAULT_BLOKC_SIZE / 4) | std::ranges::to<Bytes> (), 4)
                                                 | std::ranges::to<std::vector<Bytes>> ());
                 }
@@ -103,7 +101,7 @@ TEST_CASE ("universal SampleNum and IDX", "[backend]")
                 REQUIRE (backend.sampleRate () == 100_Sps);
 
                 for (int i = 0; i < 10; ++i) {
-                        backend.append (analogGroup, BITS_PER_SAMPLE,
+                        backend.append (analogGroup,
                                         std::views::repeat (std::views::iota (0UZ, DEFAULT_BLOKC_SIZE / 4) | std::ranges::to<Bytes> (), 4)
                                                 | std::ranges::to<std::vector<Bytes>> ());
                 }
@@ -128,7 +126,7 @@ TEST_CASE ("iterate the data", "[backend]")
         size_t dState{};
 
         /*
-         * ch0: 1,2,3,4
+         * extractBytes: 11,,2,3,4
          * ch1: 1,2,3,4
          * ch2: 1,2,3,4
          * ch3: 1,2,3,4
@@ -137,7 +135,7 @@ TEST_CASE ("iterate the data", "[backend]")
                 for (int i = 0; i < anum; ++i) {
                         auto bytesPerCh = DEFAULT_BLOKC_SIZE / 4;
 
-                        backend.append (analogGroup, BITS_PER_SAMPLE,
+                        backend.append (analogGroup,
                                         std::views::repeat (std::views::iota (aState, aState + bytesPerCh) | std::ranges::to<Bytes> (), 4)
                                                 | std::ranges::to<std::vector<Bytes>> ());
 
@@ -147,20 +145,12 @@ TEST_CASE ("iterate the data", "[backend]")
                 for (int i = 0; i < bnum; ++i) {
                         auto bytesPerCh = DEFAULT_BLOKC_SIZE / 4;
 
-                        backend.append (digitalGroup, BITS_PER_SAMPLE,
+                        backend.append (digitalGroup,
                                         std::views::repeat (std::views::iota (dState, dState + bytesPerCh) | std::ranges::to<Bytes> (), 4)
                                                 | std::ranges::to<std::vector<Bytes>> ());
 
                         dState += bytesPerCh;
                 }
-        };
-
-        auto ch0 = [] (size_t channelIdx, SampleIdx rangeBegin, SampleNum rangeLen) {
-                auto beg = rangeBegin.get () / CHAR_BIT;
-                auto len = rangeLen.get () / CHAR_BIT;
-
-                return std::views::transform ([channelIdx] (auto &block) { return block.channel (channelIdx); }) | std::views::join
-                        | std::views::drop (beg) | std::views::take (len) | std::ranges::to<Bytes> ();
         };
 
         SECTION ("first")
@@ -192,10 +182,10 @@ TEST_CASE ("iterate the data", "[backend]")
                 auto dsr = backend.sampleRate (digitalGroup);
 
                 // First 4 analog samples and 40 digital samples
-                REQUIRE (std::ranges::equal (analogData | ch0 (0, resample (rangeBegin, asr), resample (rangeLen, asr)),
+                REQUIRE (std::ranges::equal (analogData | extractBytes (0, 1, resample (rangeBegin, asr), resample (rangeLen, asr)),
                                              std::views::iota (0, 4) | std::ranges::to<Bytes> ()));
 
-                REQUIRE (std::ranges::equal (digitalData | ch0 (0, resample (rangeBegin, dsr), resample (rangeLen, dsr)),
+                REQUIRE (std::ranges::equal (digitalData | extractBytes (0, 1, resample (rangeBegin, dsr), resample (rangeLen, dsr)),
                                              std::views::iota (0, 40) | std::ranges::to<Bytes> ()));
 
                 rangeBegin += rangeLen;
@@ -221,12 +211,12 @@ TEST_CASE ("iterate the data", "[backend]")
                 //         | std::ranges::to<Bytes> ();
 
                 // Next 4 analog samples and 40 digital samples
-                REQUIRE ((analogData | ch0 (0, resample (rangeBegin, asr) - firstSampleNo (analogData), resample (rangeLen, asr))
+                REQUIRE ((analogData | extractBytes (0, 1, resample (rangeBegin, asr) - firstSampleNo (analogData), resample (rangeLen, asr))
                           | std::ranges::to<Bytes> ())
                          == (std::views::iota (4, 8) | std::ranges::to<Bytes> ()));
 
                 REQUIRE (std::ranges::equal (
-                        digitalData | ch0 (0, resample (rangeBegin, dsr) - firstSampleNo (digitalData), resample (rangeLen, dsr)),
+                        digitalData | extractBytes (0, 1, resample (rangeBegin, dsr) - firstSampleNo (digitalData), resample (rangeLen, dsr)),
                         std::views::iota (40, 80) | std::ranges::to<Bytes> ()));
 
                 rangeBegin += rangeLen;

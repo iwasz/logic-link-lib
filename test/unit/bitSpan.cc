@@ -98,11 +98,11 @@ TEST_CASE ("Owning Basic", "[bitSpan]")
 TEST_CASE ("Join", "[backend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
-        BlockArray cbs{1, 1_Sps};
+        BlockArray cbs{1, 1_Sps, BITS_PER_SAMPLE};
         cbs.setBlockSizeB (16);
-        cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
-        cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
-        cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
+        cbs.append (getChannelBlockData (0));
+        cbs.append (getChannelBlockData (1));
+        cbs.append (getChannelBlockData (2));
 
         SECTION ("copy")
         {
@@ -227,16 +227,16 @@ TEST_CASE ("Join", "[backend]")
 TEST_CASE ("Join multiplier", "[backend]")
 {
         static constexpr auto BITS_PER_SAMPLE = 1U;
-        BlockArray cbs{1, 1_Sps};
+        BlockArray cbs{1, 1_Sps, BITS_PER_SAMPLE};
         cbs.setBlockSizeB (16);
         cbs.setBlockSizeMultiplier (2);
 
         SECTION ("lazy, full blocks")
         {
-                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
-                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
-                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
-                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (3));
+                cbs.append (getChannelBlockData (0));
+                cbs.append (getChannelBlockData (1));
+                cbs.append (getChannelBlockData (2));
+                cbs.append (getChannelBlockData (3));
 
                 auto r = cbs.range (0_SI, 128_SI);
                 REQUIRE (std::ranges::distance (r) == 2);
@@ -247,9 +247,9 @@ TEST_CASE ("Join multiplier", "[backend]")
 
         SECTION ("lazy, missing blocks")
         {
-                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (0));
-                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (1));
-                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (2));
+                cbs.append (getChannelBlockData (0));
+                cbs.append (getChannelBlockData (1));
+                cbs.append (getChannelBlockData (2));
 
                 auto r = cbs.range (0_SI, 128_SI);
                 REQUIRE (std::ranges::distance (r) == 1); // Returns 1 block, becuase it is still waiting for 16*2 bytes
@@ -268,7 +268,7 @@ TEST_CASE ("Join multiplier", "[backend]")
 
                 /*--------------------------------------------------------------------------*/
 
-                cbs.append (BITS_PER_SAMPLE, getChannelBlockData (3));
+                cbs.append (getChannelBlockData (3));
                 r = cbs.range (0_SI, 128_SI);
                 REQUIRE (std::ranges::distance (r) == 2);
 

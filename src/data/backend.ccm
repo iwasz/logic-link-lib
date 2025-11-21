@@ -9,7 +9,9 @@
 module;
 #include "common/constants.hh"
 #include <Tracy.hpp>
+#include <climits>
 #include <mutex>
+#include <ranges>
 #include <unordered_set>
 #include <vector>
 export module logic.data:backend;
@@ -46,7 +48,7 @@ struct IBackend {
         virtual ~IBackend () = default;
 
         /// Adds s[0] to stream[0], s[1] to stream[1] etc
-        virtual void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) = 0;
+        virtual void append (size_t groupIdx, std::vector<Bytes> &&s) = 0;
         virtual void clear () = 0;
 
         /**
@@ -61,6 +63,7 @@ struct IBackend {
         struct Group {
                 size_t channelsNumber{};
                 SampleRate sampleRate = 1_Sps;
+                uint8_t bitsPerSample = 1;
                 size_t maxZoomOutLevels = 1;
                 size_t zoomOutPerLevel = 1;
                 size_t blockSizeB = 16; // For UT
@@ -85,6 +88,8 @@ struct IBackend {
         virtual SampleRate sampleRate () const = 0; /// Max from all the groups.
         virtual SampleRate sampleRate (size_t groupIdx) const = 0;
 
+        virtual uint8_t bitsPerSample (size_t groupIdx) const = 0;
+
         virtual void addObserver (IBackendObserver *observer) = 0;
         virtual void removeObserver (IBackendObserver *observer) = 0;
 };
@@ -94,7 +99,7 @@ struct IBackend {
  */
 class Backend : public IBackend {
 public:
-        void append (size_t groupIdx, uint8_t bitsPerSample, std::vector<Bytes> &&s) override;
+        void append (size_t groupIdx, std::vector<Bytes> &&s) override;
         void clear () override;
 
         SubRange range (size_t groupIdx, SampleIdx begin, SampleIdx end, size_t zoomOut = 1, bool peek = false) const override;
@@ -111,6 +116,8 @@ public:
         SampleRate sampleRate () const override { return sampleRate (fastestGroup_); }
         SampleRate sampleRate (size_t groupIdx) const override { return groups_.at (groupIdx).sampleRate (); }
 
+        uint8_t bitsPerSample (size_t groupIdx) const override { return groups_.at (groupIdx).bitsPerSample (); }
+
         void addObserver (IBackendObserver *observer) override { observers.insert (observer); }
         void removeObserver (IBackendObserver *observer) override { observers.erase (observer); }
 
@@ -122,5 +129,19 @@ private:
         std::unordered_set<IBackendObserver *> observers;
         size_t fastestGroup_{};
 };
+
+/**
+ * A helper.
+ * Example: test/unit/backend.cc
+ * TEST_CASE ("iterate the data", "[backend]")
+ */
+inline auto extractBytes (size_t channelIdx, size_t bitsPerSample, SampleIdx rangeBegin, SampleNum rangeLen)
+{
+        auto beg = rangeBegin.get () / (CHAR_BIT / bitsPerSample);
+        auto len = rangeLen.get () / (CHAR_BIT / bitsPerSample);
+
+        return std::views::transform ([channelIdx] (auto &block) { return block.channel (channelIdx); }) | std::views::join
+                | std::views::drop (beg) | std::views::take (len) | std::ranges::to<Bytes> ();
+}
 
 } // namespace logic

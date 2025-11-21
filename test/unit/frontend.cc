@@ -26,14 +26,14 @@ TEST_CASE ("new data", "[frontend]")
         REQUIRE (frontend1.isNewData () == false);
         REQUIRE (frontend2.isNewData () == false);
 
-        backend.append (0, 1, generateDemoDeviceBlock ());
+        backend.append (0, generateDemoDeviceBlock ());
 
         REQUIRE (frontend1.isNewData () == true);
         REQUIRE (frontend1.isNewData () == false);
         REQUIRE (frontend2.isNewData () == true);
         REQUIRE (frontend2.isNewData () == false);
 
-        backend.append (0, 1, generateDemoDeviceBlock ());
+        backend.append (0, generateDemoDeviceBlock ());
 
         REQUIRE (frontend1.isNewData () == true);
         REQUIRE (frontend1.isNewData () == false);
@@ -49,13 +49,13 @@ TEST_CASE ("size", "[frontend]")
 
         REQUIRE (frontend.size (0) == 0_Sn);
 
-        backend.append (0, 1, generateDemoDeviceBlock ());
+        backend.append (0, generateDemoDeviceBlock ());
         REQUIRE (frontend.size (0) == 8192_Sn);
 
-        backend.append (0, 1, generateDemoDeviceBlock ());
+        backend.append (0, generateDemoDeviceBlock ());
         REQUIRE (frontend.size (0) == SampleNum (2 * 8192));
 
-        backend.append (0, 1, generateDemoDeviceBlock ());
+        backend.append (0, generateDemoDeviceBlock ());
         REQUIRE (frontend.size (0) == SampleNum (3 * 8192));
 
         backend.clear ();
@@ -67,7 +67,6 @@ TEST_CASE ("size", "[frontend]")
  */
 TEST_CASE ("square wave integration test usecase", "[frontend]")
 {
-        static constexpr auto BITS_PER_SAMPLE = 1U;
         static constexpr auto GROUP = 0U;
 
         Backend backend;
@@ -75,7 +74,7 @@ TEST_CASE ("square wave integration test usecase", "[frontend]")
 
         // Add some of these blocks.
         for (int i = 0; i < 10; ++i) {
-                backend.append (GROUP, BITS_PER_SAMPLE, generateDemoDeviceBlock ());
+                backend.append (GROUP, generateDemoDeviceBlock ());
         }
 
         DigitalFrontend frontend{&backend};

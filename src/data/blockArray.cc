@@ -21,9 +21,13 @@ import logic.processing;
 
 namespace logic {
 
-BlockArray::BlockArray (size_t channelsNumber, SampleRate sampleRate, size_t maxZoomOutLevels, size_t zoomOutPerLevel)
-    : sampleRate_{sampleRate}, levels (std::max (maxZoomOutLevels, 1uz)), zoomOutPerLevel_{zoomOutPerLevel}
+BlockArray::BlockArray (size_t channelsNumber, SampleRate sampleRate, uint8_t bitsPerSample, size_t maxZoomOutLevels, size_t zoomOutPerLevel)
+    : sampleRate_{sampleRate}, bitsPerSample_{bitsPerSample}, levels (std::max (maxZoomOutLevels, 1uz)), zoomOutPerLevel_{zoomOutPerLevel}
 {
+        if (bitsPerSample != 1 && bitsPerSample != 8) {
+                throw Exception{"Only 1 and 8 bit samples are supported for now."};
+        }
+
         for (size_t curZoomOut = 1; auto &lev : levels) {
                 lev.zoomOut = curZoomOut;
                 curZoomOut *= zoomOutPerLevel_;
@@ -52,7 +56,7 @@ Block BlockArray::downsample (Block const &block, size_t zoomOut, DownSamplers c
 
 /****************************************************************************/
 
-void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
+void BlockArray::append (std::vector<Bytes> &&channels)
 {
         if (channels.empty () || channels.front ().empty ()) {
                 return;
@@ -98,7 +102,7 @@ void BlockArray::append (uint8_t bitsPerSample, std::vector<Bytes> &&channels)
         };
 
         // Collect multiBlockBytes (blockSizeB_ * blockSizeMultiplier_) bytes of data, so the downsampling algorithms hev enough data to work on.
-        pendingBlock.append (Block{sampleRate_, bitsPerSample, std::move (channels)});
+        pendingBlock.append (Block{sampleRate_, bitsPerSample_, std::move (channels)});
 
         if (blockB (pendingBlock) >= multiBlockSizeB) {
                 auto tmp = pendingBlock.channelLength ().get ();
