@@ -86,6 +86,10 @@ export struct IDevice {
          */
         virtual std::unordered_set<logs::Code> getErrors () = 0;
         virtual void clearErrors () = 0;
+
+        /// Group indices we publish the data to.
+        virtual std::vector<size_t> const &groupsIdx () const = 0;
+        virtual void setGroupsIdx (std::vector<size_t> groupsIdx) = 0;
 };
 
 /**
@@ -98,7 +102,8 @@ public:
 
         void notify (std::optional<bool> running, std::optional<Health> state);
 
-        /*--------------------------------------------------------------------------*/
+        std::vector<size_t> const &groupsIdx () const override { return groupsIdx_; }
+        void setGroupsIdx (std::vector<size_t> groupsIdx) override { groupsIdx_ = std::move (groupsIdx); }
 
         void writeAcquisitionParams (common::acq::Params const &params, bool legacy) override;
 
@@ -110,6 +115,7 @@ private:
         /// It's sole purpose is to indicate the status to the outside world.
         mutable std::atomic<Health> health_;
         mutable std::atomic_bool acquiring_;
+        std::vector<size_t> groupsIdx_; /// Group numbers to populate
 };
 
 /**

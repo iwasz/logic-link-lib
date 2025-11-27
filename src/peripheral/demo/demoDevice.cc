@@ -62,7 +62,7 @@ void DemoDevice::start (IBackend *backend)
                                 }
 
                                 ZoneNamedN (append, "append", false);
-                                backend->append (acquisitionParams.groups[0], std::move (channels));
+                                backend->append (groupsIdx ().front (), std::move (channels));
 
                                 totalSizePerChan += sizePerChanBits;
                                 if (acquisitionParams.digitalSamplesPerChannelLimit > 0

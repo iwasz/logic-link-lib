@@ -79,7 +79,7 @@ void TestRigA::run ()
                 }
         }
 
-        backend ()->append (acquisitionParams.groups[0], std::move (channels));
+        backend ()->append (groupsIdx ().front (), std::move (channels));
 
         totalSizePerChan += sizePerChanWords * sizeof (uint32_t) * CHAR_BIT;
         if (acquisitionParams.digitalSamplesPerChannelLimit > 0 && totalSizePerChan >= acquisitionParams.digitalSamplesPerChannelLimit) {

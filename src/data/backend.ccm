@@ -10,6 +10,7 @@ module;
 #include "common/constants.hh"
 #include <Tracy.hpp>
 #include <climits>
+#include <condition_variable>
 #include <mutex>
 #include <ranges>
 #include <unordered_set>
@@ -79,11 +80,19 @@ struct IBackend {
         /**
          * Channel length in the `smallest sample` unit i.e. most fine grained samples
          * this backend holds. Assuming all groups start and stop at the sasme time.
-         * Assume a backend has 2 groups: digital at 1 Msps and analog at 1 ksps and
-         * the device acquired data for 1s. This method will return SampleNum {1000'000, 1000'000}
+         * For example if a backend has 2 groups: digital at 1 Msps and analog at 1 ksps
+         * and the device acquired data for 1s. This method will return
+         * SampleNum {1000'000, 1000'000}
          */
         virtual SampleNum channelLength () const = 0;
         virtual SampleNum channelLength (size_t groupIdx) const = 0;
+
+        /*
+         * Blocks (on a CV var) until the backend's `channelLength()` becomes longer than `len`.
+         * Returns the difference.
+         */
+        virtual SampleNum waitLength (SampleNum const &len) const = 0;
+        virtual SampleNum waitLength (size_t groupIdx, SampleNum const &len) const = 0;
 
         virtual SampleRate sampleRate () const = 0; /// Max from all the groups.
         virtual SampleRate sampleRate (size_t groupIdx) const = 0;
@@ -113,6 +122,9 @@ public:
         SampleNum channelLength () const override { return channelLength (fastestGroup_); }
         SampleNum channelLength (size_t groupIdx) const override;
 
+        SampleNum waitLength (SampleNum const &len) const override { return waitLength (fastestGroup_, len); }
+        SampleNum waitLength (size_t groupIdx, SampleNum const &len) const override;
+
         SampleRate sampleRate () const override { return sampleRate (fastestGroup_); }
         SampleRate sampleRate (size_t groupIdx) const override { return groups_.at (groupIdx).sampleRate (); }
 
@@ -126,6 +138,7 @@ private:
 
         BlockArrays groups_;
         mutable TracyLockable (std::mutex, mutex);
+        mutable std::condition_variable cvVar;
         std::unordered_set<IBackendObserver *> observers;
         size_t fastestGroup_{};
 };

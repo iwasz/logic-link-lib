@@ -26,6 +26,7 @@ void Backend::append (size_t groupIdx, std::vector<Bytes> &&s)
                 groups_.at (groupIdx).append (std::move (s));
         }
 
+        cvVar.notify_all ();
         notifyObservers ();
 }
 
@@ -97,6 +98,21 @@ SampleNum Backend::channelLength (size_t groupIdx) const
 {
         std::lock_guard lock{mutex};
         return groups_.at (groupIdx).channelLength ();
+}
+
+/*--------------------------------------------------------------------------*/
+
+SampleNum Backend::waitLength (size_t groupIdx, SampleNum const &len) const
+{
+        std::unique_lock lock{mutex};
+
+        cvVar.wait (lock, [this, len, groupIdx] {
+                auto actl = groups_.at (groupIdx).channelLength ();
+                srcheck (actl, len);
+                return actl.get () > len.get ();
+        });
+
+        return groups_.at (groupIdx).channelLength () - len;
 }
 
 /*--------------------------------------------------------------------------*/
