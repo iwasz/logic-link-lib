@@ -7,8 +7,8 @@
  ****************************************************************************/
 
 module;
-#include "common/constants.hh"
-#include <Tracy.hpp>
+#include <cstdint>
+#include <cstdlib>
 #include <vector>
 export module logic.data:block;
 import :types;

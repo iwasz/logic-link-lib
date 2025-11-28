@@ -28,7 +28,7 @@ include(cmake/CPM.cmake)
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
 CPMAddPackage("gh:microsoft/GSL@4.1.0")
 CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
-CPMAddPackage("gh:wolfpld/tracy@0.12.2")
+CPMAddPackage("gh:wolfpld/tracy@0.13.0")
 
 if(LOCAL_DEPENDENCIES)
   message("💀💀💀 ${PROJECT_NAME} is using local library versions!")

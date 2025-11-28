@@ -9,6 +9,7 @@
 module;
 #include <format>
 #include <ranges>
+#include <vector>
 module logic.processing;
 import logic.data;
 

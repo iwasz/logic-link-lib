@@ -10,6 +10,7 @@ module;
 #include "common/constants.hh"
 #include <Tracy.hpp>
 #include <algorithm>
+#include <condition_variable>
 #include <mutex>
 #include <ranges>
 #include <vector>
