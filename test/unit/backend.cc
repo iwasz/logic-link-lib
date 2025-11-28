@@ -182,11 +182,13 @@ TEST_CASE ("iterate the data", "[backend]")
                 auto dsr = backend.sampleRate (digitalGroup);
 
                 // First 4 analog samples and 40 digital samples
-                REQUIRE (std::ranges::equal (analogData | extractBytes (0, 1, resample (rangeBegin, asr), resample (rangeLen, asr)),
-                                             std::views::iota (0, 4) | std::ranges::to<Bytes> ()));
+                REQUIRE (std::ranges::equal (
+                        analogData | extractBytes (0, 1, resample (rangeBegin, asr) - firstSampleNo (analogData), resample (rangeLen, asr)),
+                        std::views::iota (0, 4) | std::ranges::to<Bytes> ()));
 
-                REQUIRE (std::ranges::equal (digitalData | extractBytes (0, 1, resample (rangeBegin, dsr), resample (rangeLen, dsr)),
-                                             std::views::iota (0, 40) | std::ranges::to<Bytes> ()));
+                REQUIRE (std::ranges::equal (
+                        digitalData | extractBytes (0, 1, resample (rangeBegin, dsr) - firstSampleNo (digitalData), resample (rangeLen, dsr)),
+                        std::views::iota (0, 40) | std::ranges::to<Bytes> ()));
 
                 rangeBegin += rangeLen;
 

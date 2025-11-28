@@ -86,8 +86,6 @@ void UsbDevice::run ()
                 return;
         }
 
-        ZoneScopedN ("anaysis");
-
         /*
          * Protecting transmissionParams with mutex is not crucial as it
          * changes only upon a call to writeTransmissionParams. That method
@@ -97,12 +95,14 @@ void UsbDevice::run ()
          *
          * queue->start () called in UsbDevice::start
          */
-        TracyPlot ("rawQueueSize", int64_t (queue ().size ()));
         auto rcd = (transmissionParams_.discardRaw) ? (queue ().pop ()) : (queue ().next ());
 
         if (!rcd) {
                 return;
         }
+
+        ZoneScopedN ("anaysis");
+        TracyPlot ("rawQueueSize", int64_t (queue ().size ()));
 
         RawData rd;
 
@@ -204,7 +204,8 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
 
         if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
                 /*
-                 * We're in the interal lubusb thread now, we can't throw, thus I
+                 * We're in the `UsbAsyncInput::acquireLoop ()` thread now, so I'm
+                 * reporting errors through eventQueue.
                  */
                 h->eventQueue ()->addEvent<ErrorEvent> (
                         std::format ("USB transfer status error Code: {}", libusb_error_name (transfer->status)));

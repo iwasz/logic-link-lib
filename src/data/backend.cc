@@ -22,6 +22,8 @@ namespace logic {
 
 void Backend::append (size_t groupIdx, std::vector<Bytes> &&s)
 {
+        ZoneScopedN ("BackendAppend");
+
         {
                 std::lock_guard lock{mutex};
                 groups_.at (groupIdx).append (std::move (s));
@@ -107,7 +109,7 @@ SampleNum Backend::waitLength (size_t groupIdx, SampleNum const &len) const
 {
         std::unique_lock lock{mutex};
 
-        cvVar.wait (lock, [this, len, groupIdx] {
+        cvVar.wait_for (lock, std::chrono::milliseconds (10), [this, len, groupIdx] {
                 auto actl = groups_.at (groupIdx).channelLength ();
                 srcheck (actl, len);
                 return actl.get () > len.get ();
