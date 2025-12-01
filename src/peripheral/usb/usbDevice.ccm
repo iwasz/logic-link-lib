@@ -94,7 +94,10 @@ export struct UsbInterface {
  */
 export class UsbDevice : public AbstractDevice {
 public:
-        UsbDevice (EventQueue *eventQueue, libusb_device_handle *dev) : deviceHandle_{dev}, eventQueue_{eventQueue} {}
+        UsbDevice (EventQueue *eventQueue, libusb_device_handle *dev)
+            : deviceHandle_{dev}, transfers (USB_BULK_TRANSFER_POOL_SIZE), eventQueue_{eventQueue}
+        {
+        }
         UsbDevice (UsbDevice const &) = delete;
         UsbDevice &operator= (UsbDevice const &) = delete;
         UsbDevice (UsbDevice &&) = delete;
@@ -145,7 +148,9 @@ private:
         mutable libusb_device_handle *deviceHandle_{};
 
         /// USB transfers are sent directly by this class (called by UsbAsyncInput).
-        libusb_transfer *transfer{};
+        static constexpr size_t USB_BULK_TRANSFER_POOL_SIZE = 4;
+        std::vector<libusb_transfer *> transfers;
+        ;
 
         /*
          * We keep some defaults global (like compress == false) and some

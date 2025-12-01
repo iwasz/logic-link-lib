@@ -26,8 +26,10 @@ namespace logic {
 
 UsbDevice::~UsbDevice ()
 {
-        libusb_free_transfer (transfer);
         // Device handles are closed in in the UsbAbstractInput which owns them.
+        for (auto *transfer : transfers) {
+                libusb_free_transfer (transfer);
+        }
 }
 
 /****************************************************************************/
@@ -57,21 +59,23 @@ void UsbDevice::start (IBackend *backend)
         acquisitionStopRequest = false;
         totalSizePerChan = 0;
 
-        if (transfer = libusb_alloc_transfer (0); transfer == nullptr) {
-                /*
-                 * This is called from an user thread (via UsbAsyncInput::start) so we are
-                 * safe to throw an exception.
-                 */
-                notify (false, Health::error);
-                throw Exception{"Libusb could not instantiate a new transfer using `libusb_alloc_transfer`"};
-        }
+        for (auto *transfer : transfers) {
+                if (transfer = libusb_alloc_transfer (0); transfer == nullptr) {
+                        /*
+                         * This is called from an user thread (via UsbAsyncInput::start) so we are
+                         * safe to throw an exception.
+                         */
+                        notify (false, Health::error);
+                        throw Exception{"Libusb could not instantiate a new transfer using `libusb_alloc_transfer`"};
+                }
 
-        libusb_fill_bulk_transfer (transfer, deviceHandle (), common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (),
-                                   &UsbDevice::transferCallback, this, common::usb::TIMEOUT_MS);
+                libusb_fill_bulk_transfer (transfer, deviceHandle (), common::usb::IN_EP, singleTransfer.data (), singleTransfer.size (),
+                                           &UsbDevice::transferCallback, this, common::usb::TIMEOUT_MS);
 
-        if (auto r = libusb_submit_transfer (transfer); r < 0) {
-                notify (false, Health::error);
-                throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
+                if (auto r = libusb_submit_transfer (transfer); r < 0) {
+                        notify (false, Health::error);
+                        throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
+                }
         }
 
         TracyMessageLC ("submit start", tracy::Color::Red);
@@ -217,6 +221,11 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
         }
 
         if (h->acquisitionStopRequest) {
+                for (auto *transfer : h->transfers) {
+                        libusb_cancel_transfer (transfer);
+                        libusb_free_transfer (transfer);
+                }
+
                 h->notify (false, Health::ok);
                 TracyMessageL ("stop request");
                 return;
