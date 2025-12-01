@@ -7,6 +7,7 @@
  ****************************************************************************/
 
 module;
+#include <Tracy.hpp>
 #include <chrono>
 #include <condition_variable>
 #include <deque>
@@ -33,8 +34,8 @@ public:
 
 private:
         std::deque<Elem> data;
-        mutable std::mutex mutex;
-        mutable std::condition_variable cVar;
+        mutable TracyLockableN (std::mutex, mutex, "rawQueue");
+        mutable std::condition_variable_any cVar;
         mutable std::optional<size_t> index;
         bool started_{}; // Tells if iteration has been started and is in proces
         bool closed_{};  // Additional

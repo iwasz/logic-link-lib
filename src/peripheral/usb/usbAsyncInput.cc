@@ -167,7 +167,6 @@ int UsbAsyncInput::hotplugCallback (libusb_context * /* ctx */, libusb_device *d
 void UsbAsyncInput::acquireLoop ()
 {
         static timeval tv = {.tv_sec = 0, .tv_usec = 10000};
-        std::optional<high_resolution_clock::time_point> startPoint;
         setThreadName ("Acquire");
 
         while (true) {
@@ -175,22 +174,16 @@ void UsbAsyncInput::acquireLoop ()
                         break;
                 }
 
-                if (!startPoint) { // TODO move to a benchmarking class
-                        startPoint = high_resolution_clock::now ();
-                }
-
                 if (auto r = libusb_handle_events_timeout (nullptr, &tv); r < 0) {
                         /*
                          * After libusb source code analysis I believe that (at least) transfer timeout
-                         * erorrs will be directed to the transfer callback and there I can assing the
+                         * erorrs will be directed to the transfer callback and there I can assign the
                          * error to a transfer and device. This way I can inform particular device about
                          * the error.
                          */
                         eventQueue ()->addEvent<ErrorEvent> (
                                 std::format ("Error in the main USB loop (libusb_handle_events_timeout): {}", libusb_error_name (r)));
                 }
-
-                startPoint.reset ();
         }
 }
 
@@ -239,47 +232,9 @@ void UsbAsyncInput::analyzeLoop (/* Queue<RawCompressedBlock> *rawQueue, IBacken
 
 void UsbAsyncInput::run (/* Queue<RawCompressedBlock> *rawQueue, IBackend *backend */)
 {
-        // Futures are created for exception handling.
+        // Futures are created for exception handling. TODO change to threads
         analyzeFuture = std::async (std::launch::async, &UsbAsyncInput::analyzeLoop, this /* , rawQueue, backend */);
         acquireFuture = std::async (std::launch::async, &UsbAsyncInput::acquireLoop, this);
-        // TODO start all inputs.
-        // auto acquireFuture = std::async (std::launch::async, &logic::IInput::run, &factory.demo ());
-
-        // while (true) {
-        //         if (auto now = std::chrono::high_resolution_clock::now ();
-        //             config.app.seconds > 0 && now - start >= std::chrono::seconds{config.app.seconds}) {
-        //                 std::println ("Time limit reached.");
-        //                 break;
-        //         }
-
-        //         //  TODO
-        //         // if (config.app.bytes > 0 && session.receivedB () >= config.app.bytes) {
-        //         //         device->stop ();
-        //         //         break;
-        //         // }
-
-        //         if (cli::sys::isTermRequested ()) {
-        //                 std::println ("Interrupted by user.");
-        //                 break;
-        //         }
-
-        //         // They get ready only on exception.
-        //         if (acquireFuture.wait_for (100ms) == std::future_status::ready) {
-        //                 std::println ("acquireFuture has finished.");
-        //                 break;
-        //         }
-
-        //         if (analyzeFuture.wait_for (100ms) == std::future_status::ready) {
-        //                 std::println ("analyzeFuture has finished.");
-        //                 break;
-        //         }
-
-        //         if (printErrorEvents (eventQueue)) {
-        //                 break;
-        //         }
-
-        //         // std::this_thread::sleep_for (100ms);
-        // }
 }
 
 } // namespace logic

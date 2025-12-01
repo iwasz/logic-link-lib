@@ -74,6 +74,8 @@ void UsbDevice::start (IBackend *backend)
                 throw Exception{"`libusb_submit_transfer` has failed. Code: " + std::string{libusb_error_name (r)}};
         }
 
+        TracyMessageLC ("submit start", tracy::Color::Red);
+
         // Clear the error state since it seems we started successfuly.
         notify (true, Health::ok);
 }
@@ -210,11 +212,13 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                 h->eventQueue ()->addEvent<ErrorEvent> (
                         std::format ("USB transfer status error Code: {}", libusb_error_name (transfer->status)));
                 h->notify (false, Health::error);
+                TracyMessageL ("!completed");
                 return;
         }
 
         if (h->acquisitionStopRequest) {
                 h->notify (false, Health::ok);
+                TracyMessageL ("stop request");
                 return;
         }
 
@@ -222,6 +226,7 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                 // Lotys of code in upper layers depend on blocks of equal length.
                 h->eventQueue ()->addEvent<ErrorEvent> ("Received data size != requested data size.");
                 h->notify (false, Health::error);
+                TracyMessageL ("rx len mismatch");
                 return;
         }
 
@@ -261,6 +266,7 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                 RawCompressedBlock rcd{mbps, 0, h->singleTransfer};
                 h->queue_.push (std::move (rcd)); // Lock protected
                 h->singleTransfer.resize (transferLen);
+                TracyMessageL ("pushed");
         }
 
         // Only after finishing the data gathering may we re-start the transfer.
@@ -268,8 +274,11 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                 auto msg = std::format ("libusb_submit_transfer status error Code: {}", libusb_error_name (rc));
                 h->notify (false, Health::error);
                 h->eventQueue ()->addEvent<ErrorEvent> (msg);
+                TracyMessageL ("submit error");
                 return;
         }
+
+        TracyMessageLC ("submit", tracy::Color::Red);
 }
 
 /****************************************************************************/
