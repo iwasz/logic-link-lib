@@ -150,7 +150,6 @@ private:
         /// USB transfers are sent directly by this class (called by UsbAsyncInput).
         static constexpr size_t USB_BULK_TRANSFER_POOL_SIZE = 4;
         std::vector<libusb_transfer *> transfers;
-        ;
 
         /*
          * We keep some defaults global (like compress == false) and some

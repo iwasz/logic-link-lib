@@ -222,7 +222,7 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
 
         if (h->acquisitionStopRequest) {
                 for (auto *transfer : h->transfers) {
-                        libusb_cancel_transfer (transfer);
+                        // libusb_cancel_transfer (transfer); // TODO This crashes the app. Why?
                         libusb_free_transfer (transfer);
                 }
 

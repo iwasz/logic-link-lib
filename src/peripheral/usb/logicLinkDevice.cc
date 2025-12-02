@@ -49,7 +49,7 @@ void LogicLink::start (IBackend *backend)
         UsbDevice::start (backend);
 
         // Send the start USB control request.
-        controlOut (UsbRequest{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_START_CAPTURE));
+        // controlOut (UsbRequest{}.clazz (GREATFET_CLASS_LA).verb (LA_VERB_START_CAPTURE));
 }
 
 /****************************************************************************/
