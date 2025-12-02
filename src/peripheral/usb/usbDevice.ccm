@@ -168,6 +168,7 @@ private:
         /// Used to stop re-issuing the transfer.
         std::atomic_bool acquisitionStopRequest;
         int64_t totalSizePerChan{};
+        bool dropTransfer{}; // For droping first dummy transfer.
 };
 
 } // namespace logic

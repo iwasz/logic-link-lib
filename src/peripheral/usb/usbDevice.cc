@@ -58,6 +58,7 @@ void UsbDevice::start (IBackend *backend)
 
         acquisitionStopRequest = false;
         totalSizePerChan = 0;
+        dropTransfer = true;
 
         for (auto *transfer : transfers) {
                 if (transfer = libusb_alloc_transfer (0); transfer == nullptr) {
@@ -272,10 +273,16 @@ void UsbDevice::transferCallback (libusb_transfer *transfer)
                  * BEFORE the h->singleTransfer was copied (actually moved) to the
                  * final queue.
                  */
-                RawCompressedBlock rcd{mbps, 0, h->singleTransfer};
-                h->queue_.push (std::move (rcd)); // Lock protected
-                h->singleTransfer.resize (transferLen);
-                TracyMessageL ("pushed");
+                if (h->dropTransfer) {
+                        TracyMessageL ("dropped");
+                        h->dropTransfer = false; // Ditch first dummy transfer (used to start the acq)
+                }
+                else {
+                        RawCompressedBlock rcd{mbps, 0, h->singleTransfer};
+                        h->queue_.push (std::move (rcd)); // Lock protected
+                        h->singleTransfer.resize (transferLen);
+                        TracyMessageL ("pushed");
+                }
         }
 
         // Only after finishing the data gathering may we re-start the transfer.
