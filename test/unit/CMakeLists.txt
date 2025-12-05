@@ -86,7 +86,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS false)
 
 # Enable warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  target_compile_options(${PROJECT_NAME} PRIVATE -Werror -Wall -Wno-unused-function -Wno-deprecated)
+  target_compile_options(${PROJECT_NAME} PRIVATE -Werror -Wall -Wno-unused-function -Wno-deprecated -Wno-unused-variable)
 elseif(MSVC)
   target_compile_options(${PROJECT_NAME} PUBLIC /W4 /WX)
   target_compile_options(${PROJECT_NAME} PUBLIC PUBLIC DOCTEST_CONFIG_USE_STD_HEADERS)

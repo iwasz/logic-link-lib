@@ -7,8 +7,13 @@
  ****************************************************************************/
 
 #include "common/params.hh"
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <climits>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <random>
 #include <ranges>
 #include <vector>
 
@@ -148,5 +153,18 @@ TEST_CASE ("square", "[generate]")
                 REQUIRE (gen (6)
                          == (std::views::repeat (Bytes{0xfc, 0x0f, 0xc0}) | std::views::join | std::views::take (3 * 1024)
                              | std::ranges::to<Bytes> ()));
+        }
+
+        SECTION ("generate file")
+        {
+                // std::minstd_rand gen;
+                std::mt19937 gen;
+                gen.seed (1);
+                std::ofstream aaa ("/home/iwasz/mt19937-seed1-bin-ascii-0x8000-repeated.csv");
+
+                for (int i = 0; i < 50; ++i) {
+                        std::generate_n (std::ostream_iterator<std::string> (aaa, ""), 2 * 0x4000,
+                                         [gen] () mutable { return std::format ("{:032b}", gen ()); });
+                }
         }
 }

@@ -25,10 +25,10 @@ UsbFactory::UsbFactory (EventQueue *eventQueue)
                        .pid = common::usb::PID,
                        .create = [eventQueue] (libusb_device_handle *h) { return std::make_unique<LogicLink> (eventQueue, h); }},
 
-              UsbEntry{.name = "testRigA",
-                       .vid = common::usb::VID,
-                       .pid = common::usb::PID - 1,
-                       .create = [eventQueue] (libusb_device_handle *h) { return std::make_unique<TestRigA> (eventQueue, h); }},
+              //       UsbEntry{.name = "testRigC",
+              //                .vid = common::usb::VID,
+              //                .pid = common::usb::PID - 1,
+              //                .create = [eventQueue] (libusb_device_handle *h) { return std::make_unique<TestRigA> (eventQueue, h); }},
       }
 {
 }
