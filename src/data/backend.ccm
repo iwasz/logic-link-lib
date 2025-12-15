@@ -154,7 +154,7 @@ inline auto extractBytes (size_t channelIdx, size_t bitsPerSample, SampleIdx ran
         auto len = rangeLen.get () / (CHAR_BIT / bitsPerSample);
 
         return std::views::transform ([channelIdx] (auto &block) { return block.channel (channelIdx); }) | std::views::join
-                | std::views::drop (beg) | std::views::take (len) /* | std::ranges::to<Bytes> () */;
+                | std::views::drop (beg) | std::views::take (len);
 }
 
 } // namespace logic

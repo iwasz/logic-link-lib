@@ -30,6 +30,11 @@ CPMAddPackage("gh:microsoft/GSL@4.1.0")
 CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
 CPMAddPackage("gh:wolfpld/tracy@0.13.0")
 
+if(${TRACY_ENABLE})
+  message("💀💀📊 Tracy client is enabled!")
+  add_definitions(-DTRACY_ENABLE)
+endif()
+
 if(LOCAL_DEPENDENCIES)
   message("💀💀💀 ${PROJECT_NAME} is using local library versions!")
   CPMAddPackage(NAME common SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/logic-link-common)
